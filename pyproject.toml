@@ -1,0 +1,12 @@
+[project]
+name = "programarr"
+version = "0.1.0"
+description = "Posters, content flows, collections and the Plex home screen in one self-hosted app"
+license = "GPL-3.0-only"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
