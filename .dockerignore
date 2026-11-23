@@ -1,0 +1,11 @@
+.git
+data
+demo-data
+tests
+docs
+frontend/node_modules
+app/web/dist
+**/__pycache__
+*.pyc
+.env
+.pytest_cache

@@ -7,7 +7,6 @@ import { useRunJob } from "../../api/jobs";
 import { useItem } from "../../api/queries";
 import { Button, ButtonLink, ExternalButton } from "../../components/Button";
 import { useDialogs } from "../../components/Dialogs";
-import { useToast } from "../../components/Toasts";
 import { Badge, Card, Empty, Loading, Notice, Section, type Tone } from "../../components/ui";
 import { dateOnly, seasonLabel, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
@@ -156,7 +155,6 @@ function SetCard({ detail, onPick }: { detail: Detail; onPick: () => void }) {
 
 function DetailsCard({ detail }: { detail: Detail }) {
   const run = useRunJob();
-  const toast = useToast();
   const { prompt } = useDialogs();
   const key = detail.item.key;
   const setTpdb = async () => {
@@ -198,7 +196,7 @@ function DetailsCard({ detail }: { detail: Detail }) {
         <Button size="sm" variant="ghost" title="Read the poster files in the folder again" onClick={() => run(() => unwrap(api.POST("/api/items/{key}/rescan", { params: { path: { key } } })), "Rescanning folder…")}>
           Rescan folder
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setTpdb().catch((error) => toast.show(String(error), { kind: "error" }))}>
+        <Button size="sm" variant="ghost" onClick={setTpdb}>
           Set ThePosterDB page
         </Button>
       </div>

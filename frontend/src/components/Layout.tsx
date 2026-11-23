@@ -123,8 +123,14 @@ function SearchBox() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // On the library, the search narrows the current filters; elsewhere it starts fresh.
+    const next = new URLSearchParams(location.pathname === "/library" ? params : undefined);
     const q = value.trim();
-    navigate(q ? `/library?q=${encodeURIComponent(q)}` : "/library");
+    if (q) next.set("q", q);
+    else next.delete("q");
+    next.delete("page");
+    const query = next.toString();
+    navigate(query ? `/library?${query}` : "/library");
   };
 
   return (
