@@ -1,7 +1,7 @@
-"""Litfass mit simulierten Diensten starten: python -m tests.demo [--port 8794]
+"""Run Programarr against simulated services: python -m tests.demo [--port 8796]
 
-Plex, MediUX, ThePosterDB, TMDB, fanart.tv, TVmaze und Discord laufen im selben
-Prozess als Simulation. Die Medienordner liegen unter ./demo-data/media.
+Plex, MediUX, ThePosterDB, TMDB, fanart.tv, TVmaze and Discord are simulated in the
+same process. The media folders live under ./demo-data/media.
 """
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ async def build(world) -> None:
     mediux.add_show_set("95480", "Slow Horses", 2022, "mikenobbs", [1, 2, 3], popularity=8)
     world.tvmaze.shows["386268"] = "40011"
     world.tvmaze.shows["371980"] = "40012"
-    world.tvmaze.status["371980"] = "Ended"  # Severance: beendet, alle Poster als Datei → «Fertig»
+    world.tvmaze.status["371980"] = "Ended"  # Severance: ended, every poster a file -> Complete
     plex.add_show("Star Trek: The Next Generation", 1987, "655", "71470", seasons=[1, 2, 3, 4, 5, 6, 7])
     mediux.add_show_set("655", "Star Trek: The Next Generation", 1987, "bobaflett", [1, 2, 3, 4], popularity=9)
     mediux.add_show_set("655", "Star Trek: The Next Generation", 1987, "mikenobbs", [1, 2, 3, 4, 5, 6, 7], popularity=4)
@@ -57,7 +57,7 @@ async def build(world) -> None:
     dune = plex.add_movie("Dune", 2021, "438631")
     mediux.add_movie_set("438631", "Dune", 2021, "willtong93", popularity=50)
     arrival = plex.add_movie("Arrival", 2016, "329865")
-    (world.media / "movies" / "Arrival (2016)" / "poster.jpg").write_bytes(poster_for("arrival-own", "EIGEN"))
+    (world.media / "movies" / "Arrival (2016)" / "poster.jpg").write_bytes(poster_for("arrival-own", "OWN"))
     lotr = plex.add_movie("Der Herr der Ringe: Die Gefährten", 2001, "120")
     mediux.add_collection_set("119", "Der Herr der Ringe", "bobaflett",
                               [("120", "The Fellowship of the Ring", 2001), ("121", "The Two Towers", 2002)])
@@ -65,8 +65,8 @@ async def build(world) -> None:
     tpdb.add_movie_set(lotr_item, "DIIIVOY")
 
     await world.enable_libraries()
-    await library.sync()  # Bestand
-    plex.upload(lotr, poster_for("posteria-lotr", "ALT"))  # früher mit Posteria hochgeladen
+    await library.sync()  # existing titles
+    plex.upload(lotr, poster_for("posteria-lotr", "OLD"))  # uploaded with Posteria earlier
 
     for key in (severance, bear, dune):
         item = db.get().one("SELECT * FROM items WHERE key=?", (key,))
@@ -75,14 +75,14 @@ async def build(world) -> None:
         await binding.bind(key, preferred.set)
     _ = bear_set, arrival
 
-    # Neue Titel nach dem Bestand
+    # New titles after the first sync
     plex.add_movie("Dune: Part Two", 2024, "693134")
     mediux.add_movie_set("693134", "Dune: Part Two", 2024, "willtong93", popularity=60)
     plex.add_show("Shōgun", 2024, "126308", "419220", seasons=[1])
     mediux.add_show_set("126308", "Shōgun", 2024, "olivier_pons", [1], popularity=15)
     await tasks.sync_and_process()
     await detect.detect_item(andor)
-    # Plex hat inzwischen alles eingelesen; Litfass prüft nach.
+    # Plex has read everything by now; Programarr checks.
     from app.posters import apply
 
     for key in list(plex.items):
@@ -93,7 +93,7 @@ async def build(world) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8794)
+    parser.add_argument("--port", type=int, default=8796)
     parser.add_argument("--data", default="demo-data")
     args = parser.parse_args()
 
@@ -101,15 +101,15 @@ def main() -> None:
     if root.exists():
         shutil.rmtree(root)
     (root / "data").mkdir(parents=True, exist_ok=True)
-    os.environ["LITFASS_DATA_DIR"] = str(root / "data")
-    os.environ.setdefault("LITFASS_SCHEDULER", "0")
+    os.environ["PROGRAMARR_DATA_DIR"] = str(root / "data")
+    os.environ.setdefault("PROGRAMARR_SCHEDULER", "0")
 
     from app import config, db, http, settings
     from tests.fakes.world import World
 
     config.set_data_dir(root / "data")
     config.ensure_dirs()
-    db.init(root / "data" / "litfass.db")
+    db.init(root / "data" / "programarr.db")
     settings.reset_cache()
     world = World(root)
     http.set_transport(world.router)
@@ -120,7 +120,7 @@ def main() -> None:
 
     from app.main import app
 
-    print(f"Litfass-Demo: http://127.0.0.1:{args.port}  (Medienordner: {world.media})")
+    print(f"Programarr demo: http://127.0.0.1:{args.port}  (media folders: {world.media})")
     uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
 
 

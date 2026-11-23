@@ -2383,7 +2383,11 @@
           "set_key",
           "set_title",
           "designer",
-          "state"
+          "set_url",
+          "bound_at",
+          "checked_at",
+          "state",
+          "note"
         ],
         "title": "BindingView"
       },
@@ -2501,10 +2505,15 @@
         "required": [
           "key",
           "title",
+          "year",
           "type",
+          "library_key",
           "thumb",
           "has_file",
+          "flag",
           "complete",
+          "designer",
+          "source_label",
           "files"
         ],
         "title": "Card"
@@ -2555,6 +2564,7 @@
         },
         "type": "object",
         "required": [
+          "ok",
           "message",
           "count"
         ],
@@ -2625,6 +2635,7 @@
         },
         "type": "object",
         "required": [
+          "source",
           "name"
         ],
         "title": "Designer"
@@ -2658,7 +2669,8 @@
         "required": [
           "shows",
           "movies",
-          "complete"
+          "complete",
+          "job"
         ],
         "title": "DetectStats"
       },
@@ -2890,10 +2902,17 @@
         "required": [
           "id",
           "at",
+          "item_key",
+          "slot_id",
           "title",
           "action",
           "action_label",
-          "origin_label"
+          "origin",
+          "origin_label",
+          "source_label",
+          "designer",
+          "note",
+          "archived"
         ],
         "title": "HistoryRow"
       },
@@ -3060,7 +3079,17 @@
         "required": [
           "token",
           "thumb",
-          "source"
+          "kind",
+          "season",
+          "label",
+          "language",
+          "designer",
+          "likes",
+          "width",
+          "height",
+          "source",
+          "selected",
+          "local"
         ],
         "title": "ImageView"
       },
@@ -3153,7 +3182,9 @@
         "type": "object",
         "required": [
           "item",
+          "library",
           "slots",
+          "binding",
           "history",
           "reviews",
           "links",
@@ -3291,7 +3322,17 @@
         "required": [
           "key",
           "type",
-          "title"
+          "title",
+          "year",
+          "original_title",
+          "search_title",
+          "collection_name",
+          "show_status",
+          "folder",
+          "local_folder",
+          "tpdb_url",
+          "library_key",
+          "gone"
         ],
         "title": "ItemInfo"
       },
@@ -3390,7 +3431,14 @@
           "id",
           "kind",
           "title",
-          "status"
+          "status",
+          "done",
+          "total",
+          "message",
+          "result",
+          "created_at",
+          "started_at",
+          "finished_at"
         ],
         "title": "Job"
       },
@@ -3446,7 +3494,10 @@
           "id",
           "kind",
           "title",
-          "status"
+          "status",
+          "done",
+          "total",
+          "message"
         ],
         "title": "JobBrief"
       },
@@ -3684,6 +3735,28 @@
         },
         "additionalProperties": true,
         "type": "object",
+        "required": [
+          "message",
+          "outcomes",
+          "written",
+          "failed",
+          "waiting",
+          "items",
+          "new_items",
+          "new_seasons",
+          "skipped",
+          "checked",
+          "found",
+          "high",
+          "errors",
+          "confidence",
+          "applied",
+          "changed",
+          "gave_up",
+          "adopted",
+          "scanned",
+          "outcome"
+        ],
         "title": "JobResult",
         "description": "Result fields of the different job kinds; each kind fills a few of them."
       },
@@ -3979,7 +4052,10 @@
           "id",
           "at",
           "level",
-          "message"
+          "area",
+          "message",
+          "item_key",
+          "title"
         ],
         "title": "LogRow"
       },
@@ -4033,6 +4109,11 @@
           }
         },
         "type": "object",
+        "required": [
+          "movie",
+          "show",
+          "season"
+        ],
         "title": "NamingDetected"
       },
       "Ok": {
@@ -4055,6 +4136,10 @@
           }
         },
         "type": "object",
+        "required": [
+          "ok",
+          "message"
+        ],
         "title": "Ok"
       },
       "OnlineResponse": {
@@ -4111,6 +4196,7 @@
           "key",
           "label",
           "enabled",
+          "error",
           "images"
         ],
         "title": "OnlineSource"
@@ -4145,7 +4231,8 @@
         "required": [
           "slot",
           "ok",
-          "message"
+          "message",
+          "path"
         ],
         "title": "Outcome"
       },
@@ -4260,7 +4347,8 @@
         "type": "object",
         "required": [
           "plex",
-          "local"
+          "local",
+          "readonly"
         ],
         "title": "PathExample"
       },
@@ -4346,7 +4434,10 @@
         "required": [
           "item_key",
           "title",
+          "what",
           "type",
+          "source_label",
+          "designer",
           "origin_label",
           "at",
           "thumb"
@@ -4388,7 +4479,8 @@
           "id",
           "kind",
           "kind_label",
-          "reason"
+          "reason",
+          "season"
         ],
         "title": "ReviewBrief"
       },
@@ -4556,13 +4648,21 @@
           "kind_label",
           "item_key",
           "title",
+          "year",
+          "type",
+          "season",
           "reason",
+          "created_at",
           "thumb",
           "candidates",
           "seasons",
           "errors",
           "pairs",
-          "changes"
+          "changes",
+          "set",
+          "confidence",
+          "via",
+          "slot"
         ],
         "title": "ReviewView"
       },
@@ -4612,6 +4712,7 @@
         },
         "type": "object",
         "required": [
+          "ok",
           "saved"
         ],
         "title": "Saved"
@@ -4652,7 +4753,9 @@
         "type": "object",
         "required": [
           "title",
-          "source_label"
+          "designer",
+          "source_label",
+          "url"
         ],
         "title": "SetSummary"
       },
@@ -4765,8 +4868,17 @@
           "set_key",
           "title",
           "designer",
+          "url",
           "loaded",
-          "images"
+          "images",
+          "rank",
+          "covers",
+          "missing",
+          "has_main",
+          "complete",
+          "hidden",
+          "bound",
+          "more"
         ],
         "title": "SetView"
       },
@@ -4823,7 +4935,9 @@
           "type",
           "sets",
           "errors",
-          "seasons"
+          "seasons",
+          "tpdb_url",
+          "tpdb_sure"
         ],
         "title": "SetsResponse"
       },
@@ -5396,13 +5510,24 @@
         "required": [
           "id",
           "kind",
+          "season",
           "label",
+          "file",
+          "file_name",
+          "folder_name",
           "thumb",
+          "source",
+          "source_label",
+          "designer",
+          "mode",
           "mode_label",
+          "plex_state",
           "state",
           "state_text",
           "needs_force",
+          "applied_at",
           "waiting",
+          "waiting_since",
           "wait_given_up",
           "gone"
         ],
@@ -5737,8 +5862,15 @@
           "slot",
           "item_key",
           "title",
+          "year",
+          "season",
           "thumb",
-          "waiting"
+          "waiting",
+          "waiting_since",
+          "checked_at",
+          "set_title",
+          "designer",
+          "source_label"
         ],
         "title": "WaitingRow"
       }

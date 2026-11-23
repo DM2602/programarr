@@ -7,6 +7,12 @@ from pydantic import BaseModel, ConfigDict
 
 
 class Model(BaseModel):
+    # In responses every field is present (defaults included), so the generated types mark them required.
+    model_config = ConfigDict(extra="ignore", json_schema_serialization_defaults_required=True)
+
+
+class Body(BaseModel):
+    """Request bodies: fields with a default stay optional."""
     model_config = ConfigDict(extra="ignore")
 
 
@@ -32,7 +38,7 @@ class Outcome(Model):
 
 class JobResult(BaseModel):
     """Result fields of the different job kinds; each kind fills a few of them."""
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", json_schema_serialization_defaults_required=True)
 
     message: str | None = None
     outcomes: list[Outcome] | None = None
@@ -99,7 +105,7 @@ class AuthState(Model):
     version: str
 
 
-class LoginBody(Model):
+class LoginBody(Body):
     password: str
 
 
@@ -348,30 +354,30 @@ class OnlineResponse(Model):
     sources: list[OnlineSource]
 
 
-class ApplyBody(Model):
+class ApplyBody(Body):
     slot: str
     token: str
 
 
-class BindBody(Model):
+class BindBody(Body):
     token: str
     replace_all: bool = True
     review: int | None = None
 
 
-class TokenBody(Model):
+class TokenBody(Body):
     token: str
 
 
-class SlotBody(Model):
+class SlotBody(Body):
     slot: str
 
 
-class UrlBody(Model):
+class UrlBody(Body):
     url: str
 
 
-class ImageUrlBody(Model):
+class ImageUrlBody(Body):
     url: str
     kind: str = "movie"
     season: int | None = None
@@ -601,7 +607,7 @@ class Libraries(Model):
     libraries: list[LibraryView]
 
 
-class EnabledBody(Model):
+class EnabledBody(Body):
     enabled: list[str]
 
 
@@ -619,7 +625,7 @@ class PathCheck(Model):
     examples: list[PathExample]
 
 
-class TestBody(Model):
+class TestBody(Body):
     value: str | None = None
     extra: str | None = None
 

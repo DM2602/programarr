@@ -1,0 +1,58 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow-poster: 0 10px 25px -8px rgb(0 0 0 / 0.6);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-gray-900);
+    color: var(--color-gray-100);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100vh;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-400);
+    outline-offset: 2px;
+  }
+
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background-color: var(--color-indigo-500);
+    color: white;
+  }
+}
+
+@layer components {
+  .field-input {
+    @apply block w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60;
+  }
+
+  .scroll-x {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-600) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
