@@ -1,4 +1,4 @@
-"""Background jobs in two lanes (interactive and background) plus the scheduler."""
+"""Background jobs in three lanes (interactive, background, lists) plus the scheduler."""
 from __future__ import annotations
 
 import asyncio
@@ -40,7 +40,7 @@ class Runner:
             "WHERE status IN ('queued','running')",
             (db.now(),),
         )
-        for lane in ("ui", "bg"):
+        for lane in ("ui", "bg", "flows"):
             self.queues[lane] = asyncio.Queue()
             self.workers.append(asyncio.create_task(self._worker(lane)))
         if scheduler:

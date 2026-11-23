@@ -12,8 +12,9 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import config, db, jobs, settings
+from .lists import runs
 from .posters import refsign
-from .web import auth, hooks, images, posters, system
+from .web import auth, hooks, images, lists, posters, system
 
 DIST_DIR = Path(__file__).resolve().parent / "web" / "dist"
 
@@ -57,6 +58,7 @@ async def lifespan(app: FastAPI):
     db.init(config.DATA_DIR / "programarr.db")
     settings.reset_cache()
     refsign.reset()
+    runs.recover()
     jobs.runner.start(scheduler=config.SCHEDULER)
     logging.getLogger("programarr").info("Programarr %s started, data in %s", config.VERSION, config.DATA_DIR)
     yield
@@ -111,6 +113,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(system.router)
     app.include_router(posters.router)
+    app.include_router(lists.router)
     app.include_router(hooks.router)
     app.include_router(images.router)
 

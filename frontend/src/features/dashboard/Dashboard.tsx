@@ -155,6 +155,12 @@ export function Dashboard() {
     todo.review > 0 && { to: "/review", count: todo.review, text: "to review", tone: "yellow" as const },
     todo.waiting > 0 && { to: "/waiting", count: todo.waiting, text: `${todo.waiting === 1 ? "season waits" : "seasons wait"} for the set`, tone: "indigo" as const },
     todo.problems > 0 && { to: "/library?status=problem", count: todo.problems, text: `${todo.problems === 1 ? "poster" : "posters"} Plex doesn't show`, tone: "red" as const },
+    todo.match_open > 0 && {
+      to: "/lists/matches",
+      count: todo.match_open,
+      text: `${todo.match_open === 1 ? "title" : "titles"} to match`,
+      tone: "yellow" as const,
+    },
     todo.unlinked_with_files > 0 && !todo.detect_open && {
       to: "/match",
       count: todo.unlinked_with_files,

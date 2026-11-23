@@ -1,6 +1,8 @@
-import pytest
 """Sync from Plex, file names, writing, archive, locks and Plex verification."""
+import sqlite3
 from pathlib import Path
+
+import pytest
 
 from app import db, imaging, settings
 from app.posters import apply, library, paths
@@ -257,17 +259,22 @@ async def test_posters_uploaded_into_plex_become_files(world):
 
 
 def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
-    path = tmp_path / "programarr.db"
-    database = db.Database(path)
-    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 1
-    database.execute("INSERT INTO items (key, type, title, show_status) VALUES ('1', 'show', 'Old', 'ended')")
+    database = db.Database(tmp_path / "programarr.db")
+    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 2
     database.close()
-    # A later schema: the old file is copied before the migration runs.
-    monkeypatch.setattr(db, "SCHEMA_VERSION", 2)
+    # A file from version 1: copied before the migration, data kept, the list tables added.
+    path = tmp_path / "old.db"
+    conn = sqlite3.connect(path)
+    conn.executescript(db.SCHEMA_V1 + "\nPRAGMA user_version=1;")
+    conn.execute("INSERT INTO items (key, type, title, show_status) VALUES ('1', 'show', 'Old', 'ended')")
+    conn.commit()
+    conn.close()
     database = db.Database(path)
     assert database.scalar("PRAGMA user_version") == 2
     assert database.one("SELECT title, show_status FROM items WHERE key='1'") == {"title": "Old", "show_status": "ended"}
     assert (tmp_path / "programarr-pre-v1.db").exists()
+    tables = {row["name"] for row in database.query("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"media_cache", "parser_runs", "parser_entries", "parser_overrides", "exclusions"} <= tables
     database.close()
     monkeypatch.setattr(db, "SCHEMA_VERSION", 1)
     with pytest.raises(RuntimeError, match="newer Programarr"):

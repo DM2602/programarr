@@ -9,7 +9,10 @@ import {
   InboxStackIcon,
   LinkIcon,
   MagnifyingGlassIcon,
+  NoSymbolIcon,
+  QueueListIcon,
   Squares2X2Icon,
+  TableCellsIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,6 +62,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     { to: "/match", label: "Match existing", icon: LinkIcon },
     { to: "/history", label: "History", icon: ArchiveBoxIcon },
   ];
+  const lists: NavItem[] = [
+    { to: "/lists", label: "Lists", icon: QueueListIcon, end: true },
+    { to: "/lists/matches", label: "Match log", icon: TableCellsIcon, count: counts?.match_open },
+    { to: "/lists/exclusions", label: "Exclusions", icon: NoSymbolIcon },
+  ];
   const system: NavItem[] = [
     { to: "/logs", label: "Logs", icon: DocumentTextIcon },
     { to: "/settings", label: "Settings", icon: Cog6ToothIcon },
@@ -75,6 +83,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
         <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Posters</p>
         {posters.map((item) => (
+          <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
+        ))}
+        <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Lists</p>
+        {lists.map((item) => (
           <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
         ))}
         <div className="mt-auto pt-6">

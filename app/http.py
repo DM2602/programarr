@@ -20,6 +20,24 @@ MAX_IMAGE_BYTES = 40 * 1024 * 1024
 _transport: httpx.AsyncBaseTransport | None = None
 
 
+CHALLENGE_MARKERS = (
+    "just a moment",
+    "cf-chl",
+    "challenge-platform",
+    "attention required",
+    "verify you are human",
+    "checking your browser",
+)
+
+
+def is_challenge(status: int, text: str) -> bool:
+    """A Cloudflare check instead of the page (normal pages also load the beacon script)."""
+    if status not in (403, 429, 503) and "<title>just a moment" not in text[:2000].lower():
+        return False
+    lowered = text[:20000].lower()
+    return any(marker in lowered for marker in CHALLENGE_MARKERS)
+
+
 class FetchError(Exception):
     """A download failed; the message is meant for the UI."""
 

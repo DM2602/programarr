@@ -1,7 +1,7 @@
 """Run Programarr against simulated services: python -m tests.demo [--port 8796]
 
-Plex, MediUX, ThePosterDB, TMDB, fanart.tv, TVmaze and Discord are simulated in the
-same process. The media folders live under ./demo-data/media.
+Plex, MediUX, ThePosterDB, TMDB, fanart.tv, TVmaze, Discord, FlixPatrol, MDBList and
+Trakt are simulated in the same process. The media folders live under ./demo-data/media.
 """
 from __future__ import annotations
 
@@ -54,6 +54,7 @@ async def build(world) -> None:
     mediux.add_show_set("655", "Star Trek: The Next Generation", 1987, "bobaflett", [1, 2, 3, 4], popularity=9)
     mediux.add_show_set("655", "Star Trek: The Next Generation", 1987, "mikenobbs", [1, 2, 3, 4, 5, 6, 7], popularity=4)
 
+    plex.add_movie("The Grinch", 2018, "360920")  # also in the FlixPatrol TOP 10
     dune = plex.add_movie("Dune", 2021, "438631")
     mediux.add_movie_set("438631", "Dune", 2021, "willtong93", popularity=50)
     arrival = plex.add_movie("Arrival", 2016, "329865")
@@ -89,6 +90,22 @@ async def build(world) -> None:
         plex.refresh(key)
     for row in db.get().query("SELECT item_key, id FROM slots WHERE file IS NOT NULL"):
         await apply.verify(row["item_key"], [row["id"]])
+    await build_lists(world)
+
+
+async def build_lists(world) -> None:
+    """Previews of a FlixPatrol TOP 10, an MDBList list and a Trakt chart, one excluded title."""
+    from app.lists import runs, scrape
+    from app.media import store
+
+    world.fill_lists()
+    scrape.reset()
+    await runs.preview("flixpatrol", runs.prepare("flixpatrol", {"platform": "netflix", "region": "switzerland",
+                                                                 "sections": ["movies", "shows"], "limit": 10}))
+    await runs.preview("mdblist", runs.prepare("mdblist", {"list": "dominik/netflix-ch", "limit": 100}))
+    await runs.preview("trakt", runs.prepare("trakt", {"chart": "trending", "type": "movies", "limit": 10}))
+    power = store.find("show", 2010)
+    await runs.exclude(None, None, power["id"], "Seen it")
 
 
 def main() -> None:

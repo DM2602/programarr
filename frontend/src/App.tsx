@@ -8,6 +8,10 @@ import { Layout } from "./components/Layout";
 import { Loading } from "./components/ui";
 import { Login } from "./features/auth/Login";
 import { Dashboard } from "./features/dashboard/Dashboard";
+import { Exclusions } from "./features/lists/Exclusions";
+import { Lists } from "./features/lists/Lists";
+import { MatchLog } from "./features/lists/MatchLog";
+import { RunPage } from "./features/lists/RunPage";
 import { History } from "./features/posters/History";
 import { ItemPage } from "./features/posters/ItemPage";
 import { Library } from "./features/posters/Library";
@@ -67,6 +71,10 @@ export function App() {
         <Route path="waiting" element={<Waiting />} />
         <Route path="match" element={<Match />} />
         <Route path="history" element={<History />} />
+        <Route path="lists" element={<Lists />} />
+        <Route path="lists/runs/:id" element={<RunPage />} />
+        <Route path="lists/matches" element={<MatchLog />} />
+        <Route path="lists/exclusions" element={<Exclusions />} />
         <Route path="logs" element={<Logs />} />
         <Route path="settings" element={<Navigate to="/settings/plex" replace />} />
         <Route path="settings/:section" element={<Settings />} />

@@ -56,6 +56,15 @@ DEFAULTS: dict[str, Any] = {
     "tvmaze_enabled": True,
     "tvmaze_api": "https://api.tvmaze.com",
     "allow_private_urls": False,
+    # Lists
+    "mdblist_key": "",
+    "mdblist_api": "https://api.mdblist.com",
+    "trakt_client_id": "",
+    "trakt_api": "https://api.trakt.tv",
+    "flixpatrol_base": "https://flixpatrol.com",
+    "flixpatrol_delay": 1.0,
+    "ratings_days": 7,
+    "runs_keep_days": 60,
     # Automation. Off until switched on: Litfass keeps writing posters during the parallel run.
     "automation": False,
     "designers": [],
@@ -90,6 +99,8 @@ SECRETS = {
     "fanart_key",
     "fanart_client_key",
     "discord_webhook",
+    "mdblist_key",
+    "trakt_client_id",
 }
 
 INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "tpdb_cookies"}

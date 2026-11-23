@@ -119,3 +119,53 @@ export function useLog(level: string) {
 export function useSettings() {
   return useQuery({ queryKey: ["settings"], queryFn: () => unwrap(api.GET("/api/settings")), staleTime: Infinity });
 }
+
+// -- lists -------------------------------------------------------------------------------
+export function useListSources() {
+  return useQuery({ queryKey: ["list-sources"], queryFn: () => unwrap(api.GET("/api/lists/sources")) });
+}
+
+export function useRuns() {
+  return useQuery({
+    queryKey: ["runs"],
+    queryFn: () => unwrap(api.GET("/api/lists/runs", { params: { query: { limit: 60 } } })),
+    refetchInterval: (query) => (query.state.data?.runs.some((run) => run.status === "running") ? 2500 : false),
+  });
+}
+
+export function useRun(id: number) {
+  return useQuery({
+    queryKey: ["run", id],
+    queryFn: () => unwrap(api.GET("/api/lists/runs/{run_id}", { params: { path: { run_id: id } } })),
+    refetchInterval: (query) => (query.state.data?.status === "running" ? 2000 : false),
+  });
+}
+
+export function useProblems() {
+  return useQuery({ queryKey: ["problems"], queryFn: () => unwrap(api.GET("/api/lists/problems")) });
+}
+
+export function useMatches(params: { status: string; q: string; page: number }) {
+  return useQuery({
+    queryKey: ["matches", params],
+    queryFn: () => unwrap(api.GET("/api/lists/matches", { params: { query: params } })),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useOverrides() {
+  return useQuery({ queryKey: ["overrides"], queryFn: () => unwrap(api.GET("/api/lists/overrides")) });
+}
+
+export function useExclusions() {
+  return useQuery({ queryKey: ["exclusions"], queryFn: () => unwrap(api.GET("/api/exclusions")) });
+}
+
+export function useMediaSearch(params: { q: string; kind: string; year?: number }, enabled: boolean) {
+  return useQuery({
+    queryKey: ["media-search", params],
+    queryFn: () => unwrap(api.GET("/api/media/search", { params: { query: params } })),
+    enabled: enabled && params.q.trim().length > 0,
+    staleTime: 5 * 60_000,
+  });
+}

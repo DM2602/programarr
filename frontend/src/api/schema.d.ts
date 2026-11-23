@@ -844,6 +844,313 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/lists/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sources */
+        get: operations["sources_api_lists_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview */
+        post: operations["preview_api_lists_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Runs */
+        get: operations["list_runs_api_lists_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Detail */
+        get: operations["run_detail_api_lists_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/runs/{run_id}/again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run Again */
+        post: operations["run_again_api_lists_runs__run_id__again_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/problems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Problems */
+        get: operations["problems_api_lists_problems_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Matches */
+        get: operations["matches_api_lists_matches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/entries/{entry_id}/fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fix */
+        post: operations["fix_api_lists_entries__entry_id__fix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/entries/{entry_id}/ignore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ignore */
+        post: operations["ignore_api_lists_entries__entry_id__ignore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/entries/{entry_id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset */
+        post: operations["reset_api_lists_entries__entry_id__reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overrides */
+        get: operations["overrides_api_lists_overrides_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/overrides/{override_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Override */
+        delete: operations["remove_override_api_lists_overrides__override_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/mdblist/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mdblist Mine */
+        get: operations["mdblist_mine_api_lists_mdblist_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exclusions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exclusions */
+        get: operations["exclusions_api_exclusions_get"];
+        put?: never;
+        /** Exclude */
+        post: operations["exclude_api_exclusions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exclusions/media/{media_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unexclude Media */
+        delete: operations["unexclude_media_api_exclusions_media__media_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exclusions/{exclusion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unexclude */
+        delete: operations["unexclude_api_exclusions__exclusion_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/media/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Media Search */
+        get: operations["media_search_api_media_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/media/{media_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Media */
+        get: operations["media_api_media__media_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hooks/sonarr": {
         parameters: {
             query?: never;
@@ -946,6 +1253,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/img/tmdb/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tmdb Image
+         * @description TMDB posters for list entries and search results, cached like the other previews.
+         */
+        get: operations["tmdb_image_img_tmdb__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1006,6 +1333,31 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Candidate */
+        Candidate: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "movie" | "show";
+            /** Tmdb Id */
+            tmdb_id: number;
+            /** Title */
+            title: string;
+            /** Original Title */
+            original_title: string | null;
+            /** Year */
+            year: number | null;
+            /**
+             * Popularity
+             * @default 0
+             */
+            popularity: number;
+            /** Similarity */
+            similarity: number | null;
+            /** Poster */
+            poster: string | null;
+        };
         /** Card */
         Card: {
             /** Key */
@@ -1035,6 +1387,21 @@ export interface components {
             source_label: string | null;
             /** Files */
             files: number;
+        };
+        /** Changed */
+        Changed: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /**
+             * Changed
+             * @default 0
+             */
+            changed: number;
+            /** Message */
+            message: string | null;
         };
         /** ComparePair */
         ComparePair: {
@@ -1077,6 +1444,11 @@ export interface components {
             linked: number;
             /** Jobs */
             jobs: number;
+            /**
+             * Match Open
+             * @default 0
+             */
+            match_open: number;
         };
         /** Designer */
         Designer: {
@@ -1104,10 +1476,105 @@ export interface components {
             /** Enabled */
             enabled: string[];
         };
+        /** EntryList */
+        EntryList: {
+            /** Run Id */
+            run_id: number;
+            /** Label */
+            label: string;
+            /** Position */
+            position: number | null;
+        };
+        /** EntryView */
+        EntryView: {
+            /** Id */
+            id: number;
+            /** Run Id */
+            run_id: number;
+            /** Position */
+            position: number | null;
+            /** Title */
+            title: string;
+            /** Year */
+            year: number | null;
+            /** Kind */
+            kind: ("movie" | "show") | null;
+            /** Ids */
+            ids: {
+                [key: string]: unknown;
+            };
+            /** Url */
+            url: string | null;
+            /** Extra */
+            extra: {
+                [key: string]: unknown;
+            };
+            /** Fingerprint */
+            fingerprint: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "matched" | "uncertain" | "failed" | "excluded";
+            /** Method */
+            method: string | null;
+            /** Score */
+            score: number | null;
+            /** Error */
+            error: string | null;
+            media: components["schemas"]["MediaView"] | null;
+            /** Plex Key */
+            plex_key: string | null;
+            /** Candidates */
+            candidates: components["schemas"]["Candidate"][];
+            /** Source */
+            source: string | null;
+            /** Label */
+            label: string | null;
+            /** Lists */
+            lists: components["schemas"]["EntryList"][] | null;
+        };
         /** EventOption */
         EventOption: {
             /** Key */
             key: string;
+            /** Label */
+            label: string;
+        };
+        /** ExclusionBody */
+        ExclusionBody: {
+            /** Media Id */
+            media_id?: number | null;
+            /** Kind */
+            kind?: ("movie" | "show") | null;
+            /** Tmdb Id */
+            tmdb_id?: number | null;
+            /** Reason */
+            reason?: string | null;
+        };
+        /** ExclusionView */
+        ExclusionView: {
+            /** Id */
+            id: number;
+            /** Scope */
+            scope: string;
+            /** Reason */
+            reason: string | null;
+            /** Created At */
+            created_at: number | null;
+            media: components["schemas"]["MediaView"];
+            /** Plex Key */
+            plex_key: string | null;
+        };
+        /** ExclusionsPage */
+        ExclusionsPage: {
+            /** Rows */
+            rows: components["schemas"]["ExclusionView"][];
+        };
+        /** FieldOption */
+        FieldOption: {
+            /** Value */
+            value: string;
             /** Label */
             label: string;
         };
@@ -1117,6 +1584,16 @@ export interface components {
             key: string;
             /** Label */
             label: string;
+        };
+        /** FixBody */
+        FixBody: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "movie" | "show";
+            /** Tmdb Id */
+            tmdb_id: number;
         };
         /** Follows */
         Follows: {
@@ -1395,6 +1872,8 @@ export interface components {
             scanned: number | null;
             /** Outcome */
             outcome: string | null;
+            /** Run */
+            run: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -1476,6 +1955,22 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** ListSource */
+        ListSource: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Fields */
+            fields: components["schemas"]["SourceField"][];
+            /** Missing */
+            missing: string | null;
+        };
+        /** ListSources */
+        ListSources: {
+            /** Sources */
+            sources: components["schemas"]["ListSource"][];
+        };
         /** LogPage */
         LogPage: {
             /** Rows */
@@ -1505,6 +2000,82 @@ export interface components {
         LoginBody: {
             /** Password */
             password: string;
+        };
+        /** MatchesPage */
+        MatchesPage: {
+            /** Rows */
+            rows: components["schemas"]["EntryView"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Per Page */
+            per_page: number;
+        };
+        /** MdblistListView */
+        MdblistListView: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** User */
+            user: string;
+            /** Items */
+            items: number | null;
+            /** Dynamic */
+            dynamic: boolean;
+            /** Mediatype */
+            mediatype: string;
+        };
+        /** MdblistLists */
+        MdblistLists: {
+            /** Lists */
+            lists: components["schemas"]["MdblistListView"][];
+        };
+        /** MediaSearch */
+        MediaSearch: {
+            /** Results */
+            results: components["schemas"]["Candidate"][];
+        };
+        /** MediaView */
+        MediaView: {
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "movie" | "show";
+            /** Tmdb Id */
+            tmdb_id: number | null;
+            /** Imdb Id */
+            imdb_id: string | null;
+            /** Tvdb Id */
+            tvdb_id: number | null;
+            /** Title */
+            title: string;
+            /** Original Title */
+            original_title: string | null;
+            /** Year */
+            year: number | null;
+            /** Status */
+            status: string | null;
+            /** Seasons */
+            seasons: number | null;
+            /** Poster */
+            poster: string | null;
+            /** Imdb Rating */
+            imdb_rating: number | null;
+            /** Imdb Votes */
+            imdb_votes: number | null;
+            /** Rt Critics */
+            rt_critics: number | null;
+            /** Rt Audience */
+            rt_audience: number | null;
+            /** Ratings At */
+            ratings_at: number | null;
         };
         /** NamingDetected */
         NamingDetected: {
@@ -1553,6 +2124,31 @@ export interface components {
             message: string;
             /** Path */
             path: string | null;
+        };
+        /** OverrideView */
+        OverrideView: {
+            /** Id */
+            id: number;
+            /** Source */
+            source: string;
+            /** Fingerprint */
+            fingerprint: string;
+            /** Title */
+            title: string;
+            /** Year */
+            year: number | null;
+            /** Kind */
+            kind: ("movie" | "show") | null;
+            /** Ignore */
+            ignore: boolean;
+            media: components["schemas"]["MediaView"] | null;
+            /** Created At */
+            created_at: number | null;
+        };
+        /** OverridesPage */
+        OverridesPage: {
+            /** Rows */
+            rows: components["schemas"]["OverrideView"][];
         };
         /** Overview */
         Overview: {
@@ -1603,6 +2199,23 @@ export interface components {
             plex: string;
             /** Local */
             local: string;
+        };
+        /** PreviewBody */
+        PreviewBody: {
+            /** Source */
+            source: string;
+            /**
+             * Params
+             * @default {}
+             */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        /** ProblemsPage */
+        ProblemsPage: {
+            /** Rows */
+            rows: components["schemas"]["EntryView"][];
         };
         /** RecentCard */
         RecentCard: {
@@ -1690,6 +2303,85 @@ export interface components {
             kinds: components["schemas"]["KindCount"][];
             /** Total */
             total: number;
+        };
+        /** RunBrief */
+        RunBrief: {
+            /** Id */
+            id: number;
+            /** Source */
+            source: string;
+            /** Source Ref */
+            source_ref: string;
+            /** Label */
+            label: string;
+            /** Started At */
+            started_at: number | null;
+            /** Finished At */
+            finished_at: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "ok" | "partial" | "error";
+            /** Error */
+            error: string | null;
+            /** Total */
+            total: number;
+            /** Matched */
+            matched: number;
+            /** Uncertain */
+            uncertain: number;
+            /** Failed */
+            failed: number;
+            /** Excluded */
+            excluded: number;
+        };
+        /** RunDetail */
+        RunDetail: {
+            /** Id */
+            id: number;
+            /** Source */
+            source: string;
+            /** Source Ref */
+            source_ref: string;
+            /** Label */
+            label: string;
+            /** Started At */
+            started_at: number | null;
+            /** Finished At */
+            finished_at: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "ok" | "partial" | "error";
+            /** Error */
+            error: string | null;
+            /** Total */
+            total: number;
+            /** Matched */
+            matched: number;
+            /** Uncertain */
+            uncertain: number;
+            /** Failed */
+            failed: number;
+            /** Excluded */
+            excluded: number;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes: string[];
+            /** Previous */
+            previous: number | null;
+            /** Entries */
+            entries: components["schemas"]["EntryView"][];
+        };
+        /** RunsPage */
+        RunsPage: {
+            /** Runs */
+            runs: components["schemas"]["RunBrief"][];
         };
         /** Saved */
         Saved: {
@@ -1877,6 +2569,22 @@ export interface components {
             tvmaze_api: string;
             /** Allow Private Urls */
             allow_private_urls: boolean;
+            /** Mdblist Key */
+            mdblist_key: boolean;
+            /** Mdblist Api */
+            mdblist_api: string;
+            /** Trakt Client Id */
+            trakt_client_id: boolean;
+            /** Trakt Api */
+            trakt_api: string;
+            /** Flixpatrol Base */
+            flixpatrol_base: string;
+            /** Flixpatrol Delay */
+            flixpatrol_delay: number;
+            /** Ratings Days */
+            ratings_days: number;
+            /** Runs Keep Days */
+            runs_keep_days: number;
             /** Automation */
             automation: boolean;
             /** Designers */
@@ -2001,6 +2709,36 @@ export interface components {
             /** Gone */
             gone: boolean;
         };
+        /** SourceField */
+        SourceField: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "number" | "select" | "multi";
+            /** Options */
+            options: components["schemas"]["FieldOption"][];
+            /** Default */
+            default: unknown;
+            /** Required */
+            required: boolean;
+            /** Placeholder */
+            placeholder: string | null;
+            /** Suggestions */
+            suggestions: string[];
+            /** Min */
+            min: number | null;
+            /** Max */
+            max: number | null;
+            /** When */
+            when: {
+                [key: string]: string[];
+            } | null;
+        };
         /** Status */
         Status: {
             /** Version */
@@ -2041,6 +2779,11 @@ export interface components {
             unlinked_with_files: number;
             /** Detect Open */
             detect_open: number;
+            /**
+             * Match Open
+             * @default 0
+             */
+            match_open: number;
         };
         /** TokenBody */
         TokenBody: {
@@ -3560,6 +4303,553 @@ export interface operations {
             };
         };
     };
+    sources_api_lists_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListSources"];
+                };
+            };
+        };
+    };
+    preview_api_lists_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_lists_runs_get: {
+        parameters: {
+            query?: {
+                source_ref?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_detail_api_lists_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_again_api_lists_runs__run_id__again_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    problems_api_lists_problems_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemsPage"];
+                };
+            };
+        };
+    };
+    matches_api_lists_matches_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchesPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    fix_api_lists_entries__entry_id__fix_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FixBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ignore_api_lists_entries__entry_id__ignore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_api_lists_entries__entry_id__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overrides_api_lists_overrides_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverridesPage"];
+                };
+            };
+        };
+    };
+    remove_override_api_lists_overrides__override_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                override_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Changed"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mdblist_mine_api_lists_mdblist_mine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MdblistLists"];
+                };
+            };
+        };
+    };
+    exclusions_api_exclusions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExclusionsPage"];
+                };
+            };
+        };
+    };
+    exclude_api_exclusions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExclusionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unexclude_media_api_exclusions_media__media_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unexclude_api_exclusions__exclusion_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exclusion_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    media_search_api_media_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                kind?: string;
+                year?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaSearch"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    media_api_media__media_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                media_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sonarr_api_hooks_sonarr_post: {
         parameters: {
             query?: {
@@ -3721,6 +5011,37 @@ export interface operations {
             header?: never;
             path: {
                 history_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tmdb_image_img_tmdb__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
             };
             cookie?: never;
         };
