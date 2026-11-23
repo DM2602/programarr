@@ -1,0 +1,5879 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Programarr",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/auth/state": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "State",
+        "operationId": "state_api_auth_state_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Status",
+        "operationId": "status_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_api_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Job Status",
+        "operationId": "job_status_api_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Job Cancel",
+        "operationId": "job_cancel_api_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Sync",
+        "operationId": "sync_api_sync_post",
+        "parameters": [
+          {
+            "name": "full",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Full"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/log": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Log",
+        "operationId": "log_api_log_get",
+        "parameters": [
+          {
+            "name": "level",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Level"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Save Settings",
+        "description": "Partial update. Secrets: empty or true keeps the stored value, false clears it.",
+        "operationId": "save_settings_api_settings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Saved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/libraries/refresh": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Libraries Refresh",
+        "operationId": "libraries_refresh_api_libraries_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Libraries"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/libraries": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Libraries Save",
+        "operationId": "libraries_save_api_libraries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/paths/check": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Paths Check",
+        "operationId": "paths_check_api_paths_check_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PathCheck"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/setup/finish": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Setup Finish",
+        "operationId": "setup_finish_api_setup_finish_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test/{what}": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Test Connection",
+        "operationId": "test_connection_api_test__what__post",
+        "parameters": [
+          {
+            "name": "what",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "What"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Library Page",
+        "operationId": "library_page_api_library_get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Type"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "library_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Library Key"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "title",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Detail",
+        "operationId": "item_detail_api_items__key__get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/sets": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Sets",
+        "operationId": "item_sets_api_items__key__sets_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Fresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/sets/full": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Set Full",
+        "description": "Load a ThePosterDB set page completely (season posters).",
+        "operationId": "item_set_full_api_items__key__sets_full_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/plex": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Plex",
+        "operationId": "item_plex_api_items__key__plex_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slot"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Images"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/online": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Online",
+        "operationId": "item_online_api_items__key__online_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "slot",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slot"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnlineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/apply": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Apply",
+        "operationId": "item_apply_api_items__key__apply_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/bind": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Bind",
+        "operationId": "item_bind_api_items__key__bind_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/unbind": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Unbind",
+        "operationId": "item_unbind_api_items__key__unbind_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/check": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Check",
+        "operationId": "item_check_api_items__key__check_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/detect": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Detect",
+        "operationId": "item_detect_api_items__key__detect_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/refresh": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Refresh",
+        "operationId": "item_refresh_api_items__key__refresh_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/rescan": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Rescan",
+        "operationId": "item_rescan_api_items__key__rescan_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/force": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Force",
+        "operationId": "item_force_api_items__key__force_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/remove": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Remove",
+        "operationId": "item_remove_api_items__key__remove_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/retry": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Retry",
+        "operationId": "item_retry_api_items__key__retry_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/tpdb": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Tpdb",
+        "operationId": "item_tpdb_api_items__key__tpdb_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UrlBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TpdbSaved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{key}/slots/stopwait": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Stop Waiting",
+        "operationId": "stop_waiting_api_items__key__slots_stopwait_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Upload",
+        "operationId": "upload_api_upload_post",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "movie",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Season"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_api_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fetch-url": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Fetch Url",
+        "operationId": "fetch_url_api_fetch_url_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImageUrlBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review List",
+        "operationId": "review_list_api_reviews_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewsPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{review_id}/dismiss": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review Dismiss",
+        "operationId": "review_dismiss_api_reviews__review_id__dismiss_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{review_id}/accept": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review Accept",
+        "operationId": "review_accept_api_reviews__review_id__accept_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Review Id"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Take"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{review_id}/confirm": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review Confirm",
+        "operationId": "review_confirm_api_reviews__review_id__confirm_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/confirm-all": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review Confirm All",
+        "operationId": "review_confirm_all_api_reviews_confirm_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmAll"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/waiting": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Waiting List",
+        "operationId": "waiting_list_api_waiting_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitingPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/setcheck": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Setcheck",
+        "operationId": "setcheck_api_setcheck_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/detect/stats": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Detect Stats",
+        "operationId": "detect_stats_api_detect_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetectStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/detect": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Detect Library",
+        "operationId": "detect_library_api_detect_post",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "shows",
+              "title": "Scope"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/adopt": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Adopt",
+        "operationId": "adopt_api_adopt_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/rescan": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Rescan",
+        "operationId": "rescan_api_rescan_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follows/refresh": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Follows Refresh",
+        "operationId": "follows_refresh_api_follows_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Follows"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "History Page",
+        "operationId": "history_page_api_history_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/history/{history_id}/restore": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "History Restore",
+        "operationId": "history_restore_api_history__history_id__restore_post",
+        "parameters": [
+          {
+            "name": "history_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "History Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/sonarr": {
+      "post": {
+        "summary": "Sonarr",
+        "operationId": "sonarr_api_hooks_sonarr_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/radarr": {
+      "post": {
+        "summary": "Radarr",
+        "operationId": "radarr_api_hooks_radarr_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/plex": {
+      "post": {
+        "summary": "Plex",
+        "operationId": "plex_api_hooks_plex_post",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/img/slot/{slot_id}": {
+      "get": {
+        "summary": "Slot Image",
+        "operationId": "slot_image_img_slot__slot_id__get",
+        "parameters": [
+          {
+            "name": "slot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/img/ref/{token}": {
+      "get": {
+        "summary": "Ref Image",
+        "operationId": "ref_image_img_ref__token__get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/img/archive/{history_id}": {
+      "get": {
+        "summary": "Archive Image",
+        "operationId": "archive_image_img_archive__history_id__get",
+        "parameters": [
+          {
+            "name": "history_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "History Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApplyBody": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "token"
+        ],
+        "title": "ApplyBody"
+      },
+      "AuthState": {
+        "properties": {
+          "password_required": {
+            "type": "boolean",
+            "title": "Password Required"
+          },
+          "signed_in": {
+            "type": "boolean",
+            "title": "Signed In"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password_required",
+          "signed_in",
+          "version"
+        ],
+        "title": "AuthState"
+      },
+      "BindBody": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "replace_all": {
+            "type": "boolean",
+            "title": "Replace All",
+            "default": true
+          },
+          "review": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "BindBody"
+      },
+      "BindingView": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_label": {
+            "type": "string",
+            "title": "Source Label"
+          },
+          "set_key": {
+            "type": "string",
+            "title": "Set Key"
+          },
+          "set_title": {
+            "type": "string",
+            "title": "Set Title"
+          },
+          "designer": {
+            "type": "string",
+            "title": "Designer"
+          },
+          "set_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Url"
+          },
+          "bound_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound At"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "source_label",
+          "set_key",
+          "set_title",
+          "designer",
+          "set_url",
+          "bound_at",
+          "checked_at",
+          "state",
+          "note"
+        ],
+        "title": "BindingView"
+      },
+      "Body_upload_api_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_api_upload_post"
+      },
+      "Card": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Type"
+          },
+          "library_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Key"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "has_file": {
+            "type": "boolean",
+            "title": "Has File"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "problem",
+                  "review",
+                  "waiting",
+                  "new"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "year",
+          "type",
+          "library_key",
+          "thumb",
+          "has_file",
+          "flag",
+          "complete",
+          "designer",
+          "source_label",
+          "files"
+        ],
+        "title": "Card"
+      },
+      "ComparePair": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "current": {
+            "type": "string",
+            "title": "Current"
+          },
+          "other": {
+            "type": "string",
+            "title": "Other"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "label",
+          "current",
+          "other"
+        ],
+        "title": "ComparePair"
+      },
+      "ConfirmAll": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "message",
+          "count"
+        ],
+        "title": "ConfirmAll"
+      },
+      "Counts": {
+        "properties": {
+          "review": {
+            "type": "integer",
+            "title": "Review"
+          },
+          "review_kinds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Review Kinds"
+          },
+          "waiting": {
+            "type": "integer",
+            "title": "Waiting"
+          },
+          "movies": {
+            "type": "integer",
+            "title": "Movies"
+          },
+          "shows": {
+            "type": "integer",
+            "title": "Shows"
+          },
+          "linked": {
+            "type": "integer",
+            "title": "Linked"
+          },
+          "jobs": {
+            "type": "integer",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "review",
+          "review_kinds",
+          "waiting",
+          "movies",
+          "shows",
+          "linked",
+          "jobs"
+        ],
+        "title": "Counts"
+      },
+      "Designer": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "any",
+              "mediux",
+              "tpdb"
+            ],
+            "title": "Source",
+            "default": "any"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "name"
+        ],
+        "title": "Designer"
+      },
+      "DetectStats": {
+        "properties": {
+          "shows": {
+            "type": "integer",
+            "title": "Shows"
+          },
+          "movies": {
+            "type": "integer",
+            "title": "Movies"
+          },
+          "complete": {
+            "type": "integer",
+            "title": "Complete"
+          },
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Job"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "shows",
+          "movies",
+          "complete",
+          "job"
+        ],
+        "title": "DetectStats"
+      },
+      "EnabledBody": {
+        "properties": {
+          "enabled": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "EnabledBody"
+      },
+      "EventOption": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "EventOption"
+      },
+      "FilterOption": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "FilterOption"
+      },
+      "Follows": {
+        "properties": {
+          "follow": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Follow"
+          },
+          "hide": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Hide"
+          }
+        },
+        "type": "object",
+        "required": [
+          "follow",
+          "hide"
+        ],
+        "title": "Follows"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistoryPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "page",
+          "pages",
+          "total"
+        ],
+        "title": "HistoryPage"
+      },
+      "HistoryRow": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "item_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Key"
+          },
+          "slot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "action_label": {
+            "type": "string",
+            "title": "Action Label"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
+          },
+          "origin_label": {
+            "type": "string",
+            "title": "Origin Label"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "archived": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "item_key",
+          "slot_id",
+          "title",
+          "action",
+          "action_label",
+          "origin",
+          "origin_label",
+          "source_label",
+          "designer",
+          "note",
+          "archived"
+        ],
+        "title": "HistoryRow"
+      },
+      "Hooks": {
+        "properties": {
+          "sonarr": {
+            "type": "string",
+            "title": "Sonarr"
+          },
+          "radarr": {
+            "type": "string",
+            "title": "Radarr"
+          },
+          "plex": {
+            "type": "string",
+            "title": "Plex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sonarr",
+          "radarr",
+          "plex"
+        ],
+        "title": "Hooks"
+      },
+      "ImageUrlBody": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "movie"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "ImageUrlBody"
+      },
+      "ImageView": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "default": false
+          },
+          "local": {
+            "type": "boolean",
+            "title": "Local",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "thumb",
+          "kind",
+          "season",
+          "label",
+          "language",
+          "designer",
+          "likes",
+          "width",
+          "height",
+          "source",
+          "selected",
+          "local"
+        ],
+        "title": "ImageView"
+      },
+      "Images": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageView"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "images"
+        ],
+        "title": "Images"
+      },
+      "ItemDetail": {
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/ItemInfo"
+          },
+          "library": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LibraryRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/SlotView"
+            },
+            "type": "array",
+            "title": "Slots"
+          },
+          "binding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BindingView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryRow"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewBrief"
+            },
+            "type": "array",
+            "title": "Reviews"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/Link"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete"
+          },
+          "seasons": {
+            "type": "integer",
+            "title": "Seasons"
+          },
+          "specials": {
+            "type": "boolean",
+            "title": "Specials"
+          },
+          "has_files": {
+            "type": "boolean",
+            "title": "Has Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "library",
+          "slots",
+          "binding",
+          "history",
+          "reviews",
+          "links",
+          "complete",
+          "seasons",
+          "specials",
+          "has_files"
+        ],
+        "title": "ItemDetail"
+      },
+      "ItemInfo": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "original_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Title"
+          },
+          "search_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Title"
+          },
+          "collection_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Name"
+          },
+          "show_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Status"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder"
+          },
+          "local_folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Folder"
+          },
+          "tpdb_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tpdb Url"
+          },
+          "library_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Key"
+          },
+          "gone": {
+            "type": "boolean",
+            "title": "Gone",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "type",
+          "title",
+          "year",
+          "original_title",
+          "search_title",
+          "collection_name",
+          "show_status",
+          "folder",
+          "local_folder",
+          "tpdb_url",
+          "library_key",
+          "gone"
+        ],
+        "title": "ItemInfo"
+      },
+      "Job": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "status",
+          "done",
+          "total",
+          "message",
+          "result",
+          "created_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "Job"
+      },
+      "JobBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "status",
+          "done",
+          "total",
+          "message"
+        ],
+        "title": "JobBrief"
+      },
+      "JobResult": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Outcome"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcomes"
+          },
+          "written": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Written"
+          },
+          "failed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed"
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "new_items": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Items"
+          },
+          "new_seasons": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Seasons"
+          },
+          "skipped": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped"
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked"
+          },
+          "found": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Found"
+          },
+          "high": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "applied": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied"
+          },
+          "changed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed"
+          },
+          "gave_up": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gave Up"
+          },
+          "adopted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adopted"
+          },
+          "scanned": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scanned"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "message",
+          "outcomes",
+          "written",
+          "failed",
+          "waiting",
+          "items",
+          "new_items",
+          "new_seasons",
+          "skipped",
+          "checked",
+          "found",
+          "high",
+          "errors",
+          "confidence",
+          "applied",
+          "changed",
+          "gave_up",
+          "adopted",
+          "scanned",
+          "outcome"
+        ],
+        "title": "JobResult",
+        "description": "Result fields of the different job kinds; each kind fills a few of them."
+      },
+      "JobStarted": {
+        "properties": {
+          "job": {
+            "type": "integer",
+            "title": "Job"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job"
+        ],
+        "title": "JobStarted"
+      },
+      "KindCount": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "count"
+        ],
+        "title": "KindCount"
+      },
+      "Libraries": {
+        "properties": {
+          "libraries": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryView"
+            },
+            "type": "array",
+            "title": "Libraries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "libraries"
+        ],
+        "title": "Libraries"
+      },
+      "LibraryFacts": {
+        "properties": {
+          "movies": {
+            "type": "integer",
+            "title": "Movies"
+          },
+          "shows": {
+            "type": "integer",
+            "title": "Shows"
+          },
+          "linked": {
+            "type": "integer",
+            "title": "Linked"
+          },
+          "complete": {
+            "type": "integer",
+            "title": "Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "movies",
+          "shows",
+          "linked",
+          "complete"
+        ],
+        "title": "LibraryFacts"
+      },
+      "LibraryPage": {
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/Card"
+            },
+            "type": "array",
+            "title": "Cards"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/FilterOption"
+            },
+            "type": "array",
+            "title": "Filters"
+          },
+          "libraries": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryRef"
+            },
+            "type": "array",
+            "title": "Libraries"
+          },
+          "empty_library": {
+            "type": "boolean",
+            "title": "Empty Library"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cards",
+          "total",
+          "page",
+          "pages",
+          "page_size",
+          "filters",
+          "libraries",
+          "empty_library"
+        ],
+        "title": "LibraryPage"
+      },
+      "LibraryRef": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "type"
+        ],
+        "title": "LibraryRef"
+      },
+      "LibraryView": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "type",
+          "enabled",
+          "locations"
+        ],
+        "title": "LibraryView"
+      },
+      "Link": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "Link"
+      },
+      "LogPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/LogRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows"
+        ],
+        "title": "LogPage"
+      },
+      "LogRow": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "title": "Level"
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "item_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Key"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "level",
+          "area",
+          "message",
+          "item_key",
+          "title"
+        ],
+        "title": "LogRow"
+      },
+      "LoginBody": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "LoginBody"
+      },
+      "NamingDetected": {
+        "properties": {
+          "movie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movie"
+          },
+          "show": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          }
+        },
+        "type": "object",
+        "required": [
+          "movie",
+          "show",
+          "season"
+        ],
+        "title": "NamingDetected"
+      },
+      "Ok": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "Ok"
+      },
+      "OnlineResponse": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/OnlineSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources"
+        ],
+        "title": "OnlineResponse"
+      },
+      "OnlineSource": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageView"
+            },
+            "type": "array",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "enabled",
+          "error",
+          "images"
+        ],
+        "title": "OnlineSource"
+      },
+      "Outcome": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "ok",
+          "message",
+          "path"
+        ],
+        "title": "Outcome"
+      },
+      "Overview": {
+        "properties": {
+          "setup_done": {
+            "type": "boolean",
+            "title": "Setup Done"
+          },
+          "automation": {
+            "type": "boolean",
+            "title": "Automation"
+          },
+          "steps": {
+            "$ref": "#/components/schemas/SetupSteps"
+          },
+          "last_sync": {
+            "type": "integer",
+            "title": "Last Sync"
+          },
+          "last_set_check": {
+            "type": "integer",
+            "title": "Last Set Check"
+          },
+          "todo": {
+            "$ref": "#/components/schemas/Todo"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/RecentCard"
+            },
+            "type": "array",
+            "title": "Recent"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/LibraryFacts"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/Job"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "setup_done",
+          "automation",
+          "steps",
+          "last_sync",
+          "last_set_check",
+          "todo",
+          "recent",
+          "facts",
+          "jobs"
+        ],
+        "title": "Overview"
+      },
+      "PathCheck": {
+        "properties": {
+          "checked": {
+            "type": "integer",
+            "title": "Checked"
+          },
+          "ok": {
+            "type": "integer",
+            "title": "Ok"
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing"
+          },
+          "readonly": {
+            "type": "integer",
+            "title": "Readonly"
+          },
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/PathExample"
+            },
+            "type": "array",
+            "title": "Examples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked",
+          "ok",
+          "missing",
+          "readonly",
+          "examples"
+        ],
+        "title": "PathCheck"
+      },
+      "PathExample": {
+        "properties": {
+          "plex": {
+            "type": "string",
+            "title": "Plex"
+          },
+          "local": {
+            "type": "string",
+            "title": "Local"
+          },
+          "readonly": {
+            "type": "boolean",
+            "title": "Readonly",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "plex",
+          "local",
+          "readonly"
+        ],
+        "title": "PathExample"
+      },
+      "PathMap": {
+        "properties": {
+          "plex": {
+            "type": "string",
+            "title": "Plex"
+          },
+          "local": {
+            "type": "string",
+            "title": "Local"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plex",
+          "local"
+        ],
+        "title": "PathMap"
+      },
+      "RecentCard": {
+        "properties": {
+          "item_key": {
+            "type": "string",
+            "title": "Item Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "what": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "What"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "origin_label": {
+            "type": "string",
+            "title": "Origin Label"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item_key",
+          "title",
+          "what",
+          "type",
+          "source_label",
+          "designer",
+          "origin_label",
+          "at",
+          "thumb"
+        ],
+        "title": "RecentCard"
+      },
+      "ReviewBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_label": {
+            "type": "string",
+            "title": "Kind Label"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "kind_label",
+          "reason",
+          "season"
+        ],
+        "title": "ReviewBrief"
+      },
+      "ReviewView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_label": {
+            "type": "string",
+            "title": "Kind Label"
+          },
+          "item_key": {
+            "type": "string",
+            "title": "Item Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/SetView"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "seasons": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Seasons"
+          },
+          "errors": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Errors"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/ComparePair"
+            },
+            "type": "array",
+            "title": "Pairs"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ComparePair"
+            },
+            "type": "array",
+            "title": "Changes"
+          },
+          "set": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SetSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "via": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Via"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "kind_label",
+          "item_key",
+          "title",
+          "year",
+          "type",
+          "season",
+          "reason",
+          "created_at",
+          "thumb",
+          "candidates",
+          "seasons",
+          "errors",
+          "pairs",
+          "changes",
+          "set",
+          "confidence",
+          "via",
+          "slot"
+        ],
+        "title": "ReviewView"
+      },
+      "ReviewsPage": {
+        "properties": {
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewView"
+            },
+            "type": "array",
+            "title": "Reviews"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/KindCount"
+            },
+            "type": "array",
+            "title": "Kinds"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reviews",
+          "kinds",
+          "total"
+        ],
+        "title": "ReviewsPage"
+      },
+      "Saved": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "saved": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Saved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "saved"
+        ],
+        "title": "Saved"
+      },
+      "SetSummary": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "source_label": {
+            "type": "string",
+            "title": "Source Label"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "designer",
+          "source_label",
+          "url"
+        ],
+        "title": "SetSummary"
+      },
+      "SetView": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_label": {
+            "type": "string",
+            "title": "Source Label"
+          },
+          "set_key": {
+            "type": "string",
+            "title": "Set Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "designer": {
+            "type": "string",
+            "title": "Designer"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "loaded": {
+            "type": "boolean",
+            "title": "Loaded"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageView"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "covers": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Covers",
+            "default": []
+          },
+          "missing": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Missing",
+            "default": []
+          },
+          "has_main": {
+            "type": "boolean",
+            "title": "Has Main",
+            "default": true
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete",
+            "default": false
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          },
+          "bound": {
+            "type": "boolean",
+            "title": "Bound",
+            "default": false
+          },
+          "more": {
+            "type": "integer",
+            "title": "More",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "source",
+          "source_label",
+          "set_key",
+          "title",
+          "designer",
+          "url",
+          "loaded",
+          "images",
+          "rank",
+          "covers",
+          "missing",
+          "has_main",
+          "complete",
+          "hidden",
+          "bound",
+          "more"
+        ],
+        "title": "SetView"
+      },
+      "SetsResponse": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Type"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/SetView"
+            },
+            "type": "array",
+            "title": "Sets"
+          },
+          "errors": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Errors"
+          },
+          "seasons": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Seasons"
+          },
+          "tpdb_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tpdb Url"
+          },
+          "tpdb_sure": {
+            "type": "boolean",
+            "title": "Tpdb Sure",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "sets",
+          "errors",
+          "seasons",
+          "tpdb_url",
+          "tpdb_sure"
+        ],
+        "title": "SetsResponse"
+      },
+      "SettingsValues": {
+        "properties": {
+          "setup_done": {
+            "type": "boolean",
+            "title": "Setup Done"
+          },
+          "plex_url": {
+            "type": "string",
+            "title": "Plex Url"
+          },
+          "plex_token": {
+            "type": "boolean",
+            "title": "Plex Token"
+          },
+          "path_maps": {
+            "items": {
+              "$ref": "#/components/schemas/PathMap"
+            },
+            "type": "array",
+            "title": "Path Maps"
+          },
+          "naming_movie": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "poster",
+              "file"
+            ],
+            "title": "Naming Movie"
+          },
+          "naming_show": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "poster",
+              "show",
+              "folder"
+            ],
+            "title": "Naming Show"
+          },
+          "naming_season": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "root",
+              "root_plain",
+              "folder"
+            ],
+            "title": "Naming Season"
+          },
+          "keep_png": {
+            "type": "boolean",
+            "title": "Keep Png"
+          },
+          "conflicts": {
+            "type": "string",
+            "enum": [
+              "archive",
+              "keep"
+            ],
+            "title": "Conflicts"
+          },
+          "unlock_fields": {
+            "type": "boolean",
+            "title": "Unlock Fields"
+          },
+          "verify_plex": {
+            "type": "boolean",
+            "title": "Verify Plex"
+          },
+          "archive_keep": {
+            "type": "integer",
+            "title": "Archive Keep"
+          },
+          "mediux_token": {
+            "type": "boolean",
+            "title": "Mediux Token"
+          },
+          "mediux_quality": {
+            "type": "string",
+            "enum": [
+              "original",
+              "optimized"
+            ],
+            "title": "Mediux Quality"
+          },
+          "mediux_api": {
+            "type": "string",
+            "title": "Mediux Api"
+          },
+          "mediux_site": {
+            "type": "string",
+            "title": "Mediux Site"
+          },
+          "tpdb_email": {
+            "type": "string",
+            "title": "Tpdb Email"
+          },
+          "tpdb_password": {
+            "type": "boolean",
+            "title": "Tpdb Password"
+          },
+          "tpdb_base": {
+            "type": "string",
+            "title": "Tpdb Base"
+          },
+          "tpdb_delay": {
+            "type": "number",
+            "title": "Tpdb Delay"
+          },
+          "tpdb_pages": {
+            "type": "integer",
+            "title": "Tpdb Pages"
+          },
+          "flaresolverr_url": {
+            "type": "string",
+            "title": "Flaresolverr Url"
+          },
+          "tmdb_key": {
+            "type": "boolean",
+            "title": "Tmdb Key"
+          },
+          "tmdb_api": {
+            "type": "string",
+            "title": "Tmdb Api"
+          },
+          "tmdb_image": {
+            "type": "string",
+            "title": "Tmdb Image"
+          },
+          "tmdb_languages": {
+            "type": "string",
+            "title": "Tmdb Languages"
+          },
+          "fanart_key": {
+            "type": "boolean",
+            "title": "Fanart Key"
+          },
+          "fanart_client_key": {
+            "type": "boolean",
+            "title": "Fanart Client Key"
+          },
+          "fanart_api": {
+            "type": "string",
+            "title": "Fanart Api"
+          },
+          "tvmaze_enabled": {
+            "type": "boolean",
+            "title": "Tvmaze Enabled"
+          },
+          "tvmaze_api": {
+            "type": "string",
+            "title": "Tvmaze Api"
+          },
+          "allow_private_urls": {
+            "type": "boolean",
+            "title": "Allow Private Urls"
+          },
+          "automation": {
+            "type": "boolean",
+            "title": "Automation"
+          },
+          "designers": {
+            "items": {
+              "$ref": "#/components/schemas/Designer"
+            },
+            "type": "array",
+            "title": "Designers"
+          },
+          "use_mediux_follows": {
+            "type": "boolean",
+            "title": "Use Mediux Follows"
+          },
+          "source_order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Source Order"
+          },
+          "auto_new": {
+            "type": "boolean",
+            "title": "Auto New"
+          },
+          "auto_require_complete": {
+            "type": "boolean",
+            "title": "Auto Require Complete"
+          },
+          "auto_count_specials": {
+            "type": "boolean",
+            "title": "Auto Count Specials"
+          },
+          "auto_collection_consistency": {
+            "type": "boolean",
+            "title": "Auto Collection Consistency"
+          },
+          "poll_minutes": {
+            "type": "integer",
+            "title": "Poll Minutes"
+          },
+          "set_check_hours": {
+            "type": "integer",
+            "title": "Set Check Hours"
+          },
+          "wait_max_days": {
+            "type": "integer",
+            "title": "Wait Max Days"
+          },
+          "set_changes": {
+            "type": "string",
+            "enum": [
+              "notify",
+              "apply"
+            ],
+            "title": "Set Changes"
+          },
+          "detect_movies": {
+            "type": "boolean",
+            "title": "Detect Movies"
+          },
+          "discord_webhook": {
+            "type": "boolean",
+            "title": "Discord Webhook"
+          },
+          "discord_events": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Discord Events"
+          },
+          "base_url": {
+            "type": "string",
+            "title": "Base Url"
+          },
+          "hook_token": {
+            "type": "string",
+            "title": "Hook Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "setup_done",
+          "plex_url",
+          "plex_token",
+          "path_maps",
+          "naming_movie",
+          "naming_show",
+          "naming_season",
+          "keep_png",
+          "conflicts",
+          "unlock_fields",
+          "verify_plex",
+          "archive_keep",
+          "mediux_token",
+          "mediux_quality",
+          "mediux_api",
+          "mediux_site",
+          "tpdb_email",
+          "tpdb_password",
+          "tpdb_base",
+          "tpdb_delay",
+          "tpdb_pages",
+          "flaresolverr_url",
+          "tmdb_key",
+          "tmdb_api",
+          "tmdb_image",
+          "tmdb_languages",
+          "fanart_key",
+          "fanart_client_key",
+          "fanart_api",
+          "tvmaze_enabled",
+          "tvmaze_api",
+          "allow_private_urls",
+          "automation",
+          "designers",
+          "use_mediux_follows",
+          "source_order",
+          "auto_new",
+          "auto_require_complete",
+          "auto_count_specials",
+          "auto_collection_consistency",
+          "poll_minutes",
+          "set_check_hours",
+          "wait_max_days",
+          "set_changes",
+          "detect_movies",
+          "discord_webhook",
+          "discord_events",
+          "base_url",
+          "hook_token"
+        ],
+        "title": "SettingsValues",
+        "description": "Editable settings; secrets only say whether they are set."
+      },
+      "SettingsView": {
+        "properties": {
+          "values": {
+            "$ref": "#/components/schemas/SettingsValues"
+          },
+          "libraries": {
+            "items": {
+              "$ref": "#/components/schemas/LibraryView"
+            },
+            "type": "array",
+            "title": "Libraries"
+          },
+          "hooks": {
+            "$ref": "#/components/schemas/Hooks"
+          },
+          "discord_events": {
+            "items": {
+              "$ref": "#/components/schemas/EventOption"
+            },
+            "type": "array",
+            "title": "Discord Events"
+          },
+          "naming_detected": {
+            "$ref": "#/components/schemas/NamingDetected"
+          },
+          "follows": {
+            "$ref": "#/components/schemas/Follows"
+          },
+          "data_dir": {
+            "type": "string",
+            "title": "Data Dir"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "values",
+          "libraries",
+          "hooks",
+          "discord_events",
+          "naming_detected",
+          "follows",
+          "data_dir",
+          "version"
+        ],
+        "title": "SettingsView"
+      },
+      "SetupSteps": {
+        "properties": {
+          "plex": {
+            "type": "boolean",
+            "title": "Plex"
+          },
+          "libraries": {
+            "type": "boolean",
+            "title": "Libraries"
+          },
+          "sources": {
+            "type": "boolean",
+            "title": "Sources"
+          },
+          "designers": {
+            "type": "boolean",
+            "title": "Designers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plex",
+          "libraries",
+          "sources",
+          "designers"
+        ],
+        "title": "SetupSteps"
+      },
+      "SlotBody": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot"
+        ],
+        "title": "SlotBody"
+      },
+      "SlotView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show",
+              "season"
+            ],
+            "title": "Kind"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "folder_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Name"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "mode_label": {
+            "type": "string",
+            "title": "Mode Label"
+          },
+          "plex_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plex State"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warn",
+              "bad",
+              "none"
+            ],
+            "title": "State"
+          },
+          "state_text": {
+            "type": "string",
+            "title": "State Text"
+          },
+          "needs_force": {
+            "type": "boolean",
+            "title": "Needs Force"
+          },
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "waiting": {
+            "type": "boolean",
+            "title": "Waiting"
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since"
+          },
+          "wait_given_up": {
+            "type": "boolean",
+            "title": "Wait Given Up"
+          },
+          "gone": {
+            "type": "boolean",
+            "title": "Gone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "season",
+          "label",
+          "file",
+          "file_name",
+          "folder_name",
+          "thumb",
+          "source",
+          "source_label",
+          "designer",
+          "mode",
+          "mode_label",
+          "plex_state",
+          "state",
+          "state_text",
+          "needs_force",
+          "applied_at",
+          "waiting",
+          "waiting_since",
+          "wait_given_up",
+          "gone"
+        ],
+        "title": "SlotView"
+      },
+      "Status": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "setup_done": {
+            "type": "boolean",
+            "title": "Setup Done"
+          },
+          "automation": {
+            "type": "boolean",
+            "title": "Automation"
+          },
+          "last_sync": {
+            "type": "integer",
+            "title": "Last Sync"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobBrief"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "setup_done",
+          "automation",
+          "last_sync",
+          "counts",
+          "jobs"
+        ],
+        "title": "Status"
+      },
+      "TestBody": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "extra": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra"
+          }
+        },
+        "type": "object",
+        "title": "TestBody"
+      },
+      "TestResult": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "message"
+        ],
+        "title": "TestResult"
+      },
+      "Todo": {
+        "properties": {
+          "review": {
+            "type": "integer",
+            "title": "Review"
+          },
+          "waiting": {
+            "type": "integer",
+            "title": "Waiting"
+          },
+          "problems": {
+            "type": "integer",
+            "title": "Problems"
+          },
+          "unlinked_with_files": {
+            "type": "integer",
+            "title": "Unlinked With Files"
+          },
+          "detect_open": {
+            "type": "integer",
+            "title": "Detect Open"
+          }
+        },
+        "type": "object",
+        "required": [
+          "review",
+          "waiting",
+          "problems",
+          "unlinked_with_files",
+          "detect_open"
+        ],
+        "title": "Todo"
+      },
+      "TokenBody": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "TokenBody"
+      },
+      "TpdbSaved": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "url"
+        ],
+        "title": "TpdbSaved"
+      },
+      "UrlBody": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "UrlBody"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WaitingPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/WaitingRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "max_days": {
+            "type": "integer",
+            "title": "Max Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "max_days"
+        ],
+        "title": "WaitingPage"
+      },
+      "WaitingRow": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "item_key": {
+            "type": "string",
+            "title": "Item Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "waiting": {
+            "type": "boolean",
+            "title": "Waiting"
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "set_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Title"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "item_key",
+          "title",
+          "year",
+          "season",
+          "thumb",
+          "waiting",
+          "waiting_since",
+          "checked_at",
+          "set_title",
+          "designer",
+          "source_label"
+        ],
+        "title": "WaitingRow"
+      }
+    }
+  }
+}
