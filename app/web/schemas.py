@@ -61,6 +61,10 @@ class JobResult(BaseModel):
     scanned: int | None = None
     outcome: str | None = None
     run: int | None = None
+    dry_run: bool | None = None
+    added: int | None = None
+    tagged: int | None = None
+    present: int | None = None
 
 
 class JobBrief(Model):
@@ -671,15 +675,17 @@ class FieldOption(Model):
 class SourceField(Model):
     key: str
     label: str
-    type: Literal["text", "number", "select", "multi"]
+    type: Literal["text", "number", "decimal", "select", "multi", "bool", "tokens"]
     options: list[FieldOption]
     default: Any = None
     required: bool
     placeholder: str | None = None
     suggestions: list[str]
-    min: int | None = None
-    max: int | None = None
+    min: float | None = None
+    max: float | None = None
     when: dict[str, list[str]] | None = None
+    step: float | None = None
+    dynamic: str | None = None
 
 
 class ListSource(Model):
@@ -886,3 +892,227 @@ class MissingSeasons(Model):
 
     seasons: list[MissingSeason]
     sonarr_url: str | None = None
+
+
+# -- flows -----------------------------------------------------------------------------
+FlowRunStatus = Literal["running", "ok", "partial", "error"]
+NodeCategory = Literal["source", "filter", "output"]
+
+
+class FlowPosition(Model):
+    x: float = 0
+    y: float = 0
+
+
+class FlowNode(Model):
+    id: str
+    type: str
+    config: dict[str, Any] = {}
+    position: FlowPosition = FlowPosition()
+
+
+class FlowEdge(Model):
+    source: str
+    port: str
+    target: str
+
+
+class FlowGraph(Model):
+    nodes: list[FlowNode] = []
+    edges: list[FlowEdge] = []
+
+
+class FlowProblem(Model):
+    node: str | None = None
+    message: str
+
+
+class FlowRunBrief(Model):
+    id: int
+    flow_id: int
+    flow_name: str
+    flow_version: int
+    trigger: Literal["manual", "schedule"]
+    dry_run: bool
+    started_at: int | None = None
+    finished_at: int | None = None
+    status: FlowRunStatus
+    error: str | None = None
+    titles: int
+    added: int
+    tagged: int
+    present: int
+    skipped: int
+    failed: int
+
+
+class FlowView(Model):
+    id: int
+    name: str
+    version: int
+    schedule: str | None = None
+    schedule_text: str
+    enabled: bool
+    dry_run: bool
+    next_run_at: int | None = None
+    created_at: int | None = None
+    updated_at: int | None = None
+    problems: list[FlowProblem]
+    outputs: list[str]
+    nodes: int
+    last_run: FlowRunBrief | None = None
+    graph: FlowGraph | None = None
+
+
+class FlowsPage(Model):
+    flows: list[FlowView]
+
+
+class FlowCreate(Body):
+    name: str
+    graph: FlowGraph | None = None
+    schedule: str | None = None
+
+
+class FlowUpdate(Body):
+    """Only the fields sent change. schedule null (or empty) means manual."""
+    name: str | None = None
+    graph: FlowGraph | None = None
+    schedule: str | None = None
+    enabled: bool | None = None
+    dry_run: bool | None = None
+
+
+class FlowRunBody(Body):
+    dry_run: bool | None = None
+
+
+class FlowCheckBody(Body):
+    graph: FlowGraph
+
+
+class FlowCheck(Model):
+    problems: list[FlowProblem]
+
+
+class ScheduleCheck(Model):
+    ok: bool
+    schedule: str | None = None
+    text: str
+    next_run_at: int | None = None
+    message: str | None = None
+
+
+class PortCount(Model):
+    key: str
+    label: str
+    count: int
+
+
+class CompareList(Model):
+    ref: str
+    run: int | None = None
+    error: str | None = None
+
+
+class CompareView(Model):
+    lists: list[CompareList]
+    both: int
+    flow_only: list[MediaView]
+    list_only: list[MediaView]
+
+
+class RunNode(Model):
+    id: str
+    type: str
+    label: str
+    category: str
+    summary: str
+    count_in: int
+    ports: list[PortCount]
+    entries: dict[str, int] | None = None
+    run: int | None = None
+    error: str | None = None
+    compare: CompareView | None = None
+
+
+class FlowRunDetail(FlowRunBrief):
+    notes: list[str]
+    current: bool
+    nodes: list[RunNode]
+    sources: list[RunBrief]
+    previous: int | None = None
+    next: int | None = None
+
+
+class FlowRunsPage(Model):
+    runs: list[FlowRunBrief]
+    total: int
+    page: int
+    pages: int
+
+
+class TraceStep(Model):
+    node: str
+    label: str
+    category: str
+    port: str | None = None
+    port_label: str
+    detail: str
+
+
+class FlowTitle(Model):
+    media: MediaView
+    outcomes: list[TraceStep]
+    steps: list[TraceStep]
+
+
+class FlowTitlesPage(Model):
+    rows: list[FlowTitle]
+    counts: dict[str, int]
+    total: int
+    page: int
+    pages: int
+
+
+class NodeTypePort(Model):
+    key: str
+    label: str
+
+
+class NodeTypeView(Model):
+    type: str
+    label: str
+    category: NodeCategory
+    inputs: bool
+    ports: list[NodeTypePort]
+    fields: list[SourceField]
+    missing: str | None = None
+
+
+class NodeTypes(Model):
+    types: list[NodeTypeView]
+
+
+class ArrProfile(Model):
+    id: int
+    name: str
+
+
+class ArrRootFolder(Model):
+    path: str
+    free_space: int | None = None
+
+
+class ArrTag(Model):
+    id: int
+    label: str
+
+
+class ArrOptions(Model):
+    service: Literal["radarr", "sonarr"]
+    configured: bool
+    profiles: list[ArrProfile]
+    root_folders: list[ArrRootFolder]
+    tags: list[ArrTag]
+    error: str | None = None

@@ -1,4 +1,4 @@
-"""Background jobs in three lanes (interactive, background, lists) plus the scheduler."""
+"""Background jobs in three lanes (interactive, background, lists and flows) plus the scheduler."""
 from __future__ import annotations
 
 import asyncio
@@ -144,11 +144,16 @@ class Runner:
 
     # -- scheduler -------------------------------------------------------------
     async def _scheduler(self) -> None:
-        from .posters import tasks  # late import: tasks depends on most modules
+        from .flows import engine as flows  # late imports: tasks and flows depend on most modules
+        from .posters import tasks
 
         await asyncio.sleep(5)
         last_maintenance = 0.0
         while True:
+            try:
+                flows.start_due(int(time.time()))
+            except Exception as exc:  # noqa: BLE001
+                log.warning("Scheduler (flows): %s", exc)
             try:
                 now = time.time()
                 for kind in due(now):

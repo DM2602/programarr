@@ -14,7 +14,9 @@ DISCORD_EVENTS = {
     "review": "Something needs your review",
     "set_changed": "Linked set changed",
     "detect": "Match existing finished",
-    "error": "Errors (Plex unreachable, write failed)",
+    "flow": "Flow added titles or tags to Radarr or Sonarr",
+    "flow_dry": "Dry run found titles to add",
+    "error": "Errors (service unreachable, write or flow failed)",
 }
 
 DEFAULTS: dict[str, Any] = {
@@ -88,7 +90,7 @@ DEFAULTS: dict[str, Any] = {
     "detect_movies": True,
     # Notifications and interfaces
     "discord_webhook": "",
-    "discord_events": {key: True for key in DISCORD_EVENTS},
+    "discord_events": {key: key != "flow_dry" for key in DISCORD_EVENTS},
     "base_url": "",
     "hook_token": "",
     # Internal state
@@ -128,7 +130,7 @@ def _load() -> dict[str, Any]:
             values["hook_token"] = secrets.token_urlsafe(24)
             db.get().upsert("settings", ("key",), {"key": "hook_token", "value": db.dumps(values["hook_token"])})
         if isinstance(values.get("discord_events"), dict):
-            merged = {key: True for key in DISCORD_EVENTS}
+            merged = dict(DEFAULTS["discord_events"])
             merged.update({k: bool(v) for k, v in values["discord_events"].items() if k in DISCORD_EVENTS})
             values["discord_events"] = merged
         _cache = values

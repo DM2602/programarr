@@ -122,10 +122,12 @@ def recover() -> None:
 def prune() -> int:
     """Drop runs older than the setting; the last run of every list stays."""
     days = max(1, int(settings.get("runs_keep_days") or 60))
+    # Runs read by the last run of a flow stay with it.
     cursor = db.get().execute(
         "DELETE FROM parser_runs WHERE started_at < ? "
         "AND id NOT IN (SELECT MAX(id) FROM parser_runs GROUP BY source_ref) "
-        "AND id NOT IN (SELECT MAX(id) FROM parser_runs WHERE status IN ('ok','partial') GROUP BY source_ref)",
+        "AND id NOT IN (SELECT MAX(id) FROM parser_runs WHERE status IN ('ok','partial') GROUP BY source_ref) "
+        "AND (flow_run_id IS NULL OR flow_run_id NOT IN (SELECT MAX(id) FROM flow_runs GROUP BY flow_id))",
         (db.now() - days * 86400,),
     )
     return cursor.rowcount or 0
@@ -151,12 +153,15 @@ def run_brief(row: dict) -> dict:
     }
 
 
-def runs(source_ref: str | None = None, limit: int = 100) -> list[dict]:
-    sql = "SELECT * FROM parser_runs"
+def runs(source_ref: str | None = None, limit: int = 100, previews_only: bool = False) -> list[dict]:
+    """Recent runs; previews_only leaves out the lists flows read."""
+    sql = "SELECT * FROM parser_runs WHERE 1=1"
     params: list = []
     if source_ref:
-        sql += " WHERE source_ref=?"
+        sql += " AND source_ref=?"
         params.append(source_ref)
+    if previews_only:
+        sql += " AND flow_run_id IS NULL"
     sql += " ORDER BY id DESC LIMIT ?"
     params.append(max(1, min(limit, 500)))
     return [run_brief(row) for row in db.get().query(sql, params)]

@@ -2164,6 +2164,16 @@
               "default": 100,
               "title": "Limit"
             }
+          },
+          {
+            "name": "previews",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Previews"
+            }
           }
         ],
         "responses": {
@@ -2832,6 +2842,585 @@
         }
       }
     },
+    "/api/flows": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Flows",
+        "operationId": "flows_api_flows_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowsPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_flows_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/nodes": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Node Types",
+        "operationId": "node_types_api_flows_nodes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeTypes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/check": {
+      "post": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Check",
+        "operationId": "check_api_flows_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowCheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/schedule": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Check Schedule",
+        "operationId": "check_schedule_api_flows_schedule_get",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Value"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/runs": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Runs",
+        "operationId": "runs_api_flows_runs_get",
+        "parameters": [
+          {
+            "name": "flow",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Flow"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowRunsPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Run Detail",
+        "operationId": "run_detail_api_flows_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowRunDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/runs/{run_id}/titles": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Run Titles",
+        "operationId": "run_titles_api_flows_runs__run_id__titles_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "show",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Show"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowTitlesPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/{flow_id}": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Flow",
+        "operationId": "flow_api_flows__flow_id__get",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_flows__flow_id__put",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Delete",
+        "operationId": "delete_api_flows__flow_id__delete",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/{flow_id}/run": {
+      "post": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Run",
+        "operationId": "run_api_flows__flow_id__run_post",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FlowRunBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/arr/{service}/options": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Arr Options",
+        "operationId": "arr_options_api_arr__service__options_get",
+        "parameters": [
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "radarr",
+                "sonarr"
+              ],
+              "type": "string",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Fresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrOptions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/hooks/sonarr": {
       "post": {
         "summary": "Sonarr",
@@ -3225,6 +3814,125 @@
         "title": "ArrLink",
         "description": "Where a title stands in Radarr or Sonarr; service is None when that one is not set up."
       },
+      "ArrOptions": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "enum": [
+              "radarr",
+              "sonarr"
+            ],
+            "title": "Service"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ArrProfile"
+            },
+            "type": "array",
+            "title": "Profiles"
+          },
+          "root_folders": {
+            "items": {
+              "$ref": "#/components/schemas/ArrRootFolder"
+            },
+            "type": "array",
+            "title": "Root Folders"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/ArrTag"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "configured",
+          "profiles",
+          "root_folders",
+          "tags",
+          "error"
+        ],
+        "title": "ArrOptions"
+      },
+      "ArrProfile": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ArrProfile"
+      },
+      "ArrRootFolder": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "free_space": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Space"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "free_space"
+        ],
+        "title": "ArrRootFolder"
+      },
+      "ArrTag": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ArrTag"
+      },
       "AuthState": {
         "properties": {
           "password_required": {
@@ -3603,6 +4311,43 @@
         ],
         "title": "Changed"
       },
+      "CompareList": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ref",
+          "run",
+          "error"
+        ],
+        "title": "CompareList"
+      },
       "ComparePair": {
         "properties": {
           "slot": {
@@ -3630,6 +4375,43 @@
           "other"
         ],
         "title": "ComparePair"
+      },
+      "CompareView": {
+        "properties": {
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/CompareList"
+            },
+            "type": "array",
+            "title": "Lists"
+          },
+          "both": {
+            "type": "integer",
+            "title": "Both"
+          },
+          "flow_only": {
+            "items": {
+              "$ref": "#/components/schemas/MediaView"
+            },
+            "type": "array",
+            "title": "Flow Only"
+          },
+          "list_only": {
+            "items": {
+              "$ref": "#/components/schemas/MediaView"
+            },
+            "type": "array",
+            "title": "List Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lists",
+          "both",
+          "flow_only",
+          "list_only"
+        ],
+        "title": "CompareView"
       },
       "ConfirmAll": {
         "properties": {
@@ -4223,6 +5005,876 @@
           "tmdb_id"
         ],
         "title": "FixBody"
+      },
+      "FlowCheck": {
+        "properties": {
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FlowProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problems"
+        ],
+        "title": "FlowCheck"
+      },
+      "FlowCheckBody": {
+        "properties": {
+          "graph": {
+            "$ref": "#/components/schemas/FlowGraph-Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "graph"
+        ],
+        "title": "FlowCheckBody"
+      },
+      "FlowCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FlowCreate"
+      },
+      "FlowEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "port": {
+            "type": "string",
+            "title": "Port"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "port",
+          "target"
+        ],
+        "title": "FlowEdge"
+      },
+      "FlowGraph-Input": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/FlowNode-Input"
+            },
+            "type": "array",
+            "title": "Nodes",
+            "default": []
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/FlowEdge"
+            },
+            "type": "array",
+            "title": "Edges",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "FlowGraph"
+      },
+      "FlowGraph-Output": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/FlowNode-Output"
+            },
+            "type": "array",
+            "title": "Nodes",
+            "default": []
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/FlowEdge"
+            },
+            "type": "array",
+            "title": "Edges",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "FlowGraph"
+      },
+      "FlowNode-Input": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "default": {}
+          },
+          "position": {
+            "$ref": "#/components/schemas/FlowPosition-Input",
+            "default": {
+              "x": 0.0,
+              "y": 0.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "FlowNode"
+      },
+      "FlowNode-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "default": {}
+          },
+          "position": {
+            "$ref": "#/components/schemas/FlowPosition-Output",
+            "default": {
+              "x": 0.0,
+              "y": 0.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "config",
+          "position"
+        ],
+        "title": "FlowNode"
+      },
+      "FlowPosition-Input": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X",
+            "default": 0
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "FlowPosition"
+      },
+      "FlowPosition-Output": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X",
+            "default": 0
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "FlowPosition"
+      },
+      "FlowProblem": {
+        "properties": {
+          "node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node",
+          "message"
+        ],
+        "title": "FlowProblem"
+      },
+      "FlowRunBody": {
+        "properties": {
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "title": "FlowRunBody"
+      },
+      "FlowRunBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "flow_id": {
+            "type": "integer",
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "type": "string",
+            "title": "Flow Name"
+          },
+          "flow_version": {
+            "type": "integer",
+            "title": "Flow Version"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "schedule"
+            ],
+            "title": "Trigger"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "ok",
+              "partial",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "titles": {
+            "type": "integer",
+            "title": "Titles"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "tagged": {
+            "type": "integer",
+            "title": "Tagged"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "flow_id",
+          "flow_name",
+          "flow_version",
+          "trigger",
+          "dry_run",
+          "started_at",
+          "finished_at",
+          "status",
+          "error",
+          "titles",
+          "added",
+          "tagged",
+          "present",
+          "skipped",
+          "failed"
+        ],
+        "title": "FlowRunBrief"
+      },
+      "FlowRunDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "flow_id": {
+            "type": "integer",
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "type": "string",
+            "title": "Flow Name"
+          },
+          "flow_version": {
+            "type": "integer",
+            "title": "Flow Version"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "schedule"
+            ],
+            "title": "Trigger"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "ok",
+              "partial",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "titles": {
+            "type": "integer",
+            "title": "Titles"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "tagged": {
+            "type": "integer",
+            "title": "Tagged"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RunNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RunBrief"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "flow_id",
+          "flow_name",
+          "flow_version",
+          "trigger",
+          "dry_run",
+          "started_at",
+          "finished_at",
+          "status",
+          "error",
+          "titles",
+          "added",
+          "tagged",
+          "present",
+          "skipped",
+          "failed",
+          "notes",
+          "current",
+          "nodes",
+          "sources",
+          "previous",
+          "next"
+        ],
+        "title": "FlowRunDetail"
+      },
+      "FlowRunsPage": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/FlowRunBrief"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs",
+          "total",
+          "page",
+          "pages"
+        ],
+        "title": "FlowRunsPage"
+      },
+      "FlowTitle": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaView"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "type": "array",
+            "title": "Outcomes"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "outcomes",
+          "steps"
+        ],
+        "title": "FlowTitle"
+      },
+      "FlowTitlesPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowTitle"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "counts",
+          "total",
+          "page",
+          "pages"
+        ],
+        "title": "FlowTitlesPage"
+      },
+      "FlowUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "title": "FlowUpdate",
+        "description": "Only the fields sent change. schedule null (or empty) means manual."
+      },
+      "FlowView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "schedule_text": {
+            "type": "string",
+            "title": "Schedule Text"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FlowProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "outputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowRunBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version",
+          "schedule",
+          "schedule_text",
+          "enabled",
+          "dry_run",
+          "next_run_at",
+          "created_at",
+          "updated_at",
+          "problems",
+          "outputs",
+          "nodes",
+          "last_run",
+          "graph"
+        ],
+        "title": "FlowView"
+      },
+      "FlowsPage": {
+        "properties": {
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowView"
+            },
+            "type": "array",
+            "title": "Flows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flows"
+        ],
+        "title": "FlowsPage"
       },
       "Follows": {
         "properties": {
@@ -5240,6 +6892,50 @@
               }
             ],
             "title": "Run"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          },
+          "added": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added"
+          },
+          "tagged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagged"
+          },
+          "present": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Present"
           }
         },
         "additionalProperties": true,
@@ -5265,7 +6961,11 @@
           "adopted",
           "scanned",
           "outcome",
-          "run"
+          "run",
+          "dry_run",
+          "added",
+          "tagged",
+          "present"
         ],
         "title": "JobResult",
         "description": "Result fields of the different job kinds; each kind fills a few of them."
@@ -6083,6 +7783,101 @@
         ],
         "title": "NamingDetected"
       },
+      "NodeTypePort": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "NodeTypePort"
+      },
+      "NodeTypeView": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "source",
+              "filter",
+              "output"
+            ],
+            "title": "Category"
+          },
+          "inputs": {
+            "type": "boolean",
+            "title": "Inputs"
+          },
+          "ports": {
+            "items": {
+              "$ref": "#/components/schemas/NodeTypePort"
+            },
+            "type": "array",
+            "title": "Ports"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/SourceField"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "missing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "label",
+          "category",
+          "inputs",
+          "ports",
+          "fields",
+          "missing"
+        ],
+        "title": "NodeTypeView"
+      },
+      "NodeTypes": {
+        "properties": {
+          "types": {
+            "items": {
+              "$ref": "#/components/schemas/NodeTypeView"
+            },
+            "type": "array",
+            "title": "Types"
+          }
+        },
+        "type": "object",
+        "required": [
+          "types"
+        ],
+        "title": "NodeTypes"
+      },
       "Ok": {
         "properties": {
           "ok": {
@@ -6436,6 +8231,29 @@
           "local"
         ],
         "title": "PathMap"
+      },
+      "PortCount": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "count"
+        ],
+        "title": "PortCount"
       },
       "PreviewBody": {
         "properties": {
@@ -7031,6 +8849,102 @@
         ],
         "title": "RunDetail"
       },
+      "RunNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "count_in": {
+            "type": "integer",
+            "title": "Count In"
+          },
+          "ports": {
+            "items": {
+              "$ref": "#/components/schemas/PortCount"
+            },
+            "type": "array",
+            "title": "Ports"
+          },
+          "entries": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entries"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompareView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label",
+          "category",
+          "summary",
+          "count_in",
+          "ports",
+          "entries",
+          "run",
+          "error",
+          "compare"
+        ],
+        "title": "RunNode"
+      },
       "RunsPage": {
         "properties": {
           "runs": {
@@ -7068,6 +8982,60 @@
           "saved"
         ],
         "title": "Saved"
+      },
+      "ScheduleCheck": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "schedule",
+          "text",
+          "next_run_at",
+          "message"
+        ],
+        "title": "ScheduleCheck"
       },
       "SetSummary": {
         "properties": {
@@ -7970,8 +9938,11 @@
             "enum": [
               "text",
               "number",
+              "decimal",
               "select",
-              "multi"
+              "multi",
+              "bool",
+              "tokens"
             ],
             "title": "Type"
           },
@@ -8010,7 +9981,7 @@
           "min": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8021,7 +9992,7 @@
           "max": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8045,6 +10016,28 @@
               }
             ],
             "title": "When"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "dynamic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dynamic"
           }
         },
         "type": "object",
@@ -8059,7 +10052,9 @@
           "suggestions",
           "min",
           "max",
-          "when"
+          "when",
+          "step",
+          "dynamic"
         ],
         "title": "SourceField"
       },
@@ -8218,6 +10213,51 @@
           "url"
         ],
         "title": "TpdbSaved"
+      },
+      "TraceStep": {
+        "properties": {
+          "node": {
+            "type": "string",
+            "title": "Node"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port"
+          },
+          "port_label": {
+            "type": "string",
+            "title": "Port Label"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node",
+          "label",
+          "category",
+          "port",
+          "port_label",
+          "detail"
+        ],
+        "title": "TraceStep"
       },
       "UrlBody": {
         "properties": {

@@ -50,8 +50,8 @@ async def preview(body: PreviewBody):
 
 
 @router.get("/lists/runs", response_model=RunsPage)
-async def list_runs(source_ref: str = "", limit: int = 100):
-    return {"runs": runs.runs(source_ref or None, limit)}
+async def list_runs(source_ref: str = "", limit: int = 100, previews: bool = False):
+    return {"runs": runs.runs(source_ref or None, limit, previews_only=previews)}
 
 
 @router.get("/lists/runs/{run_id}", response_model=RunDetail)

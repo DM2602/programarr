@@ -1,11 +1,12 @@
-"""Radarr and Sonarr: where a title stands there, and the link to it. Phase 3 adds them as flow outputs."""
+"""Radarr and Sonarr API v3: requests, the connection test and where a title stands there."""
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import quote
 
 import httpx
 
-from . import http, settings
+from .. import http, settings
 
 SERVICES = {
     "radarr": {"label": "Radarr", "kind": "movie"},
@@ -21,6 +22,10 @@ def for_kind(kind: str) -> str:
     return "radarr" if kind == "movie" else "sonarr"
 
 
+def label(service: str) -> str:
+    return SERVICES[service]["label"]
+
+
 def configured(service: str) -> bool:
     return bool(settings.get(f"{service}_url") and settings.get(f"{service}_key"))
 
@@ -30,30 +35,56 @@ def link_base(service: str) -> str:
     return (settings.get(f"{service}_external_url") or settings.get(f"{service}_url") or "").rstrip("/")
 
 
-async def get(service: str, path: str, params: dict | None = None, url: str | None = None, key: str | None = None):
-    label = SERVICES[service]["label"]
+def _problem(name: str, response: httpx.Response) -> str:
+    """The validation messages Radarr and Sonarr send with a 400, else the status."""
+    try:
+        data = response.json()
+    except ValueError:
+        return f"{name} answered {response.status_code}"
+    rows = data if isinstance(data, list) else [data] if isinstance(data, dict) else []
+    messages = []
+    for row in rows:
+        if isinstance(row, dict):
+            text = row.get("errorMessage") or row.get("message") or row.get("error")
+            if text and text not in messages:
+                messages.append(str(text))
+    return f"{name}: {'; '.join(messages)}" if messages else f"{name} answered {response.status_code}"
+
+
+async def request(service: str, method: str, path: str, params: dict | None = None, body: Any = None,
+                  url: str | None = None, key: str | None = None, timeout: float = 15.0) -> Any:
+    name = label(service)
     base = (url or settings.get(f"{service}_url") or "").rstrip("/")
     key = key or settings.get(f"{service}_key")
     if not base or not key:
-        raise ArrError(f"{label}: address and API key are needed")
-    async with http.client(timeout=15.0, headers={"X-Api-Key": key, "Accept": "application/json"}) as client:
+        raise ArrError(f"{name}: address and API key are needed")
+    async with http.client(timeout=timeout, headers={"X-Api-Key": key, "Accept": "application/json"}) as client:
         try:
-            response = await client.get(f"{base}/api/v3{path}", params=params or {})
+            response = await client.request(method, f"{base}/api/v3{path}", params=params or {},
+                                            json=body if body is not None else None)
         except httpx.HTTPError as exc:
-            raise ArrError(f"Cannot reach {label} ({base}): {exc.__class__.__name__}") from exc
+            raise ArrError(f"Cannot reach {name} ({base}): {exc.__class__.__name__}") from exc
     if response.status_code == 401:
-        raise ArrError(f"{label} rejects the API key")
+        raise ArrError(f"{name} rejects the API key")
+    if response.status_code == 404:
+        raise ArrError(f"{name} does not know {path.split('?')[0]}")
     if response.status_code >= 400:
-        raise ArrError(f"{label} answered {response.status_code}")
+        raise ArrError(_problem(name, response))
+    if not response.content:
+        return None
     try:
         return response.json()
     except ValueError as exc:
-        raise ArrError(f"{label} sent no JSON (is this the {label} address?)") from exc
+        raise ArrError(f"{name} sent no JSON (is this the {name} address?)") from exc
+
+
+async def get(service: str, path: str, params: dict | None = None, url: str | None = None, key: str | None = None):
+    return await request(service, "GET", path, params, url=url, key=key)
 
 
 async def test(service: str, url: str | None = None, key: str | None = None) -> str:
     data = await get(service, "/system/status", url=url, key=key)
-    name = data.get("appName") or SERVICES[service]["label"]
+    name = data.get("appName") or label(service)
     return f"Connected to {name} {data.get('version', '')}".strip()
 
 
@@ -63,8 +94,7 @@ async def lookup(kind: str, tmdb_id: str | int | None, tvdb_id: str | int | None
     service = for_kind(kind)
     if not configured(service):
         return None
-    label = SERVICES[service]["label"]
-    result = {"service": service, "label": label, "present": False, "monitored": None, "downloaded": None,
+    result = {"service": service, "label": label(service), "present": False, "monitored": None, "downloaded": None,
               "url": None, "error": None}
     base = link_base(service)
     try:

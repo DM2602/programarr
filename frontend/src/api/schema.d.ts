@@ -1191,6 +1191,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/flows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Flows */
+        get: operations["flows_api_flows_get"];
+        put?: never;
+        /** Create */
+        post: operations["create_api_flows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Node Types */
+        get: operations["node_types_api_flows_nodes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check */
+        post: operations["check_api_flows_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check Schedule */
+        get: operations["check_schedule_api_flows_schedule_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs */
+        get: operations["runs_api_flows_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Detail */
+        get: operations["run_detail_api_flows_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/runs/{run_id}/titles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Titles */
+        get: operations["run_titles_api_flows_runs__run_id__titles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/{flow_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Flow */
+        get: operations["flow_api_flows__flow_id__get"];
+        /** Update */
+        put: operations["update_api_flows__flow_id__put"];
+        post?: never;
+        /** Delete */
+        delete: operations["delete_api_flows__flow_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/flows/{flow_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run */
+        post: operations["run_api_flows__flow_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/arr/{service}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arr Options */
+        get: operations["arr_options_api_arr__service__options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hooks/sonarr": {
         parameters: {
             query?: never;
@@ -1347,6 +1520,45 @@ export interface components {
             /** Error */
             error: string | null;
         };
+        /** ArrOptions */
+        ArrOptions: {
+            /**
+             * Service
+             * @enum {string}
+             */
+            service: "radarr" | "sonarr";
+            /** Configured */
+            configured: boolean;
+            /** Profiles */
+            profiles: components["schemas"]["ArrProfile"][];
+            /** Root Folders */
+            root_folders: components["schemas"]["ArrRootFolder"][];
+            /** Tags */
+            tags: components["schemas"]["ArrTag"][];
+            /** Error */
+            error: string | null;
+        };
+        /** ArrProfile */
+        ArrProfile: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /** ArrRootFolder */
+        ArrRootFolder: {
+            /** Path */
+            path: string;
+            /** Free Space */
+            free_space: number | null;
+        };
+        /** ArrTag */
+        ArrTag: {
+            /** Id */
+            id: number;
+            /** Label */
+            label: string;
+        };
         /** AuthState */
         AuthState: {
             /** Password Required */
@@ -1466,6 +1678,15 @@ export interface components {
             /** Message */
             message: string | null;
         };
+        /** CompareList */
+        CompareList: {
+            /** Ref */
+            ref: string;
+            /** Run */
+            run: number | null;
+            /** Error */
+            error: string | null;
+        };
         /** ComparePair */
         ComparePair: {
             /** Slot */
@@ -1476,6 +1697,17 @@ export interface components {
             current: string;
             /** Other */
             other: string;
+        };
+        /** CompareView */
+        CompareView: {
+            /** Lists */
+            lists: components["schemas"]["CompareList"][];
+            /** Both */
+            both: number;
+            /** Flow Only */
+            flow_only: components["schemas"]["MediaView"][];
+            /** List Only */
+            list_only: components["schemas"]["MediaView"][];
         };
         /** ConfirmAll */
         ConfirmAll: {
@@ -1657,6 +1889,317 @@ export interface components {
             kind: "movie" | "show";
             /** Tmdb Id */
             tmdb_id: number;
+        };
+        /** FlowCheck */
+        FlowCheck: {
+            /** Problems */
+            problems: components["schemas"]["FlowProblem"][];
+        };
+        /** FlowCheckBody */
+        FlowCheckBody: {
+            graph: components["schemas"]["FlowGraph-Input"];
+        };
+        /** FlowCreate */
+        FlowCreate: {
+            /** Name */
+            name: string;
+            graph?: components["schemas"]["FlowGraph-Input"] | null;
+            /** Schedule */
+            schedule?: string | null;
+        };
+        /** FlowEdge */
+        FlowEdge: {
+            /** Source */
+            source: string;
+            /** Port */
+            port: string;
+            /** Target */
+            target: string;
+        };
+        /** FlowGraph */
+        "FlowGraph-Input": {
+            /**
+             * Nodes
+             * @default []
+             */
+            nodes?: components["schemas"]["FlowNode-Input"][];
+            /**
+             * Edges
+             * @default []
+             */
+            edges?: components["schemas"]["FlowEdge"][];
+        };
+        /** FlowGraph */
+        "FlowGraph-Output": {
+            /**
+             * Nodes
+             * @default []
+             */
+            nodes: components["schemas"]["FlowNode-Output"][];
+            /**
+             * Edges
+             * @default []
+             */
+            edges: components["schemas"]["FlowEdge"][];
+        };
+        /** FlowNode */
+        "FlowNode-Input": {
+            /** Id */
+            id: string;
+            /** Type */
+            type: string;
+            /**
+             * Config
+             * @default {}
+             */
+            config?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @default {
+             *       "x": 0,
+             *       "y": 0
+             *     }
+             */
+            position?: components["schemas"]["FlowPosition-Input"];
+        };
+        /** FlowNode */
+        "FlowNode-Output": {
+            /** Id */
+            id: string;
+            /** Type */
+            type: string;
+            /**
+             * Config
+             * @default {}
+             */
+            config: {
+                [key: string]: unknown;
+            };
+            /**
+             * @default {
+             *       "x": 0,
+             *       "y": 0
+             *     }
+             */
+            position: components["schemas"]["FlowPosition-Output"];
+        };
+        /** FlowPosition */
+        "FlowPosition-Input": {
+            /**
+             * X
+             * @default 0
+             */
+            x?: number;
+            /**
+             * Y
+             * @default 0
+             */
+            y?: number;
+        };
+        /** FlowPosition */
+        "FlowPosition-Output": {
+            /**
+             * X
+             * @default 0
+             */
+            x: number;
+            /**
+             * Y
+             * @default 0
+             */
+            y: number;
+        };
+        /** FlowProblem */
+        FlowProblem: {
+            /** Node */
+            node: string | null;
+            /** Message */
+            message: string;
+        };
+        /** FlowRunBody */
+        FlowRunBody: {
+            /** Dry Run */
+            dry_run?: boolean | null;
+        };
+        /** FlowRunBrief */
+        FlowRunBrief: {
+            /** Id */
+            id: number;
+            /** Flow Id */
+            flow_id: number;
+            /** Flow Name */
+            flow_name: string;
+            /** Flow Version */
+            flow_version: number;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "manual" | "schedule";
+            /** Dry Run */
+            dry_run: boolean;
+            /** Started At */
+            started_at: number | null;
+            /** Finished At */
+            finished_at: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "ok" | "partial" | "error";
+            /** Error */
+            error: string | null;
+            /** Titles */
+            titles: number;
+            /** Added */
+            added: number;
+            /** Tagged */
+            tagged: number;
+            /** Present */
+            present: number;
+            /** Skipped */
+            skipped: number;
+            /** Failed */
+            failed: number;
+        };
+        /** FlowRunDetail */
+        FlowRunDetail: {
+            /** Id */
+            id: number;
+            /** Flow Id */
+            flow_id: number;
+            /** Flow Name */
+            flow_name: string;
+            /** Flow Version */
+            flow_version: number;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "manual" | "schedule";
+            /** Dry Run */
+            dry_run: boolean;
+            /** Started At */
+            started_at: number | null;
+            /** Finished At */
+            finished_at: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "ok" | "partial" | "error";
+            /** Error */
+            error: string | null;
+            /** Titles */
+            titles: number;
+            /** Added */
+            added: number;
+            /** Tagged */
+            tagged: number;
+            /** Present */
+            present: number;
+            /** Skipped */
+            skipped: number;
+            /** Failed */
+            failed: number;
+            /** Notes */
+            notes: string[];
+            /** Current */
+            current: boolean;
+            /** Nodes */
+            nodes: components["schemas"]["RunNode"][];
+            /** Sources */
+            sources: components["schemas"]["RunBrief"][];
+            /** Previous */
+            previous: number | null;
+            /** Next */
+            next: number | null;
+        };
+        /** FlowRunsPage */
+        FlowRunsPage: {
+            /** Runs */
+            runs: components["schemas"]["FlowRunBrief"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Pages */
+            pages: number;
+        };
+        /** FlowTitle */
+        FlowTitle: {
+            media: components["schemas"]["MediaView"];
+            /** Outcomes */
+            outcomes: components["schemas"]["TraceStep"][];
+            /** Steps */
+            steps: components["schemas"]["TraceStep"][];
+        };
+        /** FlowTitlesPage */
+        FlowTitlesPage: {
+            /** Rows */
+            rows: components["schemas"]["FlowTitle"][];
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Pages */
+            pages: number;
+        };
+        /**
+         * FlowUpdate
+         * @description Only the fields sent change. schedule null (or empty) means manual.
+         */
+        FlowUpdate: {
+            /** Name */
+            name?: string | null;
+            graph?: components["schemas"]["FlowGraph-Input"] | null;
+            /** Schedule */
+            schedule?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Dry Run */
+            dry_run?: boolean | null;
+        };
+        /** FlowView */
+        FlowView: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Version */
+            version: number;
+            /** Schedule */
+            schedule: string | null;
+            /** Schedule Text */
+            schedule_text: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Next Run At */
+            next_run_at: number | null;
+            /** Created At */
+            created_at: number | null;
+            /** Updated At */
+            updated_at: number | null;
+            /** Problems */
+            problems: components["schemas"]["FlowProblem"][];
+            /** Outputs */
+            outputs: string[];
+            /** Nodes */
+            nodes: number;
+            last_run: components["schemas"]["FlowRunBrief"] | null;
+            graph: components["schemas"]["FlowGraph-Output"] | null;
+        };
+        /** FlowsPage */
+        FlowsPage: {
+            /** Flows */
+            flows: components["schemas"]["FlowView"][];
         };
         /** Follows */
         Follows: {
@@ -1937,6 +2480,14 @@ export interface components {
             outcome: string | null;
             /** Run */
             run: number | null;
+            /** Dry Run */
+            dry_run: boolean | null;
+            /** Added */
+            added: number | null;
+            /** Tagged */
+            tagged: number | null;
+            /** Present */
+            present: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -2174,6 +2725,38 @@ export interface components {
             /** Season */
             season: string | null;
         };
+        /** NodeTypePort */
+        NodeTypePort: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /** NodeTypeView */
+        NodeTypeView: {
+            /** Type */
+            type: string;
+            /** Label */
+            label: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "source" | "filter" | "output";
+            /** Inputs */
+            inputs: boolean;
+            /** Ports */
+            ports: components["schemas"]["NodeTypePort"][];
+            /** Fields */
+            fields: components["schemas"]["SourceField"][];
+            /** Missing */
+            missing: string | null;
+        };
+        /** NodeTypes */
+        NodeTypes: {
+            /** Types */
+            types: components["schemas"]["NodeTypeView"][];
+        };
         /** Ok */
         Ok: {
             /**
@@ -2287,6 +2870,15 @@ export interface components {
             plex: string;
             /** Local */
             local: string;
+        };
+        /** PortCount */
+        PortCount: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
         };
         /** PreviewBody */
         PreviewBody: {
@@ -2466,6 +3058,32 @@ export interface components {
             /** Entries */
             entries: components["schemas"]["EntryView"][];
         };
+        /** RunNode */
+        RunNode: {
+            /** Id */
+            id: string;
+            /** Type */
+            type: string;
+            /** Label */
+            label: string;
+            /** Category */
+            category: string;
+            /** Summary */
+            summary: string;
+            /** Count In */
+            count_in: number;
+            /** Ports */
+            ports: components["schemas"]["PortCount"][];
+            /** Entries */
+            entries: {
+                [key: string]: number;
+            } | null;
+            /** Run */
+            run: number | null;
+            /** Error */
+            error: string | null;
+            compare: components["schemas"]["CompareView"] | null;
+        };
         /** RunsPage */
         RunsPage: {
             /** Runs */
@@ -2480,6 +3098,19 @@ export interface components {
             ok: boolean;
             /** Saved */
             saved: string[];
+        };
+        /** ScheduleCheck */
+        ScheduleCheck: {
+            /** Ok */
+            ok: boolean;
+            /** Schedule */
+            schedule: string | null;
+            /** Text */
+            text: string;
+            /** Next Run At */
+            next_run_at: number | null;
+            /** Message */
+            message: string | null;
         };
         /** SetSummary */
         SetSummary: {
@@ -2819,7 +3450,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "text" | "number" | "select" | "multi";
+            type: "text" | "number" | "decimal" | "select" | "multi" | "bool" | "tokens";
             /** Options */
             options: components["schemas"]["FieldOption"][];
             /** Default */
@@ -2838,6 +3469,10 @@ export interface components {
             when: {
                 [key: string]: string[];
             } | null;
+            /** Step */
+            step: number | null;
+            /** Dynamic */
+            dynamic: string | null;
         };
         /** Status */
         Status: {
@@ -2896,6 +3531,21 @@ export interface components {
             message: string;
             /** Url */
             url: string;
+        };
+        /** TraceStep */
+        TraceStep: {
+            /** Node */
+            node: string;
+            /** Label */
+            label: string;
+            /** Category */
+            category: string;
+            /** Port */
+            port: string | null;
+            /** Port Label */
+            port_label: string;
+            /** Detail */
+            detail: string;
         };
         /** UrlBody */
         UrlBody: {
@@ -4523,6 +5173,7 @@ export interface operations {
             query?: {
                 source_ref?: string;
                 limit?: number;
+                previews?: boolean;
             };
             header?: never;
             path?: never;
@@ -4999,6 +5650,406 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    flows_api_flows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowsPage"];
+                };
+            };
+        };
+    };
+    create_api_flows_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    node_types_api_flows_nodes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeTypes"];
+                };
+            };
+        };
+    };
+    check_api_flows_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowCheckBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_schedule_api_flows_schedule_get: {
+        parameters: {
+            query?: {
+                value?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleCheck"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_flows_runs_get: {
+        parameters: {
+            query?: {
+                flow?: number;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowRunsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_detail_api_flows_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowRunDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_titles_api_flows_runs__run_id__titles_get: {
+        parameters: {
+            query?: {
+                show?: string;
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowTitlesPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    flow_api_flows__flow_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_api_flows__flow_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_api_flows__flow_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_api_flows__flow_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                flow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["FlowRunBody"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    arr_options_api_arr__service__options_get: {
+        parameters: {
+            query?: {
+                fresh?: boolean;
+            };
+            header?: never;
+            path: {
+                service: "radarr" | "sonarr";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrOptions"];
                 };
             };
             /** @description Validation Error */

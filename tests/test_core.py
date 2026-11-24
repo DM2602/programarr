@@ -268,9 +268,9 @@ async def test_posters_uploaded_into_plex_become_files(world):
 
 def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     database = db.Database(tmp_path / "programarr.db")
-    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 2
+    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 3
     database.close()
-    # A file from version 1: copied before the migration, data kept, the list tables added.
+    # A file from version 1: copied before the migration, data kept, the list and flow tables added.
     path = tmp_path / "old.db"
     conn = sqlite3.connect(path)
     conn.executescript(db.SCHEMA_V1 + "\nPRAGMA user_version=1;")
@@ -278,11 +278,24 @@ def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
     database = db.Database(path)
-    assert database.scalar("PRAGMA user_version") == 2
+    assert database.scalar("PRAGMA user_version") == 3
     assert database.one("SELECT title, show_status FROM items WHERE key='1'") == {"title": "Old", "show_status": "ended"}
     assert (tmp_path / "programarr-pre-v1.db").exists()
     tables = {row["name"] for row in database.query("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {"media_cache", "parser_runs", "parser_entries", "parser_overrides", "exclusions"} <= tables
+    assert {"media_cache", "parser_runs", "parser_entries", "parser_overrides", "exclusions",
+            "flows", "flow_runs", "flow_trace"} <= tables
+    database.close()
+    # A file from version 2 (match log in use): only the flow tables come in, the runs stay.
+    path = tmp_path / "v2.db"
+    conn = sqlite3.connect(path)
+    conn.executescript(db.SCHEMA_V1 + db.SCHEMA_V2 + "\nPRAGMA user_version=2;")
+    conn.execute("INSERT INTO parser_runs (source, source_ref, status) VALUES ('mdblist', 'mdblist:x', 'ok')")
+    conn.commit()
+    conn.close()
+    database = db.Database(path)
+    assert database.scalar("PRAGMA user_version") == 3
+    assert database.scalar("SELECT COUNT(*) FROM parser_runs") == 1
+    assert (tmp_path / "programarr-pre-v2.db").exists()
     database.close()
     monkeypatch.setattr(db, "SCHEMA_VERSION", 1)
     with pytest.raises(RuntimeError, match="newer Programarr"):

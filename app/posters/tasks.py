@@ -111,10 +111,12 @@ async def check_sets(item_keys: list[str] | None = None) -> dict:
 
 
 async def maintenance() -> dict:
-    from ..lists import runs  # late import: lists depend on the media modules
+    from ..flows import store as flows  # late imports: lists and flows depend on the media modules
+    from ..lists import runs
 
     prune_events(60)
     cache.prune()
+    flows.prune()
     runs.prune()
     database = db.get()
     database.execute("DELETE FROM jobs WHERE finished_at IS NOT NULL AND finished_at < ?", (db.now() - 30 * 86400,))

@@ -17,13 +17,15 @@ COLORS = {
     "set_changed": 0x4F8FD6,
     "detect": 0x4F8FD6,
     "error": 0xD0533F,
+    "flow": 0x6366F1,
+    "flow_dry": 0x8A8F98,
     "test": 0x8A8F98,
 }
 
 
 async def send(kind: str, title: str, description: str = "", image: bytes | None = None,
                item_key: str | None = None, fields: list[tuple[str, str]] | None = None,
-               webhook: str | None = None) -> bool:
+               webhook: str | None = None, path: str | None = None) -> bool:
     url = webhook or settings.get("discord_webhook")
     if not url:
         return False
@@ -38,6 +40,8 @@ async def send(kind: str, title: str, description: str = "", image: bytes | None
     base = (settings.get("base_url") or "").rstrip("/")
     if base and item_key:
         embed["url"] = f"{base}/item/{item_key}"
+    elif base and path:
+        embed["url"] = f"{base}{path}"
     if fields:
         embed["fields"] = [{"name": name[:250], "value": value[:1000] or "–", "inline": True} for name, value in fields]
     files = None
