@@ -60,7 +60,8 @@ async def node_types():
 @router.post("/flows/check", response_model=FlowCheck)
 async def check(body: FlowCheckBody):
     checked = graphs.check(body.graph.model_dump())
-    return {"problems": [problem.as_dict() for problem in checked.problems]}
+    return {"problems": [problem.as_dict() for problem in checked.problems],
+            "summaries": {node_id: info["summary"] for node_id, info in graphs.summaries(checked).items()}}
 
 
 @router.get("/flows/schedule", response_model=ScheduleCheck)

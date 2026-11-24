@@ -1894,6 +1894,10 @@ export interface components {
         FlowCheck: {
             /** Problems */
             problems: components["schemas"]["FlowProblem"][];
+            /** Summaries */
+            summaries: {
+                [key: string]: string;
+            };
         };
         /** FlowCheckBody */
         FlowCheckBody: {
@@ -2189,6 +2193,10 @@ export interface components {
             updated_at: number | null;
             /** Problems */
             problems: components["schemas"]["FlowProblem"][];
+            /** Summaries */
+            summaries: {
+                [key: string]: string;
+            };
             /** Outputs */
             outputs: string[];
             /** Nodes */
@@ -3519,6 +3527,11 @@ export interface components {
              * @default 0
              */
             match_open: number;
+            /**
+             * Flows Failed
+             * @default 0
+             */
+            flows_failed: number;
         };
         /** TokenBody */
         TokenBody: {

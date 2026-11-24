@@ -4,9 +4,9 @@ Self-hosted companion for Plex: posters now, content flows, collections and the 
 Plex stays the source of truth. Posters are written as files next to the media ("Use local assets"),
 nothing is uploaded to or locked in Plex.
 
-Status: phase 2. Posters (formerly Litfass) plus list sources: FlixPatrol, MDBList, TMDB and Trakt
-are read and matched to TMDB as previews, with a match log, corrections and exclusions. Nothing from
-lists is written to Plex yet; that comes with content flows (phase 3).
+Status: phase 3. Posters (formerly Litfass), list sources (FlixPatrol, MDBList, TMDB, Trakt) matched
+to TMDB with a match log, corrections and exclusions, and flows that hand list titles to Radarr and
+Sonarr. Collections and the home screen follow in phase 4.
 
 ## Run with Docker
 
@@ -22,6 +22,7 @@ Open `http://<host>:8796` and follow the setup on the dashboard:
 3. Settings › Automation: preferred designers
 4. Dashboard: Finish and sync
 5. Optional, for lists: Settings › Lists (MDBList API key for ratings, Trakt client ID), TMDB key under Sources
+6. Optional, for flows: Settings › Services (Radarr and Sonarr address and API key)
 
 In Plex, turn on "Use local assets" for each library (Advanced).
 
@@ -42,6 +43,20 @@ Lists › Lists reads a source once and shows how every entry was matched. FlixP
 matched like the FlixPatrol script did: exact title and year, then year ±1, then the title without a
 year; TMDB's alternative titles count too. Anything else lands in Lists › Match log with candidates.
 A fix or an ignore holds for future runs; excluded titles never appear in a list.
+
+### Flows
+
+Flows › Flows connects sources, filters (rating, release, genre, country, language, list position,
+seasons, movie or show, in Plex) and Radarr or Sonarr in an editor. Each filter sends a title to Match
+or No match. Radarr and Sonarr add new titles with the profile, root folder and tags of their node, at
+most the set number per run; titles they already have only get the missing tags, and titles on their
+exclusion lists are skipped. Sonarr needs a TVDB ID and Sonarr v4.
+
+New flows run as a dry run: each run shows what would be added, title by title, without writing
+anything. "Go live" switches a flow to real runs. An output can compare its titles with MDBList lists,
+e.g. the import lists in Radarr and Sonarr, until the flow gives the same result. Flows run by hand,
+on an interval (`every:6h`) or by cron (`0 6 * * *`, container time zone). Runs are kept 60 days
+(Settings › Lists), the last run of every flow stays.
 
 ### Data
 

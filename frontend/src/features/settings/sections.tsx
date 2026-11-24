@@ -153,7 +153,7 @@ export function ListsSection({ view }: { view: View }) {
       </SettingsSection>
       <SettingsSection title="Matching">
         <NumberField form={form} name="ratings_days" label="Refresh ratings after" hint="Days" min={1} max={90} />
-        <NumberField form={form} name="runs_keep_days" label="Keep previews" hint="Days. The last preview of each list stays." min={1} max={365} />
+        <NumberField form={form} name="runs_keep_days" label="Keep previews and flow runs" hint="Days. The last run of each list and flow stays." min={1} max={365} />
       </SettingsSection>
     </SettingsForm>
   );

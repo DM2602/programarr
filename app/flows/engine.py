@@ -185,6 +185,7 @@ async def _execute(run_id: int, checked: graphs.Checked, infos: dict, dry: bool,
     trace: dict[tuple[int, str], tuple[str | None, str]] = {}
     nodes: dict[str, dict] = {node_id: dict(info) for node_id, info in infos.items()}
     totals = {port: 0 for port in store.OUTPUT_PORTS}
+    compared_lists: dict[str, dict] = {}
     for node_id in checked.order:
         node_type = checked.type_of(node_id)
         config = checked.configs[node_id]
@@ -217,7 +218,7 @@ async def _execute(run_id: int, checked: graphs.Checked, infos: dict, dry: bool,
         info["out"] = {port: count for port, count in result.counts.items() if count}
         for port, count in result.counts.items():
             totals[port] += count
-        compared = await outputs.compare(node_type, config, titles, run_id)
+        compared = await outputs.compare(node_type, config, titles, run_id, compared_lists)
         if compared is not None:
             info["compare"] = compared
             failed = [entry["ref"] for entry in compared["lists"] if entry["error"]]

@@ -127,11 +127,13 @@ def check(graph: dict | None) -> Checked:
         if node_type.ports and not has_out:
             problems.append(Problem(node_id, "Connect an output"))
 
-    # Kahn's algorithm keeps the editor's order where it can; what is left forms a loop.
+    # Kahn's algorithm, taking the node listed first whenever several are ready; what is left forms a loop.
     order: list[str] = []
     waiting = dict(incoming)
+    position = {node_id: index for index, node_id in enumerate(ids)}
     ready = [node_id for node_id in ids if node_id in known and waiting[node_id] == 0]
     while ready:
+        ready.sort(key=position.__getitem__)
         node_id = ready.pop(0)
         order.append(node_id)
         for edge in edges:

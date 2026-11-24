@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from .. import arr, config, db, http, jobs, notify, settings
 from ..plex import Plex, PlexError
 from ..posters import library, tasks, views
+from ..flows import store as flow_store
 from ..lists import runs as list_runs
 from ..lists import trakt
 from ..media import mdblist
@@ -52,6 +53,7 @@ async def overview():
             "unlinked_with_files": views.unlinked_with_files("show"),
             "detect_open": counts["review_kinds"].get("detect", 0),
             "match_open": list_runs.problem_count(),
+            "flows_failed": flow_store.failed_count(),
         },
         "recent": views.recent_cards(),
         "facts": {"movies": counts["movies"], "shows": counts["shows"], "linked": counts["linked"],

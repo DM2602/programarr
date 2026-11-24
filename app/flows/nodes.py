@@ -382,8 +382,7 @@ class TypeSwitch(Filter):
         return "Movies and shows apart"
 
     def test(self, config: dict, title: Title) -> Verdict:
-        kind = title.media["kind"]
-        return Verdict(kind, "Movie" if kind == "movie" else "Show")
+        return Verdict(title.media["kind"])
 
 
 class PlexFilter(Filter):

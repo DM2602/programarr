@@ -130,6 +130,7 @@ class Todo(Model):
     unlinked_with_files: int
     detect_open: int
     match_open: int = 0
+    flows_failed: int = 0
 
 
 class RecentCard(Model):
@@ -958,6 +959,7 @@ class FlowView(Model):
     created_at: int | None = None
     updated_at: int | None = None
     problems: list[FlowProblem]
+    summaries: dict[str, str]
     outputs: list[str]
     nodes: int
     last_run: FlowRunBrief | None = None
@@ -993,6 +995,7 @@ class FlowCheckBody(Body):
 
 class FlowCheck(Model):
     problems: list[FlowProblem]
+    summaries: dict[str, str]  # one line per node, for the editor
 
 
 class ScheduleCheck(Model):

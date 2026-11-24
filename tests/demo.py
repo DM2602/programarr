@@ -99,6 +99,54 @@ async def build(world) -> None:
     world.sonarr.add_series(412429, "The Bear", "the-bear", seasons=[
         {"seasonNumber": n, "monitored": n != 5, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 10}}
         for n in (1, 2, 3, 4, 5)])
+    await build_flows(world)
+
+
+TOP10_FLOW = {
+    "nodes": [
+        {"id": "flixpatrol1", "type": "flixpatrol", "position": {"x": 0, "y": 120},
+         "config": {"platform": "netflix", "region": "switzerland", "sections": ["movies", "shows"], "limit": 10}},
+        {"id": "type1", "type": "type", "position": {"x": 290, "y": 120}, "config": {}},
+        {"id": "rating1", "type": "rating", "position": {"x": 580, "y": 0},
+         "config": {"metric": "imdb", "min": 6, "missing": "match"}},
+        {"id": "radarr1", "type": "radarr", "position": {"x": 870, "y": 0},
+         "config": {"quality_profile": 1, "root_folder": "/data/movies", "tags": ["top-10"], "limit": 5,
+                    "compare": ["dominik/netflix-ch"]}},
+        {"id": "sonarr1", "type": "sonarr", "position": {"x": 870, "y": 260},
+         "config": {"quality_profile": 1, "root_folder": "/data/tv", "tags": ["top-10"]}},
+    ],
+    "edges": [
+        {"source": "flixpatrol1", "port": "out", "target": "type1"},
+        {"source": "type1", "port": "movie", "target": "rating1"},
+        {"source": "rating1", "port": "match", "target": "radarr1"},
+        {"source": "type1", "port": "show", "target": "sonarr1"},
+    ],
+}
+
+
+async def build_flows(world) -> None:
+    """Netflix Switzerland to Radarr and Sonarr with one dry run, and a Trakt flow not run yet."""
+    from app.flows import engine, store
+
+    world.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # there already: only the tag is missing
+    for tmdb_id, name in ((1001, "Guarding Stars"), (1002, "Steps"), (1003, "Heartland"), (1004, "The Christmas Switch")):
+        world.radarr.know(tmdb_id, name, 2026)
+    for tvdb_id, name, year in ((480001, "The Law of Beasts", 2026), (480002, "The Body", 2026), (450003, "Black Doves", 2024),
+                                (383365, "Lupin", 2021), (420005, "The Empress", 2022)):
+        world.sonarr.know(tvdb_id, name, year)
+    flow_id = store.create("Netflix Switzerland", TOP10_FLOW, "every:6h")
+    await engine.run(flow_id)
+    store.create("Trakt trending", {
+        "nodes": [
+            {"id": "trakt1", "type": "trakt", "position": {"x": 0, "y": 0},
+             "config": {"chart": "trending", "type": "movies", "limit": 20}},
+            {"id": "year1", "type": "year", "position": {"x": 290, "y": 0}, "config": {"mode": "recent", "months": 12}},
+            {"id": "radarr1", "type": "radarr", "position": {"x": 580, "y": 0},
+             "config": {"quality_profile": 4, "root_folder": "/data/movies", "tags": ["trakt"]}},
+        ],
+        "edges": [{"source": "trakt1", "port": "out", "target": "year1"},
+                  {"source": "year1", "port": "match", "target": "radarr1"}],
+    })
 
 
 async def build_lists(world) -> None:

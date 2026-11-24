@@ -24,7 +24,8 @@ sys.path.insert(0, str(ROOT))
 PORT = 8795
 BASE = f"http://127.0.0.1:{PORT}"
 MAIN_PAGES = ("/", "/library", "/review", "/waiting", "/match", "/history", "/lists", "/lists/matches",
-              "/lists/exclusions", "/logs", "/settings/plex", "/settings/lists", "/settings/services")
+              "/lists/exclusions", "/flows", "/flows/history", "/logs", "/settings/plex", "/settings/lists",
+              "/settings/services")
 
 
 def png(color: tuple[int, int, int]) -> bytes:
@@ -95,6 +96,27 @@ class Steps:
 def goto(page, path: str) -> None:
     page.goto(BASE + path)
     page.wait_for_load_state("networkidle")
+
+
+def settled(locator) -> dict:
+    """The element's box once it stops moving (the canvas may still pan)."""
+    box = locator.bounding_box()
+    for _ in range(30):
+        time.sleep(0.1)
+        again = locator.bounding_box()
+        if again == box:
+            return box
+        box = again
+    return box
+
+
+def drag(page, source, target) -> None:
+    """Drag with the mouse from one element to another (React Flow connections)."""
+    start, end = settled(source), settled(target)
+    page.mouse.move(start["x"] + start["width"] / 2, start["y"] + start["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(end["x"] + end["width"] / 2, end["y"] + end["height"] / 2, steps=15)
+    page.mouse.up()
 
 
 def run_browser(world, keep: bool, shots: Path | None) -> int:
@@ -361,6 +383,97 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         steps.ok("MDBList key and Trakt client ID checked", page)
 
         # 21
+        top10 = db.get().one("SELECT id, version FROM flows WHERE name='Netflix Switzerland'")
+        goto(page, "/flows")
+        page.wait_for_selector(".flow-row")
+        assert page.locator(".flow-row").count() == 2
+        row = page.locator(f".flow-row[data-flow='{top10['id']}']")
+        assert " ".join(row.locator("[data-total=added]").inner_text().split()) == "10 to add"
+        row.locator(f"a[href='/flows/{top10['id']}']").click()
+        page.wait_for_selector("[data-node=radarr1] [data-outcome=added]")
+        assert page.get_attribute("[data-node=flixpatrol1] [data-count-in]", "data-count-in") == "16"
+        assert page.inner_text("[data-node=radarr1] [data-outcome=added]").split() == ["To", "add", "5"]
+        page.wait_for_selector("[data-checks=ok]")
+        steps.ok("Flow editor shows the last dry run on its nodes", page)
+
+        # 22
+        page.click("[data-node=radarr1]")
+        page.wait_for_selector("[data-panel=radarr1]")
+        assert page.input_value("[data-panel=radarr1] select[data-field=quality_profile]") == "1"
+        page.fill("[data-panel=radarr1] input[data-field=limit]", "3")
+        page.wait_for_selector("text=Unsaved")
+        page.click("[data-action=save]")
+        wait_for(lambda: db.get().scalar("SELECT version FROM flows WHERE id=?", (top10["id"],)) == top10["version"] + 1,
+                 what="flow saved")
+        page.wait_for_selector("text=Unsaved", state="detached")
+        page.click("[data-action=dry-run]")
+        page.wait_for_url(re.compile(r".*/flows/runs/\d+$"))
+        page.wait_for_selector(".output-card [data-output=radarr1]")
+        radarr_card = page.locator(".output-card").filter(has=page.locator("[data-output=radarr1]"))
+        assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 to add"
+        assert radarr_card.locator("[data-both]").get_attribute("data-both") == "2"  # the MDBList import list
+        assert world.radarr.writes == world.sonarr.writes == 0
+        radarr_card.locator("[data-outcome=tagged]").click()
+        wait_for(lambda: page.locator(".flow-title").count() == 1, what="titles to tag")
+        assert page.locator(".flow-title").first.get_attribute("data-title") == "The Grinch"
+        steps.ok("Limit saved, the dry run shows what Radarr would get and compares with MDBList", page)
+
+        # 23
+        goto(page, "/flows")
+        page.click("[data-action=new-flow]")
+        page.fill("[role=dialog] input", "TMDB to Radarr")
+        page.click("[role=dialog] button[type=submit]")
+        page.wait_for_url(re.compile(r".*/flows/\d+$"))
+        page.click("[data-add-menu=source]")
+        page.click(".add-menu [data-add=tmdb]")
+        page.wait_for_selector("[data-panel=tmdb1]")
+        page.click("[data-action=close-panel]")
+        page.click("[data-add-menu=output]")
+        page.click(".add-menu [data-add=radarr]")
+        page.wait_for_selector("[data-panel=radarr1] select[data-field=root_folder] option[value='/data/movies']",
+                               state="attached")
+        page.click("[data-action=close-panel]")
+        page.wait_for_selector("[data-checks='2']")  # both nodes want a connection
+        drag(page, page.locator("[data-node=tmdb1] .react-flow__handle.source"),
+             page.locator("[data-node=radarr1] .react-flow__handle.target"))
+        page.wait_for_selector("[data-checks=ok]")
+        page.click("[data-action=save]")
+        page.wait_for_selector("text=Unsaved", state="detached")
+        built = db.get().one("SELECT graph, dry_run FROM flows WHERE name='TMDB to Radarr'")
+        graph = db.loads(built["graph"])
+        assert graph["edges"] == [{"source": "tmdb1", "port": "out", "target": "radarr1"}] and built["dry_run"] == 1
+        radarr_node = next(node for node in graph["nodes"] if node["id"] == "radarr1")
+        assert (radarr_node["config"]["quality_profile"], radarr_node["config"]["root_folder"]) == (1, "/data/movies")
+        steps.ok("New flow built in the editor: TMDB connected to Radarr", page)
+
+        # 24
+        goto(page, f"/flows/{top10['id']}")
+        page.click("[data-action=go-live]")
+        page.click("[role=dialog] button[type=submit]")
+        page.wait_for_selector("[data-action=run]")
+        assert db.get().scalar("SELECT dry_run FROM flows WHERE id=?", (top10["id"],)) == 0
+        page.click("[data-action=run]")
+        page.wait_for_url(re.compile(r".*/flows/runs/\d+$"))
+        page.wait_for_selector(".output-card [data-output=radarr1]")
+        assert [body["tmdbId"] for body in world.radarr.added] == [1001, 1002, 1003]
+        assert sorted(body["tvdbId"] for body in world.sonarr.added) == [383365, 420005, 450003, 480001, 480002]
+        grinch = next(row for row in world.radarr.titles if row["tmdbId"] == 360920)
+        assert world.radarr.tag_labels(grinch) == ["top-10"]
+        radarr_card = page.locator(".output-card").filter(has=page.locator("[data-output=radarr1]"))
+        assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 added"
+        steps.ok("Flow live: Radarr and Sonarr get the titles, the Grinch only its tag", page)
+
+        # 25
+        goto(page, "/flows/history")
+        page.wait_for_selector(".history-run")
+        assert page.locator(".history-run").count() == 3
+        page.select_option("select", label="TMDB to Radarr")
+        page.wait_for_selector("text=No runs yet")
+        goto(page, "/")
+        assert page.locator("[data-testid=todo] a[href='/flows']").count() == 0
+        steps.ok("Flow history lists the runs, filtered by flow", page)
+
+        # 26
         visited: set[str] = set()
         for path in MAIN_PAGES:
             goto(page, path)

@@ -5014,11 +5014,19 @@
             },
             "type": "array",
             "title": "Problems"
+          },
+          "summaries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Summaries"
           }
         },
         "type": "object",
         "required": [
-          "problems"
+          "problems",
+          "summaries"
         ],
         "title": "FlowCheck"
       },
@@ -5808,6 +5816,13 @@
             "type": "array",
             "title": "Problems"
           },
+          "summaries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Summaries"
+          },
           "outputs": {
             "items": {
               "type": "string"
@@ -5853,6 +5868,7 @@
           "created_at",
           "updated_at",
           "problems",
+          "summaries",
           "outputs",
           "nodes",
           "last_run",
@@ -10170,6 +10186,11 @@
             "type": "integer",
             "title": "Match Open",
             "default": 0
+          },
+          "flows_failed": {
+            "type": "integer",
+            "title": "Flows Failed",
+            "default": 0
           }
         },
         "type": "object",
@@ -10179,7 +10200,8 @@
           "problems",
           "unlinked_with_files",
           "detect_open",
-          "match_open"
+          "match_open",
+          "flows_failed"
         ],
         "title": "Todo"
       },

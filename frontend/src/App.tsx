@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 import { onUnauthorized, type Schemas } from "./api/client";
 import { useAuthState } from "./api/queries";
@@ -8,6 +8,9 @@ import { Layout } from "./components/Layout";
 import { Loading } from "./components/ui";
 import { Login } from "./features/auth/Login";
 import { Dashboard } from "./features/dashboard/Dashboard";
+import { FlowHistory } from "./features/flows/FlowHistory";
+import { FlowRun } from "./features/flows/FlowRun";
+import { Flows } from "./features/flows/Flows";
 import { Exclusions } from "./features/lists/Exclusions";
 import { Lists } from "./features/lists/Lists";
 import { MatchLog } from "./features/lists/MatchLog";
@@ -21,6 +24,9 @@ import { Waiting } from "./features/posters/Waiting";
 import { Settings } from "./features/settings/Settings";
 import { Logs } from "./features/system/Logs";
 import { NotFound } from "./features/system/NotFound";
+
+// The editor brings React Flow along; it loads when a flow is opened.
+const FlowEditor = lazy(() => import("./features/flows/FlowEditor").then((module) => ({ default: module.FlowEditor })));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { data, isPending, isError, refetch } = useAuthState();
@@ -75,6 +81,17 @@ export function App() {
         <Route path="lists/runs/:id" element={<RunPage />} />
         <Route path="lists/matches" element={<MatchLog />} />
         <Route path="lists/exclusions" element={<Exclusions />} />
+        <Route path="flows" element={<Flows />} />
+        <Route path="flows/history" element={<FlowHistory />} />
+        <Route path="flows/runs/:id" element={<FlowRun />} />
+        <Route
+          path="flows/:id"
+          element={
+            <Suspense fallback={<Loading />}>
+              <FlowEditor />
+            </Suspense>
+          }
+        />
         <Route path="logs" element={<Logs />} />
         <Route path="settings" element={<Navigate to="/settings/plex" replace />} />
         <Route path="settings/:section" element={<Settings />} />

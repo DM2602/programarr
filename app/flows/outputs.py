@@ -119,31 +119,39 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
     return sent
 
 
-async def compare(node: ArrOutput, config: dict, titles: list[Title], flow_run_id: int) -> dict | None:
-    """The titles that reached the output against MDBList lists (the import lists Radarr and Sonarr use)."""
+async def _read_list(ref: str, flow_run_id: int) -> dict:
+    """One MDBList list as matched titles: {"run", "error", "titles": [(media id, kind)]}."""
+    try:
+        params = runs.prepare("mdblist", {"list": ref, "limit": 1000})
+    except SourceError as exc:
+        return {"run": None, "error": str(exc), "titles": []}
+    outcome = await runs.preview("mdblist", params, flow_run_id=flow_run_id)
+    if outcome["outcome"] == "error":
+        return {"run": outcome["run"], "error": outcome["message"], "titles": []}
+    rows = db.get().query(
+        "SELECT e.media_id, m.kind FROM parser_entries e JOIN media_cache m ON m.id=e.media_id "
+        "WHERE e.run_id=? AND e.status='matched'", (outcome["run"],))
+    return {"run": outcome["run"], "error": None, "titles": [(row["media_id"], row["kind"]) for row in rows]}
+
+
+async def compare(node: ArrOutput, config: dict, titles: list[Title], flow_run_id: int,
+                  read: dict[str, dict] | None = None) -> dict | None:
+    """The titles that reached the output against MDBList lists (the import lists Radarr and Sonarr use).
+
+    read keeps the lists already read in this run, so two outputs comparing with one list read it once.
+    """
     if not config.get("compare"):
         return None
+    read = read if read is not None else {}
     kind = "movie" if node.service == "radarr" else "show"
     lists = []
     listed: set[int] = set()
     for ref in config["compare"]:
-        try:
-            params = runs.prepare("mdblist", {"list": ref, "limit": 1000})
-        except SourceError as exc:
-            lists.append({"ref": ref, "run": None, "error": str(exc)})
-            continue
-        outcome = await runs.preview("mdblist", params, flow_run_id=flow_run_id)
-        entry = {"ref": ref, "run": outcome["run"], "error": None}
-        if outcome["outcome"] == "error":
-            entry["error"] = outcome["message"]
-        else:
-            rows = db.get().query(
-                "SELECT e.media_id FROM parser_entries e JOIN media_cache m ON m.id=e.media_id "
-                "WHERE e.run_id=? AND e.status='matched' AND m.kind=?",
-                (outcome["run"], kind),
-            )
-            listed.update(row["media_id"] for row in rows)
-        lists.append(entry)
+        if ref not in read:
+            read[ref] = await _read_list(ref, flow_run_id)
+        found = read[ref]
+        lists.append({"ref": ref, "run": found["run"], "error": found["error"]})
+        listed.update(media_id for media_id, media_kind in found["titles"] if media_kind == kind)
     flow = {title.media_id for title in titles if title.media.get("kind") == kind}
     return {
         "lists": lists,

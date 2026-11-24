@@ -163,7 +163,7 @@ def test_filters(world):
     assert verdict("seasons", {"max": 2}, title(kind="show", seasons=3)) == ("no_match", "3 seasons")
     assert verdict("seasons", {"min": 1, "max": 2}, title(kind="show", seasons=1)) == ("match", "1 season")
     assert verdict("seasons", {"max": 2}, title()) == ("no_match", "Movie")
-    assert verdict("type", {}, title(kind="show")) == ("show", "Show")
+    assert verdict("type", {}, title(kind="show")) == ("show", "")
     plex = TYPES.types["plex"]
     assert plex.test({}, Title(1, {"kind": "movie"}, in_plex=True)).port == "match"
     assert TYPES.types["year"].summary(TYPES.types["year"].clean({"mode": "recent", "months": 24})) == \
@@ -213,7 +213,7 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     assert [row["media"]["title"] for row in titles["rows"]] == ["Lupin", "The Grinch"]
     lupin = titles["rows"][0]
     assert [(step["label"], step["port_label"], step["detail"]) for step in lupin["steps"]] == [
-        ("FlixPatrol", "Titles", "#4 TV Shows"), ("Movie or show", "Shows", "Show"), ("Sonarr", "Tags added", "Tags: top-10")]
+        ("FlixPatrol", "Titles", "#4 TV Shows"), ("Movie or show", "Shows", ""), ("Sonarr", "Tags added", "Tags: top-10")]
 
 
 async def test_live_run_adds_once_and_then_only_tags(lists):
@@ -275,7 +275,7 @@ async def test_compare_with_the_mdblist_import_list(lists):
     assert len(compare["flow_only"]) == 6 and compare["flow_only"][0]["kind"] == "movie"
     sonarr = next(node for node in detail["nodes"] if node["id"] == "sonarr")["compare"]
     assert sonarr["both"] == 1 and len(sonarr["flow_only"]) == 8
-    assert len(detail["sources"]) == 3  # FlixPatrol and the list, read once per output
+    assert len(detail["sources"]) == 2  # FlixPatrol and the list, read once for both outputs
 
 
 async def test_failing_source_and_unreachable_radarr(lists):
@@ -301,6 +301,7 @@ async def test_errors_are_reported_once(lists):
     assert first["outcome"] == second["outcome"] == "error"
     errors = [message for message in lists.discord.messages if message["embeds"][0]["title"].startswith("Flow failed")]
     assert len(errors) == 1
+    assert store.failed_count() == 1  # a tile on the dashboard
 
 
 def test_prune_keeps_the_last_run_of_each_flow(world):
@@ -348,7 +349,8 @@ def test_api(lists, client):  # noqa: F811
     flow_id = created["id"]
     assert client.post(f"/api/flows/{flow_id}/run", json={}).json()["detail"] == "Fix the flow first: Add a source"
     assert client.put(f"/api/flows/{flow_id}", json={"dry_run": False}).status_code == 400
-    assert client.post("/api/flows/check", json={"graph": top10()}).json() == {"problems": []}
+    checked = client.post("/api/flows/check", json={"graph": top10()}).json()
+    assert checked["problems"] == [] and checked["summaries"]["radarr"] == "/data/movies, tags top-10"
 
     updated = client.put(f"/api/flows/{flow_id}", json={"graph": top10(), "schedule": None}).json()
     assert updated["version"] == 2 and updated["problems"] == [] and updated["schedule_text"] == "Manual"

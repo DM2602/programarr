@@ -110,6 +110,7 @@ def view(flow: dict, with_graph: bool = True) -> dict:
         "created_at": flow["created_at"],
         "updated_at": flow["updated_at"],
         "problems": [problem.as_dict() for problem in checked.problems],
+        "summaries": {node_id: info["summary"] for node_id, info in graphs.summaries(checked).items()},
         "outputs": sorted({TYPES.types[node["type"]].label for node in flow["graph"]["nodes"]
                            if node["type"] in TYPES.types and TYPES.types[node["type"]].category == "output"}),
         "nodes": len(flow["graph"]["nodes"]),
@@ -302,6 +303,13 @@ def run_titles(run_id: int, show: str = "all", q: str = "", page: int = 1) -> di
             "steps": [step_view(step) for step in steps],
         })
     return {"rows": rows, "counts": counts, "total": total, "page": page, "pages": pages}
+
+
+def failed_count() -> int:
+    """Flows whose last run failed (dashboard)."""
+    return db.get().scalar(
+        "SELECT COUNT(*) FROM flow_runs WHERE status='error' "
+        "AND id IN (SELECT MAX(id) FROM flow_runs GROUP BY flow_id)", (), 0)
 
 
 # -- scheduling and housekeeping ---------------------------------------------------------------------

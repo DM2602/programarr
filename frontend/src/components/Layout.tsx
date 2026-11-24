@@ -2,6 +2,7 @@ import {
   ArchiveBoxIcon,
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
+  ClipboardDocumentListIcon,
   ClockIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
@@ -11,6 +12,7 @@ import {
   MagnifyingGlassIcon,
   NoSymbolIcon,
   QueueListIcon,
+  ShareIcon,
   Squares2X2Icon,
   TableCellsIcon,
   XMarkIcon,
@@ -67,6 +69,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     { to: "/lists/matches", label: "Match log", icon: TableCellsIcon, count: counts?.match_open },
     { to: "/lists/exclusions", label: "Exclusions", icon: NoSymbolIcon },
   ];
+  const flows: NavItem[] = [
+    { to: "/flows", label: "Flows", icon: ShareIcon, end: true },
+    { to: "/flows/history", label: "Flow history", icon: ClipboardDocumentListIcon },
+  ];
   const system: NavItem[] = [
     { to: "/logs", label: "Logs", icon: DocumentTextIcon },
     { to: "/settings", label: "Settings", icon: Cog6ToothIcon },
@@ -87,6 +93,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
         <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Lists</p>
         {lists.map((item) => (
+          <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
+        ))}
+        <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Flows</p>
+        {flows.map((item) => (
           <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
         ))}
         <div className="mt-auto pt-6">
