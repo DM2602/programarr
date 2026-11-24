@@ -16,11 +16,59 @@ class FakeTmdb:
         self.key = key
         self.image_base = image_base
         self.titles: dict[str, dict] = {}  # "movie:603" -> {"title":..., "date":...}
+        self.catalog: dict[str, dict] = {}  # "movie:603" -> full title for search, details and lookups
+        self.charts: dict[str, list[str]] = {}  # "/trending/movie/week" -> ["movie:603", ...]
+        self.lists: dict[str, list[str]] = {}  # list id -> ["movie:603", "tv:1399"]
+        self.searches: list[str] = []
         self.app = self._make_app()
         self.images_app = self._make_images()
 
     def add(self, kind: str, tmdb: str, title: str, date: str) -> None:
         self.titles[f"{kind}:{tmdb}"] = {"title": title, "date": date}
+
+    def add_title(self, kind: str, tmdb: int, title: str, date: str, *, original: str | None = None,
+                  popularity: float = 10.0, imdb: str | None = None, tvdb: int | None = None,
+                  alt: tuple[str, ...] = (), poster: bool = True, seasons: list[tuple] = ()) -> None:
+        """kind is TMDB's: movie or tv."""
+        self.catalog[f"{kind}:{tmdb}"] = {
+            "kind": kind, "id": tmdb, "title": title, "original": original or title, "date": date,
+            "popularity": popularity, "imdb": imdb, "tvdb": tvdb, "alt": list(alt),
+            "poster": f"/p{kind}{tmdb}.jpg" if poster else None,
+            "seasons": [{"season_number": n, "episode_count": count, "air_date": date, "poster_path": f"/p{tmdb}s{n}.jpg"}
+                        for n, count, date in seasons],
+        }
+
+    def _result(self, entry: dict, media_type: bool = False) -> dict:
+        if entry["kind"] == "movie":
+            row = {"id": entry["id"], "title": entry["title"], "original_title": entry["original"],
+                   "release_date": entry["date"]}
+        else:
+            row = {"id": entry["id"], "name": entry["title"], "original_name": entry["original"],
+                   "first_air_date": entry["date"]}
+        row.update({"popularity": entry["popularity"], "vote_count": 100, "poster_path": entry["poster"]})
+        if media_type:
+            row["media_type"] = entry["kind"]
+        return row
+
+    @staticmethod
+    def _words(text: str) -> set[str]:
+        import re
+        return {word for word in re.split(r"[^a-z0-9]+", text.lower()) if len(word) >= 3}
+
+    def _search(self, kind: str, query: str, year: str | None) -> list[dict]:
+        wanted = self._words(query)
+        found = []
+        for entry in self.catalog.values():
+            if entry["kind"] != kind:
+                continue
+            names = [entry["title"], entry["original"], *entry["alt"]]
+            if not any(wanted <= self._words(name) for name in names):
+                continue
+            if year and not (entry["date"] or "").startswith(str(year)):
+                continue
+            found.append(entry)
+        found.sort(key=lambda entry: -entry["popularity"])
+        return [self._result(entry) for entry in found]
 
     def _make_app(self) -> FastAPI:
         app = FastAPI()
@@ -37,6 +85,50 @@ class FakeTmdb:
         @app.get("/3/configuration")
         async def configuration():
             return {"images": {"base_url": fake.image_base}}
+
+        @app.get("/3/find/{external}")
+        async def find(external: str, request: Request):
+            source = request.query_params.get("external_source")
+            field = {"imdb_id": "imdb", "tvdb_id": "tvdb"}.get(source)
+            hits = [entry for entry in fake.catalog.values() if field and str(entry.get(field)) == external]
+            return {"movie_results": [fake._result(e) for e in hits if e["kind"] == "movie"],
+                    "tv_results": [fake._result(e) for e in hits if e["kind"] == "tv"]}
+
+        @app.get("/3/search/{kind}")
+        async def search(kind: str, request: Request):
+            query = request.query_params.get("query", "")
+            year = request.query_params.get("year") or request.query_params.get("first_air_date_year")
+            fake.searches.append(f"{kind}:{query}:{year or ''}")
+            return {"page": 1, "results": fake._search(kind, query, year), "total_pages": 1}
+
+        @app.get("/3/trending/{kind}/{window}")
+        async def trending(kind: str, window: str):
+            return fake._chart(f"/trending/{kind}/{window}", True)
+
+        @app.get("/3/list/{list_id}")
+        async def tmdb_list(list_id: str):
+            if list_id not in fake.lists:
+                return JSONResponse({"status_message": "not found"}, status_code=404)
+            items = [fake._result(fake.catalog[key], True) for key in fake.lists[list_id] if key in fake.catalog]
+            return {"id": int(list_id), "items": items, "total_pages": 1}
+
+        @app.get("/3/{kind}/{tmdb}/alternative_titles")
+        async def alternative_titles(kind: str, tmdb: str):
+            entry = fake.catalog.get(f"{kind}:{tmdb}")
+            titles = [{"iso_3166_1": "US", "title": title, "type": ""} for title in (entry or {}).get("alt", [])]
+            return {"id": int(tmdb), "titles": titles} if kind == "movie" else {"id": int(tmdb), "results": titles}
+
+        @app.get("/3/movie/{chart}")
+        async def movie_chart(chart: str, request: Request):
+            if chart.isdigit():
+                return await details("movie", chart, request)
+            return fake._chart(f"/movie/{chart}", False)
+
+        @app.get("/3/tv/{chart}")
+        async def tv_chart(chart: str, request: Request):
+            if chart.isdigit():
+                return await details("tv", chart, request)
+            return fake._chart(f"/tv/{chart}", False)
 
         @app.get("/3/{kind}/{tmdb}/images")
         async def images(kind: str, tmdb: str):
@@ -55,7 +147,22 @@ class FakeTmdb:
                                  "vote_count": 2, "width": 1000, "height": 1500}]}
 
         @app.get("/3/{kind}/{tmdb}")
-        async def details(kind: str, tmdb: str):
+        async def details(kind: str, tmdb: str, request: Request = None):
+            full = fake.catalog.get(f"{kind}:{tmdb}")
+            if full:
+                row = fake._result(full)
+                row["external_ids"] = {"imdb_id": full["imdb"], "tvdb_id": full["tvdb"]}
+                row["genres"] = [{"id": 18, "name": "Drama"}]
+                row["original_language"] = "en"
+                if kind == "movie":
+                    row["production_countries"] = [{"iso_3166_1": "US"}]
+                    row["imdb_id"] = full["imdb"]
+                else:
+                    row["origin_country"] = ["US"]
+                    row["number_of_seasons"] = len(full["seasons"]) or 2
+                    row["seasons"] = full["seasons"]
+                row["status"] = "Released" if kind == "movie" else "Returning Series"
+                return row
             entry = fake.titles.get(f"{kind}:{tmdb}")
             if not entry:
                 return JSONResponse({"status_message": "not found"}, status_code=404)
@@ -63,11 +170,15 @@ class FakeTmdb:
                 return {"id": int(tmdb), "title": entry["title"], "release_date": entry["date"]}
             return {"id": int(tmdb), "name": entry["title"], "first_air_date": entry["date"]}
 
-        @app.get("/3/find/{external}")
-        async def find(external: str):
-            return {"movie_results": [], "tv_results": []}
 
         return app
+
+    def _chart(self, path: str, media_type: bool) -> dict:
+        keys = self.charts.get(path)
+        if keys is None:
+            return JSONResponse({"status_message": "not found"}, status_code=404)
+        rows = [self._result(self.catalog[key], media_type) for key in keys if key in self.catalog]
+        return {"page": 1, "results": rows, "total_pages": 1}
 
     def _make_images(self) -> FastAPI:
         app = FastAPI()
@@ -192,12 +303,15 @@ class FakeDiscord:
 
 
 class FakeFlareSolverr:
-    """Fetches through the TPDB fake as if the browser had solved the challenge."""
+    """Fetches through the fakes as if the browser had solved the challenge."""
 
-    def __init__(self, tpdb_app):
-        self.tpdb_app = tpdb_app
+    def __init__(self, apps):
+        self.apps = apps  # host -> app (or one app for every host)
         self.calls = 0
         self.app = self._make_app()
+
+    def app_for(self, host: str):
+        return self.apps.get(host) if isinstance(self.apps, dict) else self.apps
 
     def _make_app(self) -> FastAPI:
         app = FastAPI()
@@ -210,7 +324,10 @@ class FakeFlareSolverr:
             url = body["url"]
             cookies = {c["name"]: c["value"] for c in body.get("cookies", [])}
             cookies["cf_clearance"] = "ok"
-            transport = httpx.ASGITransport(app=fake.tpdb_app)
+            target = fake.app_for(urlsplit(url).hostname)
+            if target is None:
+                return {"status": "error", "message": "unknown host"}
+            transport = httpx.ASGITransport(app=target)
             async with httpx.AsyncClient(transport=transport, cookies=cookies, follow_redirects=True) as client:
                 response = await client.get(url)
             host = urlsplit(url).hostname

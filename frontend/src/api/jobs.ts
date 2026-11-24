@@ -14,6 +14,7 @@ export function jobRunning(job: { status: string } | null | undefined): boolean 
 }
 
 export function jobOk(job: Job): boolean {
+  if (job.kind === "preview" && job.result?.outcome === "error") return false;
   return job.status === "done" && !(job.result?.outcomes ?? []).some((outcome) => !outcome.ok);
 }
 
@@ -71,6 +72,8 @@ export function jobMessage(job: Job): string {
       return r.written ? `${plural(r.written, "poster", "posters")} taken` : "Kept current posters";
     case "auto":
       return AUTO_OUTCOMES[r.outcome ?? ""] ?? "Done";
+    case "preview":
+      return r.message || "Preview done";
     case "rescan":
     case "rescan_one":
       return `${plural(r.scanned ?? 0, "folder", "folders")} checked`;

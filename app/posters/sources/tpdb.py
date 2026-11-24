@@ -17,17 +17,10 @@ import httpx
 from bs4 import BeautifulSoup
 
 from ... import cache, http, settings
+from ...http import is_challenge
 from ...util import norm_title, season_from_label, split_title_year
 from .base import ImageRef, PosterSet, SourceError
 
-CHALLENGE_MARKERS = (
-    "just a moment",
-    "cf-chl",
-    "challenge-platform",
-    "attention required",
-    "verify you are human",
-    "checking your browser",
-)
 _POSTERS_HREF = re.compile(r"/posters/(\d+)(?:[/?#]|$)")
 _SET_HREF = re.compile(r"/set/(\d+)")
 _lock = asyncio.Lock()
@@ -96,13 +89,6 @@ def _ua() -> str:
     if isinstance(stored, dict) and stored.get("ua"):
         return stored["ua"]
     return _user_agent
-
-
-def is_challenge(status: int, text: str) -> bool:
-    if status not in (403, 429, 503) and "<title>just a moment" not in text[:2000].lower():
-        return False
-    lowered = text[:20000].lower()
-    return any(marker in lowered for marker in CHALLENGE_MARKERS)
 
 
 async def _polite() -> None:

@@ -4,12 +4,14 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import httpx
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, Response
 
-from .. import cache, config, db, imaging
-from ..posters import refsign, sources
+from .. import cache, config, db, http, imaging, settings
+from ..media import tmdb as tmdb_media
 from ..plex import Plex, PlexError
+from ..posters import refsign, sources
 from ..posters.sources.base import SourceError, parse_slot_id
 
 router = APIRouter()
@@ -115,3 +117,25 @@ async def archive_image(history_id: int):
     if not thumb:
         return placeholder()
     return FileResponse(thumb, media_type="image/jpeg", headers=HEADERS)
+
+
+@router.get("/img/tmdb/{name}")
+async def tmdb_image(name: str):
+    """TMDB posters for list entries and search results, cached like the other previews."""
+    path = f"/{name}"
+    if not tmdb_media.poster_url(path):
+        return placeholder()
+    key = f"tmdb:w342{path}"
+    data = cache.image_get(key)
+    if data is None:
+        base = (settings.get("tmdb_image") or "https://image.tmdb.org/t/p").rstrip("/")
+        try:
+            async with http.client(timeout=30.0) as client:
+                response = await client.get(f"{base}/w342{path}")
+        except httpx.HTTPError:
+            return placeholder()
+        data = response.content
+        if response.status_code != 200 or _kind(data) == "application/octet-stream":
+            return placeholder()
+        cache.image_put(key, data)
+    return Response(data, media_type=_kind(data), headers=HEADERS)

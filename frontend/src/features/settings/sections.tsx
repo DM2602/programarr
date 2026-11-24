@@ -135,6 +135,52 @@ export function SourcesSection({ view }: { view: View }) {
   );
 }
 
+// -- Lists ---------------------------------------------------------------------------------
+export function ListsSection({ view }: { view: View }) {
+  const form = useSettingsForm(view.values);
+  return (
+    <SettingsForm form={form}>
+      <SettingsSection title="MDBList" description="Ratings for all list titles, and MDBList lists.">
+        <SecretField form={form} name="mdblist_key" label="API key" hint="mdblist.com › Preferences" />
+        <TestButton what="mdblist" label="Check key" body={() => ({ value: typed(form, "mdblist_key") })} />
+      </SettingsSection>
+      <SettingsSection title="Trakt">
+        <SecretField form={form} name="trakt_client_id" label="Client ID" hint="trakt.tv › Settings › Your API Apps" />
+        <TestButton what="trakt" label="Check client ID" body={() => ({ value: typed(form, "trakt_client_id") })} />
+      </SettingsSection>
+      <SettingsSection title="FlixPatrol" description={<>Cloudflare checks go through FlareSolverr (<Link to="/settings/sources" className="underline underline-offset-2">Sources</Link>).</>}>
+        <NumberField form={form} name="flixpatrol_delay" label="Pause between page loads" hint="Seconds" min={0} max={10} step={0.25} />
+      </SettingsSection>
+      <SettingsSection title="Matching">
+        <NumberField form={form} name="ratings_days" label="Refresh ratings after" hint="Days" min={1} max={90} />
+        <NumberField form={form} name="runs_keep_days" label="Keep previews" hint="Days. The last preview of each list stays." min={1} max={365} />
+      </SettingsSection>
+    </SettingsForm>
+  );
+}
+
+// -- Services --------------------------------------------------------------------------------
+function ArrSettings({ form, service, label, port }: { form: ReturnType<typeof useSettingsForm>; service: "radarr" | "sonarr"; label: string; port: number }) {
+  return (
+    <SettingsSection title={label}>
+      <TextField form={form} name={`${service}_url`} label="Address" hint="How this container reaches it, with port" placeholder={`http://192.168.1.10:${port}`} type="url" />
+      <SecretField form={form} name={`${service}_key`} label="API key" hint={`${label} › Settings › General`} />
+      <TextField form={form} name={`${service}_external_url`} label="Address for links" hint="Optional, if the browser uses another address" placeholder={`https://${service}.example.com`} type="url" />
+      <TestButton what={service} label="Test connection" body={() => ({ value: typed(form, `${service}_key`), extra: (form.get(`${service}_url`) as string) || null })} />
+    </SettingsSection>
+  );
+}
+
+export function ServicesSection({ view }: { view: View }) {
+  const form = useSettingsForm(view.values);
+  return (
+    <SettingsForm form={form}>
+      <ArrSettings form={form} service="radarr" label="Radarr" port={7878} />
+      <ArrSettings form={form} service="sonarr" label="Sonarr" port={8989} />
+    </SettingsForm>
+  );
+}
+
 // -- Automation ------------------------------------------------------------------------------
 function Designers({ form, view }: { form: Form; view: View }) {
   const toast = useToast();

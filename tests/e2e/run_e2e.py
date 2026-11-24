@@ -11,6 +11,7 @@ import argparse
 import asyncio
 import io
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -22,7 +23,8 @@ sys.path.insert(0, str(ROOT))
 
 PORT = 8795
 BASE = f"http://127.0.0.1:{PORT}"
-MAIN_PAGES = ("/", "/library", "/review", "/waiting", "/match", "/history", "/logs", "/settings/plex")
+MAIN_PAGES = ("/", "/library", "/review", "/waiting", "/match", "/history", "/lists", "/lists/matches",
+              "/lists/exclusions", "/logs", "/settings/plex", "/settings/lists", "/settings/services")
 
 
 def png(color: tuple[int, int, int]) -> bytes:
@@ -270,6 +272,95 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         steps.ok("Poster uploaded to Plex saved as a file", page)
 
         # 14
+        goto(page, "/lists")
+        page.click("[data-preview-form] button:has-text('FlixPatrol')")
+        page.fill("[data-preview-form] input[name=platform]", "netflix")
+        page.fill("[data-preview-form] input[name=region]", "switzerland")
+        page.click("[data-action=preview]")
+        page.wait_for_url(re.compile(r"/lists/runs/\d+$"), timeout=30000)
+        page.wait_for_selector(".entry")
+        run_id = int(page.url.rsplit("/", 1)[1])
+        assert page.locator(".entry").count() == 20
+        assert page.locator(".entry[data-status=uncertain]").count() == 2
+        assert page.locator(".entry[data-status=failed]").count() == 1
+        assert page.locator(".entry[data-status=excluded]").count() == 1  # Power, excluded in the demo
+        grinch = page.locator(".entry", has_text="The Grinch")
+        assert grinch.locator("a:has-text('In Plex')").count() == 1 and "IMDb 6.3" in grinch.inner_text()
+        steps.ok("FlixPatrol preview from the form: 20 entries, 3 to check", page)
+
+        # 15
+        assert [page.locator("[data-section]").nth(i).get_attribute("data-section") for i in range(2)] == ["movies", "shows"]
+        switch = page.locator(".entry", has_text="The Christmas Switch")
+        assert switch.locator("button.score").inner_text() == "90%" and "11 days in TOP 10" in switch.inner_text()
+        switch.locator("button.score").click()
+        page.wait_for_selector(".match-details")
+        assert "Same title, year off by one" in page.inner_text(".match-details")
+        steps.ok("Match details open from the score", page)
+        page.keyboard.press("Escape")
+        page.wait_for_selector(".match-details", state="detached")
+
+        # 16
+        page.locator(".entry", has_text="A Dog's Perfect Christmas").locator("[data-action=fix]").click()
+        page.wait_for_selector("[role=dialog] .candidate")
+        page.click("[role=dialog] .candidate button[data-tmdb='1011']")
+        page.wait_for_selector("[role=dialog]", state="detached")
+        wait_for(lambda: page.locator(".entry", has_text="A Dog's Perfect Christmas").get_attribute("data-status") == "matched",
+                 what="fixed entry")
+        assert db.get().scalar("SELECT COUNT(*) FROM parser_overrides WHERE media_id IS NOT NULL") == 1
+        steps.ok("Match fixed in the search dialog", page)
+
+        # 17
+        goto(page, "/lists/matches")
+        page.wait_for_selector(".problem")
+        assert page.locator(".problem").count() == 2
+        page.locator(".problem", has_text="How to Make a Killing").locator(".candidate[data-tmdb='1010'] button").click()
+        wait_for(lambda: page.locator(".problem").count() == 1, what="problem solved")
+        page.locator(".problem", has_text="The Altruists").locator("[data-action=ignore]").click()
+        page.wait_for_selector("text=Nothing to check")
+        page.click("[data-tab=corrections]")
+        page.wait_for_selector(".correction")
+        assert page.locator(".correction").count() == 3
+        steps.ok("Match log: candidate used, unknown title ignored", page)
+
+        # 18
+        goto(page, f"/lists/runs/{run_id}")
+        page.locator(".entry", has_text="Lupin").locator("[data-action=exclude]").click()
+        page.fill("[role=dialog] input", "Seen it")
+        page.click("[role=dialog] button[type=submit]")
+        wait_for(lambda: page.locator(".entry", has_text="Lupin").get_attribute("data-status") == "excluded", what="excluded")
+        goto(page, "/lists/exclusions")
+        page.wait_for_selector(".exclusion")
+        assert page.locator(".exclusion").count() == 2  # Power and Lupin
+        page.locator(".exclusion", has_text="Lupin").locator("button:has-text('Remove')").click()
+        wait_for(lambda: page.locator(".exclusion").count() == 1, what="exclusion removed")
+        steps.ok("Title excluded from a preview and included again", page)
+
+        # 19
+        dune = db.get().one("SELECT key FROM items WHERE title='Dune'")["key"]
+        sequel = db.get().one("SELECT key, tmdb_id FROM items WHERE title='Dune: Part Two'")
+        goto(page, f"/item/{dune}")
+        page.wait_for_selector("[data-arr=radarr]")
+        assert page.get_attribute("[data-arr=radarr]", "href") == "https://radarr.example.ch/movie/dune-438631"
+        goto(page, f"/item/{sequel['key']}")
+        page.wait_for_selector("[data-arr=radarr][data-present=false]")
+        assert page.get_attribute("[data-arr=radarr]", "href").endswith(f"/add/new?term=tmdb%3A{sequel['tmdb_id']}")
+        assert page.inner_text("[data-arr=radarr]").startswith("Add to Radarr")
+        bear = db.get().one("SELECT key FROM items WHERE title='The Bear'")["key"]
+        goto(page, f"/item/{bear}")
+        page.wait_for_selector("[data-missing='4']")
+        assert "Monitored in Sonarr" in page.inner_text("[data-missing='4']")
+        assert page.locator("[data-missing]").count() == 2
+        steps.ok("Title pages link to Radarr: open there or add", page)
+
+        # 20
+        goto(page, "/settings/lists")
+        page.click("[data-test=mdblist]")
+        page.wait_for_selector("[data-result=mdblist][data-ok=true]")
+        page.click("[data-test=trakt]")
+        page.wait_for_selector("[data-result=trakt][data-ok=true]")
+        steps.ok("MDBList key and Trakt client ID checked", page)
+
+        # 21
         visited: set[str] = set()
         for path in MAIN_PAGES:
             goto(page, path)

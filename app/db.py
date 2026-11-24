@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -87,6 +87,71 @@ CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value TEXT, expires_at I
 CREATE TABLE IF NOT EXISTS hashes (key TEXT PRIMARY KEY, p TEXT, d TEXT, g TEXT, at INTEGER);
 """
 
+# Phase 2: list sources, the shared media cache and the match log.
+SCHEMA_V2 = """
+CREATE TABLE IF NOT EXISTS media_cache (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('movie','show')),
+  tmdb_id INTEGER, imdb_id TEXT, tvdb_id INTEGER,
+  title TEXT NOT NULL, original_title TEXT, year INTEGER, release_date TEXT,
+  genres TEXT,
+  language TEXT, countries TEXT, seasons INTEGER, status TEXT,
+  poster_path TEXT, popularity REAL,
+  imdb_rating REAL, imdb_votes INTEGER, rt_critics INTEGER, rt_audience INTEGER,
+  meta_at INTEGER, ratings_at INTEGER,
+  UNIQUE (kind, tmdb_id)
+);
+CREATE INDEX IF NOT EXISTS media_cache_imdb ON media_cache (imdb_id);
+CREATE INDEX IF NOT EXISTS media_cache_tvdb ON media_cache (tvdb_id);
+
+CREATE TABLE IF NOT EXISTS parser_runs (
+  id INTEGER PRIMARY KEY,
+  flow_run_id INTEGER,
+  source TEXT NOT NULL,
+  source_ref TEXT NOT NULL,
+  label TEXT,
+  started_at INTEGER, finished_at INTEGER,
+  status TEXT CHECK (status IN ('running','ok','partial','error')), error TEXT,
+  params TEXT, notes TEXT,
+  raw_count INTEGER, matched INTEGER, uncertain INTEGER, failed INTEGER, excluded INTEGER
+);
+CREATE INDEX IF NOT EXISTS parser_runs_ref ON parser_runs (source_ref, id);
+
+CREATE TABLE IF NOT EXISTS parser_entries (
+  id INTEGER PRIMARY KEY,
+  run_id INTEGER NOT NULL REFERENCES parser_runs(id) ON DELETE CASCADE,
+  position INTEGER, raw_title TEXT, raw_year INTEGER, raw_kind TEXT, raw_ids TEXT,
+  raw_url TEXT, extra TEXT,
+  fingerprint TEXT NOT NULL,
+  method TEXT,
+  media_id INTEGER REFERENCES media_cache(id),
+  status TEXT NOT NULL CHECK (status IN ('matched','uncertain','failed','excluded')),
+  score REAL, candidates TEXT,
+  error TEXT
+);
+CREATE INDEX IF NOT EXISTS parser_entries_status ON parser_entries (status, run_id);
+CREATE INDEX IF NOT EXISTS parser_entries_run ON parser_entries (run_id, position);
+CREATE INDEX IF NOT EXISTS parser_entries_fp ON parser_entries (fingerprint);
+
+CREATE TABLE IF NOT EXISTS parser_overrides (
+  id INTEGER PRIMARY KEY,
+  source TEXT NOT NULL DEFAULT '',
+  fingerprint TEXT NOT NULL,
+  media_id INTEGER REFERENCES media_cache(id),
+  ignore INTEGER NOT NULL DEFAULT 0,
+  note TEXT, created_at INTEGER,
+  UNIQUE (source, fingerprint)
+);
+
+CREATE TABLE IF NOT EXISTS exclusions (
+  id INTEGER PRIMARY KEY,
+  media_id INTEGER NOT NULL REFERENCES media_cache(id),
+  scope TEXT NOT NULL DEFAULT 'global',
+  reason TEXT, created_at INTEGER,
+  UNIQUE (media_id, scope)
+);
+"""
+
 
 class Database:
     def __init__(self, path: Path):
@@ -119,6 +184,8 @@ class Database:
             script = ""
             if current < 1:
                 script += SCHEMA_V1
+            if current < 2:
+                script += SCHEMA_V2
             # executescript commits on its own, so the whole migration is one script.
             self.conn.executescript(f"BEGIN;\n{script}\nPRAGMA user_version={SCHEMA_VERSION};\nCOMMIT;")
 

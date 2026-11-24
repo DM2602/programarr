@@ -60,6 +60,7 @@ class JobResult(BaseModel):
     adopted: int | None = None
     scanned: int | None = None
     outcome: str | None = None
+    run: int | None = None
 
 
 class JobBrief(Model):
@@ -87,6 +88,7 @@ class Counts(Model):
     shows: int
     linked: int
     jobs: int
+    match_open: int = 0
 
 
 class Status(Model):
@@ -123,6 +125,7 @@ class Todo(Model):
     problems: int
     unlinked_with_files: int
     detect_open: int
+    match_open: int = 0
 
 
 class RecentCard(Model):
@@ -538,6 +541,20 @@ class SettingsValues(Model):
     tvmaze_enabled: bool
     tvmaze_api: str
     allow_private_urls: bool
+    mdblist_key: bool
+    mdblist_api: str
+    trakt_client_id: bool
+    trakt_api: str
+    flixpatrol_base: str
+    flixpatrol_delay: float
+    ratings_days: int
+    runs_keep_days: int
+    radarr_url: str
+    radarr_external_url: str
+    radarr_key: bool
+    sonarr_url: str
+    sonarr_external_url: str
+    sonarr_key: bool
     automation: bool
     designers: list[Designer]
     use_mediux_follows: bool
@@ -638,3 +655,234 @@ class TestResult(Model):
 def dump(model: type[Model], data: Any) -> Any:
     """Validate a dict against a model (used where a router returns plain dicts)."""
     return model.model_validate(data)
+
+
+# -- lists -----------------------------------------------------------------------
+RunStatus = Literal["running", "ok", "partial", "error"]
+MatchStatus = Literal["matched", "uncertain", "failed", "excluded"]
+MediaKind = Literal["movie", "show"]
+
+
+class FieldOption(Model):
+    value: str
+    label: str
+
+
+class SourceField(Model):
+    key: str
+    label: str
+    type: Literal["text", "number", "select", "multi"]
+    options: list[FieldOption]
+    default: Any = None
+    required: bool
+    placeholder: str | None = None
+    suggestions: list[str]
+    min: int | None = None
+    max: int | None = None
+    when: dict[str, list[str]] | None = None
+
+
+class ListSource(Model):
+    key: str
+    label: str
+    fields: list[SourceField]
+    missing: str | None = None
+
+
+class ListSources(Model):
+    sources: list[ListSource]
+
+
+class PreviewBody(Body):
+    source: str
+    params: dict[str, Any] = {}
+
+
+class RunBrief(Model):
+    id: int
+    source: str
+    source_ref: str
+    label: str
+    started_at: int | None = None
+    finished_at: int | None = None
+    status: RunStatus
+    error: str | None = None
+    total: int
+    matched: int
+    uncertain: int
+    failed: int
+    excluded: int
+
+
+class RunsPage(Model):
+    runs: list[RunBrief]
+
+
+class MediaView(Model):
+    id: int
+    kind: MediaKind
+    tmdb_id: int | None = None
+    imdb_id: str | None = None
+    tvdb_id: int | None = None
+    title: str
+    original_title: str | None = None
+    year: int | None = None
+    status: str | None = None
+    seasons: int | None = None
+    poster: str | None = None
+    imdb_rating: float | None = None
+    imdb_votes: int | None = None
+    rt_critics: int | None = None
+    rt_audience: int | None = None
+    ratings_at: int | None = None
+
+
+class Candidate(Model):
+    kind: MediaKind
+    tmdb_id: int
+    title: str
+    original_title: str | None = None
+    year: int | None = None
+    popularity: float = 0
+    similarity: float | None = None
+    poster: str | None = None
+
+
+class EntryList(Model):
+    run_id: int
+    label: str
+    position: int | None = None
+
+
+class EntryView(Model):
+    id: int
+    run_id: int
+    position: int | None = None
+    title: str
+    year: int | None = None
+    kind: MediaKind | None = None
+    ids: dict[str, Any]
+    url: str | None = None
+    extra: dict[str, Any]
+    fingerprint: str
+    status: MatchStatus
+    method: str | None = None
+    score: float | None = None
+    error: str | None = None
+    media: MediaView | None = None
+    plex_key: str | None = None
+    candidates: list[Candidate]
+    source: str | None = None
+    label: str | None = None
+    lists: list[EntryList] | None = None
+
+
+class RunDetail(RunBrief):
+    params: dict[str, Any]
+    notes: list[str]
+    previous: int | None = None
+    entries: list[EntryView]
+
+
+class ProblemsPage(Model):
+    rows: list[EntryView]
+
+
+class MatchesPage(Model):
+    rows: list[EntryView]
+    total: int
+    page: int
+    per_page: int
+
+
+class FixBody(Body):
+    kind: MediaKind
+    tmdb_id: int
+
+
+class Changed(Model):
+    ok: bool = True
+    changed: int = 0
+    message: str | None = None
+
+
+class OverrideView(Model):
+    id: int
+    source: str
+    fingerprint: str
+    title: str
+    year: int | None = None
+    kind: MediaKind | None = None
+    ignore: bool
+    media: MediaView | None = None
+    created_at: int | None = None
+
+
+class OverridesPage(Model):
+    rows: list[OverrideView]
+
+
+class ExclusionView(Model):
+    id: int
+    scope: str
+    reason: str | None = None
+    created_at: int | None = None
+    media: MediaView
+    plex_key: str | None = None
+
+
+class ExclusionsPage(Model):
+    rows: list[ExclusionView]
+
+
+class ExclusionBody(Body):
+    media_id: int | None = None
+    kind: MediaKind | None = None
+    tmdb_id: int | None = None
+    reason: str | None = None
+
+
+class MediaSearch(Model):
+    results: list[Candidate]
+
+
+class MdblistListView(Model):
+    id: int
+    name: str
+    slug: str
+    user: str
+    items: int | None = None
+    dynamic: bool
+    mediatype: str
+
+
+class MdblistLists(Model):
+    lists: list[MdblistListView]
+
+
+class ArrLink(Model):
+    """Where a title stands in Radarr or Sonarr; service is None when that one is not set up."""
+
+    service: Literal["radarr", "sonarr"] | None = None
+    label: str | None = None
+    present: bool = False
+    monitored: bool | None = None
+    downloaded: bool | None = None
+    url: str | None = None
+    error: str | None = None
+
+
+class MissingSeason(Model):
+    number: int
+    episodes: int | None = None
+    air_date: str | None = None
+    poster: str | None = None
+    sonarr: Literal["monitored", "unmonitored", "absent"] | None = None
+    files: int | None = None
+
+
+class MissingSeasons(Model):
+    """Seasons Plex does not have yet (from TMDB and Sonarr)."""
+
+    seasons: list[MissingSeason]
+    sonarr_url: str | None = None

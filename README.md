@@ -4,7 +4,9 @@ Self-hosted companion for Plex: posters now, content flows, collections and the 
 Plex stays the source of truth. Posters are written as files next to the media ("Use local assets"),
 nothing is uploaded to or locked in Plex.
 
-Status: phase 1, the poster module (formerly Litfass) with the new web app.
+Status: phase 2. Posters (formerly Litfass) plus list sources: FlixPatrol, MDBList, TMDB and Trakt
+are read and matched to TMDB as previews, with a match log, corrections and exclusions. Nothing from
+lists is written to Plex yet; that comes with content flows (phase 3).
 
 ## Run with Docker
 
@@ -19,6 +21,7 @@ Open `http://<host>:8796` and follow the setup on the dashboard:
 2. Settings › Sources: MediUX token, ThePosterDB account, optionally TMDB and fanart.tv
 3. Settings › Automation: preferred designers
 4. Dashboard: Finish and sync
+5. Optional, for lists: Settings › Lists (MDBList API key for ratings, Trakt client ID), TMDB key under Sources
 
 In Plex, turn on "Use local assets" for each library (Advanced).
 
@@ -32,6 +35,13 @@ scheduled set checks are skipped. Turn it on under Settings › Automation.
 - `APP_PASSWORD` set: the web app asks for it.
 - Not set: put Programarr behind a proxy with sign-in (e.g. Pangolin SSO).
 - Webhooks (`/api/hooks/…`) are protected by their token and need an exception in the proxy.
+
+### Lists
+
+Lists › Lists reads a source once and shows how every entry was matched. FlixPatrol titles are
+matched like the FlixPatrol script did: exact title and year, then year ±1, then the title without a
+year; TMDB's alternative titles count too. Anything else lands in Lists › Match log with candidates.
+A fix or an ignore holds for future runs; excluded titles never appear in a list.
 
 ### Data
 

@@ -1,11 +1,13 @@
-import { CheckBadgeIcon, FilmIcon, MinusCircleIcon, PlayCircleIcon, RectangleStackIcon, TvIcon } from "@heroicons/react/20/solid";
+import { CheckBadgeIcon, FilmIcon, MinusCircleIcon, PlayCircleIcon, Squares2X2Icon, TvIcon } from "@heroicons/react/20/solid";
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { siRadarr, siSonarr } from "simple-icons";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { api, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useItem } from "../../api/queries";
-import { Button, ButtonLink, ExternalButton } from "../../components/Button";
+import { useItem, useItemArr, useItemMissing } from "../../api/queries";
+import { BrandIcon } from "../../components/BrandIcon";
+import { Button, ButtonLink, ExternalButton, buttonClass } from "../../components/Button";
 import { useDialogs } from "../../components/Dialogs";
 import { Badge, Card, Empty, Loading, Notice, Section, type Tone } from "../../components/ui";
 import { dateOnly, seasonLabel, timeAgo } from "../../lib/format";
@@ -30,7 +32,7 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
   };
 
   return (
-    <div className={`slot-card ${slot.gone ? "opacity-60" : ""}`} data-slot={slot.id}>
+    <div className={`slot-card flex flex-col ${slot.gone ? "opacity-60" : ""}`} data-slot={slot.id}>
       <button type="button" className="pick group block w-full text-left" onClick={() => onPick(slot.id)} aria-label={`Change poster for ${slot.label}`} data-slot={slot.id}>
         <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-800 shadow-poster ring-1 ring-gray-700 transition duration-300 group-hover:ring-gray-500">
           <img src={slot.thumb} alt="" loading="lazy" className={`h-full w-full object-cover ${slot.file ? "" : "opacity-60 grayscale-[35%]"}`} />
@@ -46,7 +48,10 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
       <p className="truncate text-xs text-gray-400" title={slot.file ?? undefined}>
         {slot.file ? `${slot.folder_name ? `${slot.folder_name}/` : ""}${slot.file_name}` : "No file"}
       </p>
-      {origin && <p className="truncate text-xs text-gray-500">{origin}</p>}
+      {/* Always one line, so badges and buttons line up across the cards */}
+      <p className="min-h-4 truncate text-xs text-gray-500" title={origin ?? undefined}>
+        {origin}
+      </p>
       <div className="mt-1.5">
         {slot.waiting ? (
           <Badge tone="indigo">Waiting since {dateOnly(slot.waiting_since)}</Badge>
@@ -78,6 +83,43 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+type Missing = Schemas["MissingSeason"];
+
+function airDate(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** A season TMDB or Sonarr knows that Plex does not have yet: greyed out, no poster to set. */
+function MissingSeasonCard({ season }: { season: Missing }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = !season.air_date || season.air_date > today;
+  const facts = [season.episodes ? `${season.episodes} ${season.episodes === 1 ? "episode" : "episodes"}` : null, season.air_date && !upcoming ? season.air_date.slice(0, 4) : null]
+    .filter(Boolean)
+    .join(", ");
+  const state = upcoming
+    ? season.air_date
+      ? `Airs ${airDate(season.air_date)}`
+      : "Not aired yet"
+    : season.sonarr === "monitored"
+      ? "Monitored in Sonarr"
+      : season.sonarr === "unmonitored"
+        ? "Not monitored"
+        : season.sonarr === "absent"
+          ? "Not in Sonarr"
+          : null;
+  return (
+    <div className="slot-card flex flex-col" data-missing={season.number}>
+      <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-dashed border-gray-700 bg-gray-800/40">
+        {season.poster && <img src={season.poster} alt="" loading="lazy" className="h-full w-full object-cover opacity-30 grayscale" />}
+      </div>
+      <h3 className="mt-2 text-sm font-semibold text-gray-400">{seasonLabel(season.number)}</h3>
+      <p className="text-xs text-gray-500">Not in Plex</p>
+      <p className="min-h-4 truncate text-xs text-gray-600">{facts}</p>
+      <div className="mt-1.5">{state && <Badge tone="gray">{state}</Badge>}</div>
     </div>
   );
 }
@@ -180,6 +222,13 @@ function DetailsCard({ detail }: { detail: Detail }) {
           <p className="mt-1 font-mono text-xs break-all text-gray-300">{detail.item.folder}</p>
         </>
       )}
+      {detail.item.search_title && detail.item.search_title !== detail.item.title && (
+        <>
+          <p className="mt-4 text-xs font-semibold text-gray-400">Poster search title</p>
+          <p className="mt-1 text-gray-200">{detail.item.search_title}</p>
+          <p className="mt-0.5 text-xs text-gray-500">English title from TMDB. ThePosterDB lists titles under it.</p>
+        </>
+      )}
       {detail.links.length > 0 && (
         <>
           <p className="mt-4 text-xs font-semibold text-gray-400">Links</p>
@@ -201,6 +250,32 @@ function DetailsCard({ detail }: { detail: Detail }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+/** Open the title in Radarr or Sonarr, or add it there. Nothing when the service is not set up. */
+function ArrButton({ itemKey }: { itemKey: string }) {
+  const { data } = useItemArr(itemKey);
+  if (!data?.service || !data.url) {
+    return data?.error ? <span className="self-center text-xs text-red-300" title={data.error}>{data.label} unreachable</span> : null;
+  }
+  const state = data.present ? (data.downloaded ? "Downloaded" : data.monitored ? "Monitored, missing files" : "Not monitored") : "Not added yet";
+  const dot = data.present ? (data.downloaded ? "bg-green-400" : data.monitored ? "bg-yellow-400" : "bg-gray-500") : null;
+  return (
+    <a
+      href={data.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={buttonClass("default")}
+      title={`${data.label}: ${state}`}
+      data-arr={data.service}
+      data-present={data.present}
+    >
+      <BrandIcon icon={data.service === "radarr" ? siRadarr : siSonarr} />
+      {data.present ? data.label : `Add to ${data.label}`}
+      {dot && <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />}
+      <span className="sr-only">{state}</span>
+    </a>
   );
 }
 
@@ -246,22 +321,17 @@ function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
               </Badge>
             ) : null}
             {detail.library && (
-              <Link to={`/library?library=${encodeURIComponent(detail.library.key)}`} className="rounded-full hover:opacity-90" title="Plex library">
-                <Badge tone="dark" icon={<RectangleStackIcon className="h-3.5 w-3.5" />}>
+              <Link to={`/library?library=${encodeURIComponent(detail.library.key)}`} className="inline-flex rounded-full hover:opacity-90" title="Plex library">
+                <Badge tone="dark" icon={<Squares2X2Icon className="h-3.5 w-3.5" />}>
                   {detail.library.title}
                 </Badge>
               </Link>
             )}
           </div>
-          {(item.collection_name || (item.search_title && item.search_title !== item.title)) && (
-            <p className="mt-2 text-sm text-gray-400">
-              {item.collection_name && <span>Collection {item.collection_name}</span>}
-              {item.collection_name && item.search_title && item.search_title !== item.title && <span>, </span>}
-              {item.search_title && item.search_title !== item.title && <span>English title {item.search_title}</span>}
-            </p>
-          )}
+          {item.collection_name && <p className="mt-2 text-sm text-gray-400">Collection {item.collection_name}</p>}
         </div>
         <div className="flex shrink-0 flex-wrap justify-center gap-2">
+          <ArrButton itemKey={item.key} />
           <Button variant="primary" onClick={onPick}>
             {detail.binding ? "Change set" : "Pick a set"}
           </Button>
@@ -283,6 +353,7 @@ export function ItemPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data, isPending, error } = useItem(key);
+  const missing = useItemMissing(key, data?.item.type === "show");
   const [picking, setPicking] = useState<string | null>(null);
   useTitle(data?.item.title ?? "Title");
 
@@ -305,6 +376,13 @@ export function ItemPage() {
   }
   const main = data.slots[0];
   const openMain = () => main && setPicking(main.id);
+
+  // Plex' slots and the seasons Plex does not have yet, in season order (the show poster first).
+  type Card = { order: number; slot?: Slot; missing?: Missing };
+  const cards: Card[] = [
+    ...data.slots.map((slot): Card => ({ order: slot.kind === "season" ? (slot.season ?? 0) : -1, slot })),
+    ...(missing.data?.seasons ?? []).map((season): Card => ({ order: season.number, missing: season })),
+  ].sort((a, b) => a.order - b.order || (a.slot ? -1 : 1));
 
   return (
     <>
@@ -329,9 +407,13 @@ export function ItemPage() {
         <div className="min-w-0">
           <Section title="Posters" id="posters">
             <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-8">
-              {data.slots.map((slot) => (
-                <SlotCard key={slot.id} detail={data} slot={slot} onPick={setPicking} />
-              ))}
+              {cards.map((card) =>
+                card.slot ? (
+                  <SlotCard key={card.slot.id} detail={data} slot={card.slot} onPick={setPicking} />
+                ) : (
+                  <MissingSeasonCard key={`missing-${card.missing!.number}`} season={card.missing!} />
+                ),
+              )}
             </div>
           </Section>
           <Section title="History" id="item-history">
