@@ -10,7 +10,7 @@ import { Pager } from "../../components/Pager";
 import { Card, Empty, Loading, Notice, PageHeader } from "../../components/ui";
 import { timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
-import { EntryMeta, EntryRow, KIND_LABELS, POSTER_FALLBACK, SOURCE_LABELS, StatusBadge, type Candidate, type Entry } from "./common";
+import { EntryLists, EntryRow, KindIcon, KIND_LABELS, POSTER_FALLBACK, SOURCE_LABELS, SourceLink, StatusBadge, type Candidate, type Entry } from "./common";
 import { FixDialog } from "./FixDialog";
 
 function Problem({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void }) {
@@ -27,13 +27,14 @@ function Problem({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-semibold text-gray-100">{entry.title}</span>
             {entry.year && <span className="text-sm text-gray-400">{entry.year}</span>}
-            {entry.kind && <span className="text-xs text-gray-500">{KIND_LABELS[entry.kind]}</span>}
+            <KindIcon kind={entry.kind} />
             <StatusBadge entry={entry} />
           </p>
           <p className="mt-0.5 text-sm text-gray-400">{entry.error}</p>
-          <EntryMeta entry={entry} showLists />
+          <EntryLists entry={entry} />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {entry.url && <SourceLink url={entry.url} />}
           <Button size="sm" variant="primary" onClick={() => onFix(entry)} data-action="fix">
             Search
           </Button>

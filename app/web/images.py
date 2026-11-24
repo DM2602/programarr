@@ -10,8 +10,8 @@ from fastapi.responses import FileResponse, Response
 
 from .. import cache, config, db, http, imaging, settings
 from ..media import tmdb as tmdb_media
-from ..posters import refsign, sources
 from ..plex import Plex, PlexError
+from ..posters import refsign, sources
 from ..posters.sources.base import SourceError, parse_slot_id
 
 router = APIRouter()

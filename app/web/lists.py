@@ -8,9 +8,24 @@ from ..lists import runs
 from ..lists.base import SourceError
 from ..media import mdblist, store, tmdb
 from .common import start_job
-from .schemas import (Changed, ExclusionBody, ExclusionsPage, FixBody, JobStarted, ListSources, MatchesPage,
-                      MdblistLists, MediaSearch, MediaView, Ok, OverridesPage, PreviewBody, ProblemsPage, RunDetail,
-                      RunsPage)
+from .schemas import (
+    Changed,
+    ExclusionBody,
+    ExclusionsPage,
+    FixBody,
+    JobStarted,
+    ListSources,
+    MatchesPage,
+    MdblistLists,
+    MediaSearch,
+    MediaView,
+    Ok,
+    OverridesPage,
+    PreviewBody,
+    ProblemsPage,
+    RunDetail,
+    RunsPage,
+)
 
 router = APIRouter(prefix="/api", tags=["lists"])
 

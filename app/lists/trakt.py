@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from typing import ClassVar
 
 import httpx
 
@@ -19,7 +20,7 @@ CHARTS = {
     "list": "User list",
 }
 PERIODS = {"daily": "Day", "weekly": "Week", "monthly": "Month", "yearly": "Year", "all": "All time"}
-_LIST_URL = re.compile(r"trakt\.tv/users/([^/?#]+)/lists/([^/?#]+)", re.I)
+_LIST_URL = re.compile(r"trakt\.tv/users/([^/?#]+)/lists/([^/?#]+)", re.IGNORECASE)
 
 
 def configured() -> bool:
@@ -93,7 +94,7 @@ def entry_of(row: dict, position: int, wanted: str | None) -> RawEntry | None:
 class Trakt(Adapter):
     key = "trakt"
     label = "Trakt"
-    fields = [
+    fields: ClassVar[list[Field]] = [
         Field("chart", "List", "select", options=list(CHARTS.items()), default="trending"),
         Field("type", "Type", "select", options=[("movies", "Movies"), ("shows", "Shows"), ("both", "Both")],
               default="movies"),

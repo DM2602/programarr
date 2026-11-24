@@ -33,12 +33,11 @@ async def request(method: str, path: str, params: dict | None = None, body: dict
         raise MdblistError("No MDBList API key set (Settings › Lists)")
     base = (settings.get("mdblist_api") or "https://api.mdblist.com").rstrip("/")
     query = {"apikey": key, **{k: v for k, v in (params or {}).items() if v not in (None, "")}}
-    async with _limit:
-        async with http.client(timeout=40.0, headers={"Accept": "application/json"}) as client:
-            try:
-                response = await client.request(method, f"{base}{path}", params=query, json=body)
-            except httpx.HTTPError as exc:
-                raise MdblistError(f"Cannot reach MDBList: {exc.__class__.__name__}") from exc
+    async with _limit, http.client(timeout=40.0, headers={"Accept": "application/json"}) as client:
+        try:
+            response = await client.request(method, f"{base}{path}", params=query, json=body)
+        except httpx.HTTPError as exc:
+            raise MdblistError(f"Cannot reach MDBList: {exc.__class__.__name__}") from exc
     if response.status_code in (401, 403):
         message = _message(response) or "MDBList rejects the key"
         raise MdblistError(message, response.status_code)
@@ -115,9 +114,9 @@ def parse_ratings(item: dict) -> dict:
             values["imdb_rating"] = _number(value)
             values["imdb_votes"] = _number(rating.get("votes"), int)
         elif source == "tomatoes":
-            values["rt_critics"] = _number(value if value is not None else rating.get("score"), lambda v: int(round(float(v))))
+            values["rt_critics"] = _number(value if value is not None else rating.get("score"), lambda v: round(float(v)))
         elif source in ("popcorn", "tomatoesaudience"):
-            values["rt_audience"] = _number(value if value is not None else rating.get("score"), lambda v: int(round(float(v))))
+            values["rt_audience"] = _number(value if value is not None else rating.get("score"), lambda v: round(float(v)))
     return values
 
 

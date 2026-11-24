@@ -1,12 +1,15 @@
-"""FlixPatrol TOP 10 pages: per platform and country (or world), one table per section.
+"""FlixPatrol TOP 10 pages: per platform and country, one table per section.
 
-Kind and year come from each title's FlixPatrol page (cached), as in the FlixPatrol script.
+The world lists come from the streaming overview (/top10/), which holds the world TOP 10 of every
+big platform; platforms missing there are read from /top10/<platform>/world/. Kind and year come
+from each title's FlixPatrol page (cached), as in the FlixPatrol script.
 """
 from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import ClassVar
 
 from bs4 import BeautifulSoup
 
@@ -20,9 +23,9 @@ TITLE_DAYS = 30
 PLATFORMS = {
     "netflix": "Netflix",
     "disney": "Disney+",
-    "amazon-prime": "Prime Video",
+    "amazon-prime": "Amazon Prime",
     "hbo-max": "HBO Max",
-    "apple-tv": "Apple TV+",
+    "apple-tv": "Apple TV",
     "paramount-plus": "Paramount+",
     "hulu": "Hulu",
     "peacock": "Peacock",
@@ -35,7 +38,12 @@ SECTIONS = {
     "kids-shows": "Kids TV Shows",
 }
 SECTION_KIND = {"movies": "movie", "shows": "show", "kids-movies": "movie", "kids-shows": "show", "overall": None}
-_HEADING = re.compile(r"^top\s*\d+\s+(kids\s+)?(movies|tv\s*shows|overall)\b", re.I)
+# "TOP 10 Movies" (country pages) and "TOP Movies on Netflix on <date>"; never "TOP Movies and TV Shows ... by day".
+_HEADING = re.compile(r"^top(?:\s*\d+)?\s+(kids\s+)?(movies|tv\s*shows|overall)\b(?!\s+and\b)", re.IGNORECASE)
+_TOC = re.compile(r"^toc-(.+)-(movies|tv-shows)$")
+_DAYS = re.compile(r"^(\d+)\s*d$")
+_CHANGE = re.compile(r"^(?:[+\-\u2212\u2013]\s*\d+|[\-\u2013]|new)$", re.IGNORECASE)
+_POINTS = re.compile(r"^\d[\d,']*$")
 _DATE = re.compile(r"(\d{1,2})/(\d{1,2})/(\d{4})")
 _SLUG_YEAR = re.compile(r"/title/[^/]*-((?:19|20)\d{2})/?$")
 _IMDB = re.compile(r"imdb\.com/title/(tt\d+)")
@@ -52,8 +60,51 @@ def section_of(heading: str) -> str | None:
     return f"kids-{base}" if kids else base
 
 
+def _change(text: str) -> int | str:
+    """Rank change badge: "+1", "-2", "–" (same) or "NEW"."""
+    if text.lower() == "new":
+        return "new"
+    digits = text.replace("\u2212", "-").replace("\u2013", "-").replace(" ", "")
+    return 0 if digits == "-" else int(digits)
+
+
+def parse_rows(table) -> list[dict]:
+    """Rows of a TOP 10 table: rank, title, path, and what the page shows of change, days, points, originals."""
+    rows: list[dict] = []
+    for row in table.find_all("tr"):
+        link = row.find("a", href=re.compile(r"^/title/"))
+        title = link.get_text(" ", strip=True) if link else ""
+        if not title:
+            continue
+        cells = row.find_all("td")
+        rank_text = cells[0].get_text(strip=True).rstrip(".") if cells else ""
+        entry = {
+            "rank": int(rank_text) if rank_text.isdigit() else len(rows) + 1,
+            "title": title,
+            "path": link["href"],
+            "change": None,
+            "days": None,
+            "points": None,
+            "original": row.find(title=re.compile(r"\boriginal\b", re.IGNORECASE)) is not None,
+        }
+        for cell in cells[1:]:
+            if cell.find("a", href=re.compile(r"^/title/")):
+                continue
+            text = cell.get_text(" ", strip=True).replace("\xa0", " ")
+            if not text:
+                continue
+            if (days := _DAYS.match(text)) and entry["days"] is None:
+                entry["days"] = int(days.group(1))
+            elif _CHANGE.match(text) and entry["change"] is None:
+                entry["change"] = _change(text)
+            elif _POINTS.match(text) and entry["points"] is None:
+                entry["points"] = int(re.sub(r"[,']", "", text))
+        rows.append(entry)
+    return rows
+
+
 def parse_top10(html: str) -> dict[str, list[dict]]:
-    """Sections of a TOP 10 page: {"movies": [{"rank", "title", "path", "stat"}], ...}."""
+    """Sections of a TOP 10 page: {"movies": [row, ...], "shows": [...], ...}; the first table per section counts."""
     soup = BeautifulSoup(html, "lxml")
     sections: dict[str, list[dict]] = {}
     for heading in soup.find_all(["h2", "h3"]):
@@ -61,25 +112,23 @@ def parse_top10(html: str) -> dict[str, list[dict]]:
         if not name or name in sections:
             continue
         table = heading.find_next("table")
-        if table is None:
-            continue
-        rows = []
-        for row in table.find_all("tr"):
-            link = row.find("a", href=re.compile(r"^/title/"))
-            title = link.get_text(" ", strip=True) if link else ""
-            if not title:
-                continue
-            cells = row.find_all("td")
-            rank_text = cells[0].get_text(strip=True).rstrip(".") if cells else ""
-            rows.append({
-                "rank": int(rank_text) if rank_text.isdigit() else len(rows) + 1,
-                "title": title,
-                "path": link["href"],
-                "stat": (cells[-1].get_text(" ", strip=True).replace("\xa0", " ") or None) if len(cells) > 2 else None,
-            })
+        rows = parse_rows(table) if table is not None else []
         if rows:
             sections[name] = rows
     return sections
+
+
+def parse_overview(html: str) -> dict[str, dict[str, list[dict]]]:
+    """The streaming overview (/top10/): {platform: {"movies": rows, "shows": rows}} from the headings' ids."""
+    soup = BeautifulSoup(html, "lxml")
+    platforms: dict[str, dict[str, list[dict]]] = {}
+    for heading in soup.find_all(["h2", "h3"], id=_TOC):
+        platform, kind = _TOC.match(heading["id"]).groups()
+        table = heading.find_next("table")
+        rows = parse_rows(table) if table is not None else []
+        if rows:
+            platforms.setdefault(platform, {})["movies" if kind == "movies" else "shows"] = rows
+    return platforms
 
 
 def parse_title(html: str, path: str = "") -> dict:
@@ -138,6 +187,10 @@ def slug_year(path: str) -> int | None:
     return year if year and _real_year(year) else None
 
 
+def _today() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%d")
+
+
 def _name(value: str, names: dict[str, str]) -> str:
     return names.get(value) or " ".join(part.capitalize() for part in value.split("-"))
 
@@ -145,7 +198,7 @@ def _name(value: str, names: dict[str, str]) -> str:
 class FlixPatrol(Adapter):
     key = "flixpatrol"
     label = "FlixPatrol"
-    fields = [
+    fields: ClassVar[list[Field]] = [
         Field("platform", "Platform", "text", default="netflix", suggestions=list(PLATFORMS), placeholder="netflix"),
         Field("region", "Region", "text", default="world", suggestions=["world", "switzerland", "germany", "austria",
                                                                        "united-states", "united-kingdom"],
@@ -168,8 +221,7 @@ class FlixPatrol(Adapter):
         return (settings.get("flixpatrol_base") or "https://flixpatrol.com").rstrip("/")
 
     async def top10(self, platform: str, region: str) -> dict[str, list[dict]]:
-        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        key = f"fp:top10:{platform}/{region}:{day}"
+        key = f"fp:top10:{platform}/{region}:{_today()}"
         sections = cache.get(key)
         if sections is None:
             try:
@@ -181,6 +233,32 @@ class FlixPatrol(Adapter):
                 raise SourceError("FlixPatrol page without TOP 10 tables (layout changed?)")
             cache.put(key, sections, PAGE_HOURS * 3600)
         return sections
+
+    async def overview(self) -> dict[str, dict[str, list[dict]]]:
+        key = f"fp:overview:{_today()}"
+        platforms = cache.get(key)
+        if platforms is None:
+            html = await page(f"{self.base()}/top10/", self.delay(), "FlixPatrol")
+            platforms = parse_overview(html)
+            cache.put(key, platforms, PAGE_HOURS * 3600)
+        return platforms
+
+    async def sections(self, platform: str, region: str, wanted: list[str]) -> dict[str, list[dict]]:
+        """TOP 10 sections for a platform and region. World: the overview first, the platform's page for the rest."""
+        if region != "world":
+            return await self.top10(platform, region)
+        try:
+            found = dict((await self.overview()).get(platform, {}))
+        except NotFound:
+            found = {}
+        if any(name not in found for name in wanted):
+            try:
+                for name, rows in (await self.top10(platform, region)).items():
+                    found.setdefault(name, rows)
+            except SourceError:
+                if not found:
+                    raise
+        return found
 
     async def title_info(self, path: str) -> dict:
         key = f"fp:title:{path}"
@@ -203,7 +281,7 @@ class FlixPatrol(Adapter):
             return 1.0
 
     async def fetch(self, params: dict) -> Fetched:
-        sections = await self.top10(params["platform"], params["region"])
+        sections = await self.sections(params["platform"], params["region"], params["sections"])
         missing = [SECTIONS[name] for name in params["sections"] if name not in sections]
         found = ", ".join(SECTIONS[name] for name in sections) or "none"
         if len(missing) == len(params["sections"]):
@@ -220,9 +298,10 @@ class FlixPatrol(Adapter):
                     kind=kind,
                     ids={"imdb": info["imdb"]} if info.get("imdb") else {},
                     url=f"{self.base()}{row['path']}",
-                    extra={"section": name, "rank": row["rank"], "stat": row.get("stat"),
-                           "premiere": info.get("premiere"), "country": info.get("country"),
-                           "page_kind": info.get("kind")},
+                    extra={"section": name, "rank": row["rank"], "change": row.get("change"),
+                           "days": row.get("days"), "points": row.get("points"),
+                           "original": row.get("original") or False, "premiere": info.get("premiere"),
+                           "country": info.get("country"), "page_kind": info.get("kind")},
                 ))
         notes = [f"Not on this page: {', '.join(missing)}. Found: {found}"] if missing else []
         return Fetched(entries, notes)

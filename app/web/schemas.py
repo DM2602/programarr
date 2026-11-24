@@ -549,6 +549,12 @@ class SettingsValues(Model):
     flixpatrol_delay: float
     ratings_days: int
     runs_keep_days: int
+    radarr_url: str
+    radarr_external_url: str
+    radarr_key: bool
+    sonarr_url: str
+    sonarr_external_url: str
+    sonarr_key: bool
     automation: bool
     designers: list[Designer]
     use_mediux_follows: bool
@@ -852,3 +858,15 @@ class MdblistListView(Model):
 
 class MdblistLists(Model):
     lists: list[MdblistListView]
+
+
+class ArrLink(Model):
+    """Where a title stands in Radarr or Sonarr; service is None when that one is not set up."""
+
+    service: Literal["radarr", "sonarr"] | None = None
+    label: str | None = None
+    present: bool = False
+    monitored: bool | None = None
+    downloaded: bool | None = None
+    url: str | None = None
+    error: str | None = None

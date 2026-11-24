@@ -8,6 +8,7 @@ from fastapi import FastAPI, Response
 from app import db, settings
 from app.posters import library
 
+from .arr import FakeArr
 from .images import poster_for
 from .lists import FakeFlixPatrol, FakeMdblist, FakeTrakt, fill_tmdb
 from .mediux import FakeMediux
@@ -42,6 +43,8 @@ class World:
         self.flixpatrol = FakeFlixPatrol()
         self.mdblist = FakeMdblist()
         self.trakt = FakeTrakt()
+        self.radarr = FakeArr("radarr", "radarr-key")
+        self.sonarr = FakeArr("sonarr", "sonarr-key")
         self.flare = FakeFlareSolverr({"tpdb.test": self.tpdb.app, "flixpatrol.test": self.flixpatrol.app})
         self.apps = {
             "plex.test": self.plex.app,
@@ -58,6 +61,8 @@ class World:
             "flixpatrol.test": self.flixpatrol.app,
             "mdblist.test": self.mdblist.app,
             "trakt.test": self.trakt.app,
+            "radarr.test": self.radarr.app,
+            "sonarr.test": self.sonarr.app,
         }
         self.router = Router(self.apps)
 
@@ -90,6 +95,11 @@ class World:
             "mdblist_key": self.mdblist.key,
             "trakt_api": "https://trakt.test",
             "trakt_client_id": self.trakt.client_id,
+            "radarr_url": "http://radarr.test:7878",
+            "radarr_external_url": "https://radarr.example.ch",
+            "radarr_key": self.radarr.key,
+            "sonarr_url": "http://sonarr.test:8989",
+            "sonarr_key": self.sonarr.key,
         }
         values.update(overrides)
         settings.update(values)
@@ -116,9 +126,10 @@ class World:
                  "mediatype": "show", "release_year": 2021},
             ],
         }
-        movie = lambda tmdb, title, year, imdb=None: {"title": title, "year": year,  # noqa: E731
-                                                      "ids": {"trakt": tmdb + 5, "slug": title.lower().replace(" ", "-"),
-                                                              "imdb": imdb, "tmdb": tmdb}}
+        def movie(tmdb: int, title: str, year: int, imdb: str | None = None) -> dict:
+            slug = title.lower().replace(" ", "-")
+            return {"title": title, "year": year, "ids": {"trakt": tmdb + 5, "slug": slug, "imdb": imdb, "tmdb": tmdb}}
+
         self.trakt.trending = [
             {"watchers": 50, "movie": movie(1001, "Guarding Stars", 2026, "tt9000001")},
             {"watchers": 40, "movie": movie(360920, "The Grinch", 2018, "tt2709692")},

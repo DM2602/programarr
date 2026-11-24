@@ -4,13 +4,14 @@ import { Tabs } from "../../components/Controls";
 import { Loading, Notice, PageHeader } from "../../components/ui";
 import { useTitle } from "../../lib/useTitle";
 import { PlexSection } from "./PlexSection";
-import { AboutSection, AutomationSection, FilesSection, ListsSection, NotificationsSection, SourcesSection, WebhooksSection } from "./sections";
+import { AboutSection, AutomationSection, FilesSection, ListsSection, NotificationsSection, ServicesSection, SourcesSection, WebhooksSection } from "./sections";
 
 const SECTIONS = [
   { key: "plex", label: "Plex", component: PlexSection },
   { key: "files", label: "Files", component: FilesSection },
   { key: "sources", label: "Sources", component: SourcesSection },
   { key: "lists", label: "Lists", component: ListsSection },
+  { key: "services", label: "Services", component: ServicesSection },
   { key: "automation", label: "Automation", component: AutomationSection },
   { key: "notifications", label: "Notifications", component: NotificationsSection },
   { key: "webhooks", label: "Webhooks", component: WebhooksSection },

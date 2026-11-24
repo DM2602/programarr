@@ -9,7 +9,7 @@ import { Tabs } from "../../components/Controls";
 import { Card, Empty, Loading, Notice, PageHeader } from "../../components/ui";
 import { timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
-import { EntryRow, isOpen, SOURCE_LABELS, type Entry } from "./common";
+import { EntryRow, isOpen, sectionGroups, SOURCE_LABELS, type Entry } from "./common";
 import { FixDialog } from "./FixDialog";
 import { RunCounts } from "./Lists";
 
@@ -86,13 +86,24 @@ export function RunPage() {
               count: entry.key === "all" ? undefined : data.entries.filter(entry.test).length,
             }))}
           />
-          <div className="mt-4">
+          <div className="mt-4 space-y-6">
             {entries.length ? (
-              <Card className="divide-y divide-gray-700" >
-                {entries.map((entry) => (
-                  <EntryRow key={entry.id} entry={entry} onFix={setFixing} />
-                ))}
-              </Card>
+              sectionGroups(entries).map((group) => (
+                <section key={group.key} aria-label={group.label ?? undefined} data-section={group.key || undefined}>
+                  {group.label && (
+                    <h2 className="mb-2 flex items-center gap-2 text-lg font-semibold text-gray-100">
+                      {group.icon}
+                      {group.label}
+                      <span className="text-sm font-normal text-gray-500">{group.entries.length}</span>
+                    </h2>
+                  )}
+                  <Card className="divide-y divide-gray-700">
+                    {group.entries.map((entry) => (
+                      <EntryRow key={entry.id} entry={entry} onFix={setFixing} grouped={!!group.label} />
+                    ))}
+                  </Card>
+                </section>
+              ))
             ) : (
               <Empty title="Nothing here" />
             )}

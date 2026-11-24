@@ -1,11 +1,13 @@
 import { CheckBadgeIcon, FilmIcon, MinusCircleIcon, PlayCircleIcon, RectangleStackIcon, TvIcon } from "@heroicons/react/20/solid";
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
+import { siRadarr, siSonarr } from "simple-icons";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { api, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useItem } from "../../api/queries";
-import { Button, ButtonLink, ExternalButton } from "../../components/Button";
+import { useItem, useItemArr } from "../../api/queries";
+import { BrandIcon } from "../../components/BrandIcon";
+import { Button, ButtonLink, ExternalButton, buttonClass } from "../../components/Button";
 import { useDialogs } from "../../components/Dialogs";
 import { Badge, Card, Empty, Loading, Notice, Section, type Tone } from "../../components/ui";
 import { dateOnly, seasonLabel, timeAgo } from "../../lib/format";
@@ -204,6 +206,32 @@ function DetailsCard({ detail }: { detail: Detail }) {
   );
 }
 
+/** Open the title in Radarr or Sonarr, or add it there. Nothing when the service is not set up. */
+function ArrButton({ itemKey }: { itemKey: string }) {
+  const { data } = useItemArr(itemKey);
+  if (!data?.service || !data.url) {
+    return data?.error ? <span className="self-center text-xs text-red-300" title={data.error}>{data.label} unreachable</span> : null;
+  }
+  const state = data.present ? (data.downloaded ? "Downloaded" : data.monitored ? "Monitored, missing files" : "Not monitored") : "Not added yet";
+  const dot = data.present ? (data.downloaded ? "bg-green-400" : data.monitored ? "bg-yellow-400" : "bg-gray-500") : null;
+  return (
+    <a
+      href={data.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={buttonClass("default")}
+      title={`${data.label}: ${state}`}
+      data-arr={data.service}
+      data-present={data.present}
+    >
+      <BrandIcon icon={data.service === "radarr" ? siRadarr : siSonarr} />
+      {data.present ? data.label : `Add to ${data.label}`}
+      {dot && <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />}
+      <span className="sr-only">{state}</span>
+    </a>
+  );
+}
+
 function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
   const run = useRunJob();
   const { item } = detail;
@@ -262,6 +290,7 @@ function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
           )}
         </div>
         <div className="flex shrink-0 flex-wrap justify-center gap-2">
+          <ArrButton itemKey={item.key} />
           <Button variant="primary" onClick={onPick}>
             {detail.binding ? "Change set" : "Pick a set"}
           </Button>

@@ -139,6 +139,10 @@ class FakeFlixPatrol:
                 return HTMLResponse(CHALLENGE, status_code=403)
             return await call_next(request)
 
+        @app.get("/top10/")
+        async def overview():
+            return HTMLResponse((FIXTURES / "top10-world.html").read_text(encoding="utf-8"))
+
         @app.get("/top10/{platform}/{region}/")
         async def top10(platform: str, region: str):
             if (platform, region) != ("netflix", "switzerland"):

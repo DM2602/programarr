@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT))
 PORT = 8795
 BASE = f"http://127.0.0.1:{PORT}"
 MAIN_PAGES = ("/", "/library", "/review", "/waiting", "/match", "/history", "/lists", "/lists/matches",
-              "/lists/exclusions", "/logs", "/settings/plex", "/settings/lists")
+              "/lists/exclusions", "/logs", "/settings/plex", "/settings/lists", "/settings/services")
 
 
 def png(color: tuple[int, int, int]) -> bytes:
@@ -289,6 +289,17 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         steps.ok("FlixPatrol preview from the form: 20 entries, 3 to check", page)
 
         # 15
+        assert [page.locator("[data-section]").nth(i).get_attribute("data-section") for i in range(2)] == ["movies", "shows"]
+        switch = page.locator(".entry", has_text="The Christmas Switch")
+        assert switch.locator("button.score").inner_text() == "90%" and "11 days in TOP 10" in switch.inner_text()
+        switch.locator("button.score").click()
+        page.wait_for_selector(".match-details")
+        assert "Same title, year off by one" in page.inner_text(".match-details")
+        steps.ok("Match details open from the score", page)
+        page.keyboard.press("Escape")
+        page.wait_for_selector(".match-details", state="detached")
+
+        # 16
         page.locator(".entry", has_text="A Dog's Perfect Christmas").locator("[data-action=fix]").click()
         page.wait_for_selector("[role=dialog] .candidate")
         page.click("[role=dialog] .candidate button[data-tmdb='1011']")
@@ -298,7 +309,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert db.get().scalar("SELECT COUNT(*) FROM parser_overrides WHERE media_id IS NOT NULL") == 1
         steps.ok("Match fixed in the search dialog", page)
 
-        # 16
+        # 17
         goto(page, "/lists/matches")
         page.wait_for_selector(".problem")
         assert page.locator(".problem").count() == 2
@@ -311,7 +322,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert page.locator(".correction").count() == 3
         steps.ok("Match log: candidate used, unknown title ignored", page)
 
-        # 17
+        # 18
         goto(page, f"/lists/runs/{run_id}")
         page.locator(".entry", has_text="Lupin").locator("[data-action=exclude]").click()
         page.fill("[role=dialog] input", "Seen it")
@@ -324,7 +335,19 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         wait_for(lambda: page.locator(".exclusion").count() == 1, what="exclusion removed")
         steps.ok("Title excluded from a preview and included again", page)
 
-        # 18
+        # 19
+        dune = db.get().one("SELECT key FROM items WHERE title='Dune'")["key"]
+        sequel = db.get().one("SELECT key, tmdb_id FROM items WHERE title='Dune: Part Two'")
+        goto(page, f"/item/{dune}")
+        page.wait_for_selector("[data-arr=radarr]")
+        assert page.get_attribute("[data-arr=radarr]", "href") == "https://radarr.example.ch/movie/dune-438631"
+        goto(page, f"/item/{sequel['key']}")
+        page.wait_for_selector("[data-arr=radarr][data-present=false]")
+        assert page.get_attribute("[data-arr=radarr]", "href").endswith(f"/add/new?term=tmdb%3A{sequel['tmdb_id']}")
+        assert page.inner_text("[data-arr=radarr]").startswith("Add to Radarr")
+        steps.ok("Title pages link to Radarr: open there or add", page)
+
+        # 20
         goto(page, "/settings/lists")
         page.click("[data-test=mdblist]")
         page.wait_for_selector("[data-result=mdblist][data-ok=true]")
@@ -332,7 +355,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         page.wait_for_selector("[data-result=trakt][data-ok=true]")
         steps.ok("MDBList key and Trakt client ID checked", page)
 
-        # 19
+        # 21
         visited: set[str] = set()
         for path in MAIN_PAGES:
             goto(page, path)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from typing import ClassVar
 
 from ..media import tmdb
 from .base import Adapter, Fetched, Field, RawEntry, SourceError
@@ -27,7 +28,7 @@ _LIST = re.compile(r"(?:themoviedb\.org/list/)?(\d+)")
 class Tmdb(Adapter):
     key = "tmdb"
     label = "TMDB"
-    fields = [
+    fields: ClassVar[list[Field]] = [
         Field("chart", "List", "select", options=[(key, value[0]) for key, value in CHARTS.items()],
               default="trending-movie-week"),
         Field("list", "List address or ID", "text", default="", required=False,

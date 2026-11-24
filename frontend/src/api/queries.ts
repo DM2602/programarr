@@ -52,6 +52,14 @@ export function useItem(key: string) {
   });
 }
 
+export function useItemArr(key: string) {
+  return useQuery({
+    queryKey: ["item-arr", key],
+    queryFn: () => unwrap(api.GET("/api/items/{key}/arr", { params: { path: { key } } })),
+    staleTime: 60_000,
+  });
+}
+
 export function useSets(key: string, enabled: boolean) {
   return useQuery({
     queryKey: ["sets", key],

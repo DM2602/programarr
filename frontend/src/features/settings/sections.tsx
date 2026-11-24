@@ -159,6 +159,28 @@ export function ListsSection({ view }: { view: View }) {
   );
 }
 
+// -- Services --------------------------------------------------------------------------------
+function ArrSettings({ form, service, label, port }: { form: ReturnType<typeof useSettingsForm>; service: "radarr" | "sonarr"; label: string; port: number }) {
+  return (
+    <SettingsSection title={label}>
+      <TextField form={form} name={`${service}_url`} label="Address" hint="How this container reaches it, with port" placeholder={`http://192.168.1.10:${port}`} type="url" />
+      <SecretField form={form} name={`${service}_key`} label="API key" hint={`${label} › Settings › General`} />
+      <TextField form={form} name={`${service}_external_url`} label="Address for links" hint="Optional, if the browser uses another address" placeholder={`https://${service}.example.com`} type="url" />
+      <TestButton what={service} label="Test connection" body={() => ({ value: typed(form, `${service}_key`), extra: (form.get(`${service}_url`) as string) || null })} />
+    </SettingsSection>
+  );
+}
+
+export function ServicesSection({ view }: { view: View }) {
+  const form = useSettingsForm(view.values);
+  return (
+    <SettingsForm form={form}>
+      <ArrSettings form={form} service="radarr" label="Radarr" port={7878} />
+      <ArrSettings form={form} service="sonarr" label="Sonarr" port={8989} />
+    </SettingsForm>
+  );
+}
+
 // -- Automation ------------------------------------------------------------------------------
 function Designers({ form, view }: { form: Form; view: View }) {
   const toast = useToast();

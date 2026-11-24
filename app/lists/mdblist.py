@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import re
+from typing import ClassVar
 
 from ..media import mdblist
 from .base import Adapter, Fetched, Field, RawEntry, SourceError, int_or_none
 
-_URL = re.compile(r"mdblist\.com/lists/([^/?#]+)/([^/?#]+)", re.I)
+_URL = re.compile(r"mdblist\.com/lists/([^/?#]+)/([^/?#]+)", re.IGNORECASE)
 
 
 def list_ref(value: str) -> str:
@@ -27,7 +28,7 @@ def list_ref(value: str) -> str:
 class Mdblist(Adapter):
     key = "mdblist"
     label = "MDBList"
-    fields = [
+    fields: ClassVar[list[Field]] = [
         Field("list", "List address", "text", default="", placeholder="https://mdblist.com/lists/name/list-name"),
         Field("limit", "Titles", "number", default=100, min=1, max=1000),
     ]

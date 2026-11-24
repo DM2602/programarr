@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
-from .. import config, db, http, jobs, notify, settings
+from .. import arr, config, db, http, jobs, notify, settings
 from ..plex import Plex, PlexError
 from ..posters import library, tasks, views
 from ..lists import runs as list_runs
@@ -101,7 +101,8 @@ async def log(level: str = ""):
 # -- settings -----------------------------------------------------------------------------
 EDITABLE = {key for key in settings.DEFAULTS if key not in settings.INTERNAL} - {"hook_token", "setup_done"}
 URL_KEYS = ("plex_url", "mediux_api", "mediux_site", "tpdb_base", "flaresolverr_url", "base_url", "tmdb_api",
-            "tmdb_image", "fanart_api", "tvmaze_api", "mdblist_api", "trakt_api", "flixpatrol_base")
+            "tmdb_image", "fanart_api", "tvmaze_api", "mdblist_api", "trakt_api", "flixpatrol_base",
+            "radarr_url", "radarr_external_url", "sonarr_url", "sonarr_external_url")
 CHOICES = {
     "naming_movie": ("auto", "poster", "file"),
     "naming_show": ("auto", "poster", "show", "folder"),
@@ -274,11 +275,15 @@ async def test_connection(what: str, body: TestBody):
         if what == "trakt":
             rows = await trakt.get("/movies/trending", {"limit": 1}, client_id=body.value or None)
             return {"ok": bool(isinstance(rows, list)), "message": "Trakt client ID is valid"}
+        if what in ("radarr", "sonarr"):
+            message = await arr.test(what, url=body.extra or None, key=body.value or None)
+            return {"ok": True, "message": message}
         if what == "discord":
             ok = await notify.send("test", "Programarr is connected", "This is how Programarr messages look.",
                                    webhook=body.value or None)
             return {"ok": ok, "message": "Test message sent" if ok else "Discord rejected the message"}
-    except (SourceError, PlexError, http.FetchError, mdblist.MdblistError, list_runs.SourceError) as exc:
+    except (SourceError, PlexError, http.FetchError, mdblist.MdblistError, list_runs.SourceError,
+            arr.ArrError) as exc:
         return {"ok": False, "message": str(exc)}
     except Exception as exc:  # noqa: BLE001 - shown next to the button
         return {"ok": False, "message": f"Error: {exc.__class__.__name__}"}

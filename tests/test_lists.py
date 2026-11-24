@@ -36,10 +36,26 @@ def test_top10_page_sections_and_rows():
     assert all(len(rows) == 10 for rows in sections.values())
     movies = sections["movies"]
     assert [row["rank"] for row in movies] == list(range(1, 11))
-    assert movies[0] == {"rank": 1, "title": "Guarding Stars", "path": "/title/guarding-stars/", "stat": "5 d"}
+    assert movies[0] == {"rank": 1, "title": "Guarding Stars", "path": "/title/guarding-stars/", "change": 0,
+                         "days": 5, "points": None, "original": True}
+    assert (movies[3]["change"], movies[4]["change"], movies[4]["days"]) == (1, -1, 51)
     assert movies[2]["path"] == "/title/heartland-2026/" and movies[7]["title"] == "Russell Brand: Open Secret"
     assert sections["shows"][4]["title"] == "The Empress"
-    assert sections["kids-movies"][7]["stat"] is None  # empty days cell
+    assert sections["kids-movies"][7]["days"] is None  # empty days cell
+
+
+def test_world_overview_page():
+    platforms = flixpatrol.parse_overview((FIXTURES / "top10-world.html").read_text(encoding="utf-8"))
+    assert set(platforms) >= {"netflix", "disney", "amazon-prime", "hbo-max", "apple-tv", "paramount-plus"}
+    assert all(len(rows) == 10 for sections in platforms.values() for rows in sections.values())
+    assert list(platforms["google"]) == ["movies"]
+    netflix = platforms["netflix"]["movies"]
+    assert netflix[0] == {"rank": 1, "title": "Guarding Stars", "path": "/title/guarding-stars/", "change": None,
+                          "days": None, "points": 882, "original": True}
+    assert platforms["disney"]["shows"][0]["title"] == "Percy Jackson and the Olympians"
+    # The per-country tables further down share the headings' wording but are not TOP 10 sections.
+    assert flixpatrol.section_of("TOP Movies on Netflix on November 24, 2026") == "movies"
+    assert flixpatrol.section_of("TOP Movies and TV Shows on Netflix on November 24, 2026 by country") is None
 
 
 def test_heading_rules():
@@ -94,7 +110,8 @@ async def test_flixpatrol_netflix_switzerland_like_script(lists):
     assert [c["tmdb_id"] for c in killing[:2]] == [1009, 1010] and by_title["How to Make a Killing"]["error"]
     dog = db.loads(by_title["A Dog's Perfect Christmas"]["candidates"])
     assert dog[0]["tmdb_id"] == 1011 and dog[0]["similarity"] >= 0.6
-    assert db.loads(by_title["The Grinch"]["extra"])["stat"] == "51 d"
+    grinch_extra = db.loads(by_title["The Grinch"]["extra"])
+    assert (grinch_extra["days"], grinch_extra["change"], grinch_extra["original"]) == (51, -1, False)
     assert (run["matched"], run["uncertain"], run["failed"], run["excluded"], run["raw_count"]) == (17, 2, 1, 0, 20)
     assert result["message"] == "Netflix Switzerland – Movies, TV Shows: 17 of 20 matched, 3 to check"
     # Ratings come from MDBList in one batch per kind.
@@ -114,6 +131,28 @@ async def test_second_run_uses_caches(lists):
     assert len(lists.mdblist.calls) == mdb  # ratings are fresh
     assert {row["raw_title"]: row["status"] for row in entries_of(result["run"])} == \
         {title: value[0] for title, value in EXPECTED.items()}
+
+
+async def test_world_lists_from_the_overview(lists):
+    params = runs.prepare("flixpatrol", {"platform": "disney", "region": "world", "sections": ["movies", "shows"],
+                                         "limit": 10})
+    result = await runs.preview("flixpatrol", params)
+    run = db.get().one("SELECT * FROM parser_runs WHERE id=?", (result["run"],))
+    assert run["label"] == "Disney+ World – Movies, TV Shows" and run["status"] == "ok"
+    rows = entries_of(result["run"])
+    assert len(rows) == 20 and rows[10]["raw_title"] == "Percy Jackson and the Olympians"
+    assert db.loads(rows[10]["extra"])["points"] == 665
+    assert lists.flixpatrol.requests[0] == "/top10/"
+    # Same overview for the next platform; kids lists are not in it, the platform's world page is tried.
+    lists.flixpatrol.requests.clear()
+    netflix = await runs.preview("flixpatrol", runs.prepare("flixpatrol", {
+        "platform": "netflix", "region": "world", "sections": ["movies", "kids-movies"], "limit": 2}))
+    assert lists.flixpatrol.requests[0] == "/top10/netflix/world/"
+    notes = db.loads(db.get().scalar("SELECT notes FROM parser_runs WHERE id=?", (netflix["run"],)))
+    assert notes == ["Not on this page: Kids Movies. Found: Movies, TV Shows"]
+    hulu = await runs.preview("flixpatrol", runs.prepare("flixpatrol", {
+        "platform": "hulu", "region": "world", "sections": ["movies"], "limit": 10}))
+    assert hulu["outcome"] == "error" and "hulu/world" in hulu["message"]
 
 
 async def test_kids_sections_and_limits(lists):

@@ -91,6 +91,8 @@ async def build(world) -> None:
     for row in db.get().query("SELECT item_key, id FROM slots WHERE file IS NOT NULL"):
         await apply.verify(row["item_key"], [row["id"]])
     await build_lists(world)
+    world.radarr.add_movie(438631, "Dune", "dune-438631")  # the other movies link to Radarr's search
+    world.sonarr.add_series(371980, "Severance", "severance", episodes=19, files=10)
 
 
 async def build_lists(world) -> None:

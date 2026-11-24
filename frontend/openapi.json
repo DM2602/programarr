@@ -612,6 +612,49 @@
         }
       }
     },
+    "/api/items/{key}/arr": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Arr",
+        "description": "Radarr (movies) or Sonarr (shows): open the title there, or add it.",
+        "operationId": "item_arr_api_items__key__arr_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrLink"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/items/{key}": {
       "get": {
         "tags": [
@@ -3047,6 +3090,97 @@
           "token"
         ],
         "title": "ApplyBody"
+      },
+      "ArrLink": {
+        "properties": {
+          "service": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "radarr",
+                  "sonarr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "present": {
+            "type": "boolean",
+            "title": "Present",
+            "default": false
+          },
+          "monitored": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monitored"
+          },
+          "downloaded": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloaded"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "label",
+          "present",
+          "monitored",
+          "downloaded",
+          "url",
+          "error"
+        ],
+        "title": "ArrLink",
+        "description": "Where a title stands in Radarr or Sonarr; service is None when that one is not set up."
       },
       "AuthState": {
         "properties": {
@@ -7199,6 +7333,30 @@
             "type": "integer",
             "title": "Runs Keep Days"
           },
+          "radarr_url": {
+            "type": "string",
+            "title": "Radarr Url"
+          },
+          "radarr_external_url": {
+            "type": "string",
+            "title": "Radarr External Url"
+          },
+          "radarr_key": {
+            "type": "boolean",
+            "title": "Radarr Key"
+          },
+          "sonarr_url": {
+            "type": "string",
+            "title": "Sonarr Url"
+          },
+          "sonarr_external_url": {
+            "type": "string",
+            "title": "Sonarr External Url"
+          },
+          "sonarr_key": {
+            "type": "boolean",
+            "title": "Sonarr Key"
+          },
           "automation": {
             "type": "boolean",
             "title": "Automation"
@@ -7323,6 +7481,12 @@
           "flixpatrol_delay",
           "ratings_days",
           "runs_keep_days",
+          "radarr_url",
+          "radarr_external_url",
+          "radarr_key",
+          "sonarr_url",
+          "sonarr_external_url",
+          "sonarr_key",
           "automation",
           "designers",
           "use_mediux_follows",

@@ -280,6 +280,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/items/{key}/arr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Item Arr
+         * @description Radarr (movies) or Sonarr (shows): open the title there, or add it.
+         */
+        get: operations["item_arr_api_items__key__arr_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/items/{key}": {
         parameters: {
             query?: never;
@@ -1283,6 +1303,29 @@ export interface components {
             slot: string;
             /** Token */
             token: string;
+        };
+        /**
+         * ArrLink
+         * @description Where a title stands in Radarr or Sonarr; service is None when that one is not set up.
+         */
+        ArrLink: {
+            /** Service */
+            service: ("radarr" | "sonarr") | null;
+            /** Label */
+            label: string | null;
+            /**
+             * Present
+             * @default false
+             */
+            present: boolean;
+            /** Monitored */
+            monitored: boolean | null;
+            /** Downloaded */
+            downloaded: boolean | null;
+            /** Url */
+            url: string | null;
+            /** Error */
+            error: string | null;
         };
         /** AuthState */
         AuthState: {
@@ -2585,6 +2628,18 @@ export interface components {
             ratings_days: number;
             /** Runs Keep Days */
             runs_keep_days: number;
+            /** Radarr Url */
+            radarr_url: string;
+            /** Radarr External Url */
+            radarr_external_url: string;
+            /** Radarr Key */
+            radarr_key: boolean;
+            /** Sonarr Url */
+            sonarr_url: string;
+            /** Sonarr External Url */
+            sonarr_external_url: string;
+            /** Sonarr Key */
+            sonarr_key: boolean;
             /** Automation */
             automation: boolean;
             /** Designers */
@@ -3301,6 +3356,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LibraryPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    item_arr_api_items__key__arr_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArrLink"];
                 };
             };
             /** @description Validation Error */

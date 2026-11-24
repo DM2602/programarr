@@ -6,16 +6,16 @@ import math
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from .. import db, http, imaging, settings
+from .. import arr, db, http, imaging, settings
 from ..plex import PlexError
 from ..posters import binding, catalog, detect, library, refsign, reviews, sources, status, tasks, views
 from ..posters.sources import tpdb
 from ..posters.sources.base import ImageRef, SourceError
 from ..util import fold
 from .common import item_or_404, job_row, slot_of, start_job
-from .schemas import (ApplyBody, BindBody, ConfirmAll, DetectStats, Follows, HistoryPage, ImageUrlBody, ImageView,
-                      Images, ItemDetail, JobStarted, LibraryPage, Ok, OnlineResponse, ReviewsPage, SetsResponse,
-                      SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, WaitingPage)
+from .schemas import (ApplyBody, ArrLink, BindBody, ConfirmAll, DetectStats, Follows, HistoryPage, ImageUrlBody,
+                      ImageView, Images, ItemDetail, JobStarted, LibraryPage, Ok, OnlineResponse, ReviewsPage,
+                      SetsResponse, SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, WaitingPage)
 
 router = APIRouter(prefix="/api", tags=["posters"])
 
@@ -64,6 +64,15 @@ async def library_page(type: str = "", status: str = "all", q: str = "", library
 
 
 # -- one title ------------------------------------------------------------------------------
+@router.get("/items/{key}/arr", response_model=ArrLink)
+async def item_arr(key: str):
+    """Radarr (movies) or Sonarr (shows): open the title there, or add it."""
+    item = item_or_404(key)
+    found = await arr.lookup(item["type"], item.get("tmdb_id"), item.get("tvdb_id"), item.get("imdb_id"),
+                             item.get("search_title") or item.get("title") or "")
+    return found or {}
+
+
 @router.get("/items/{key}", response_model=ItemDetail)
 async def item_detail(key: str):
     database = db.get()

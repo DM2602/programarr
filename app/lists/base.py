@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
@@ -64,7 +64,7 @@ class Adapter:
 
     key = ""
     label = ""
-    fields: list[Field] = []
+    fields: ClassVar[list[Field]] = []
 
     def missing(self) -> str | None:
         """What has to be set up first, or None."""
