@@ -165,7 +165,7 @@ def _season_dir(place: Place) -> Path | None:
     if place.season_folder and place.season_folder != place.folder:
         return place.season_folder
     n = place.season or 0
-    names = ["specials", "season 00", "season 0", "staffel 0"] if n == 0 else \
+    names = ["season 00", "season 0", "staffel 00", "staffel 0", "specials"] if n == 0 else \
         [f"season {n:02d}", f"season {n}", f"season{n:02d}", f"staffel {n:02d}", f"staffel {n}"]
     try:
         with os.scandir(place.folder) as entries:
@@ -193,9 +193,10 @@ def _named(place: Place, ext: str, naming: dict) -> Path:
     if place.kind == "season" and place.season is not None:
         n = place.season
         mode = naming.get("season", "root")
-        if n == 0:
-            # Plex documents only this name (in the show folder) for specials.
+        if n == 0 and mode == "root":
+            # The show-folder name Plex documents for specials.
             return place.folder / f"season-specials-poster{ext}"
+        # Specials like every other season: "Season 00" folder, Season00.jpg.
         if mode == "folder":
             season_dir = _season_dir(place)
             # No season folder (all episodes in the show folder): same name, one level up.

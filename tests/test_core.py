@@ -39,6 +39,14 @@ def test_existing_and_target_names(tmp_path):
     assert paths.target(place, ".jpg", {**naming, "season": "root_plain"}) == show / "Season01.jpg"
     specials = paths.Place("season", show, season=0)
     assert paths.target(specials, ".png", naming) == show / "season-specials-poster.png"
+    # Specials otherwise follow the seasons: Season00 in "Season 00" (preferred over a "Specials" folder).
+    assert paths.target(specials, ".png", {**naming, "season": "root_plain"}) == show / "Season00.png"
+    assert paths.target(specials, ".png", {**naming, "season": "folder"}) == show / "Season00.png"  # no folder yet
+    (show / "Specials").mkdir()
+    (show / "Season 00").mkdir()
+    assert paths.target(specials, ".jpg", {**naming, "season": "folder"}) == show / "Season 00" / "Season00.jpg"
+    from_plex = paths.Place("season", show, season=0, season_folder=show / "Specials")
+    assert paths.target(from_plex, ".jpg", {**naming, "season": "folder"}) == show / "Specials" / "Season00.jpg"
     # An existing file keeps its name and place
     (season_dir / "Season01.jpg").write_bytes(b"x")
     assert paths.existing(place) == [season_dir / "Season01.jpg"]
@@ -140,9 +148,9 @@ async def test_season_posters_use_plex_names(world):
     outcomes = await apply.apply(show, assignments, "manual", "manual")
     assert all(o.ok for o in outcomes)
     names = sorted(Path(o.path).name for o in outcomes)
-    assert names == ["Season01.jpg", "Season02.jpg", "season-specials-poster.jpg"]
+    assert names == ["Season00.jpg", "Season01.jpg", "Season02.jpg"]
     root = world.media / "tv" / "Andor (2022)"
-    assert (root / "Season 01" / "Season01.jpg").exists() and (root / "season-specials-poster.jpg").exists()
+    assert (root / "Season 01" / "Season01.jpg").exists() and (root / "Season 00" / "Season00.jpg").exists()
     for n in (0, 1, 2):
         assert world.plex.selected_is_local(world.plex.season_key(show, n))
 

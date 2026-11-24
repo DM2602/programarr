@@ -1,4 +1,4 @@
-import { CheckBadgeIcon, FilmIcon, MinusCircleIcon, PlayCircleIcon, RectangleStackIcon, TvIcon } from "@heroicons/react/20/solid";
+import { CheckBadgeIcon, FilmIcon, MinusCircleIcon, PlayCircleIcon, Squares2X2Icon, TvIcon } from "@heroicons/react/20/solid";
 import { ArrowPathIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { siRadarr, siSonarr } from "simple-icons";
@@ -32,7 +32,7 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
   };
 
   return (
-    <div className={`slot-card ${slot.gone ? "opacity-60" : ""}`} data-slot={slot.id}>
+    <div className={`slot-card flex flex-col ${slot.gone ? "opacity-60" : ""}`} data-slot={slot.id}>
       <button type="button" className="pick group block w-full text-left" onClick={() => onPick(slot.id)} aria-label={`Change poster for ${slot.label}`} data-slot={slot.id}>
         <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-800 shadow-poster ring-1 ring-gray-700 transition duration-300 group-hover:ring-gray-500">
           <img src={slot.thumb} alt="" loading="lazy" className={`h-full w-full object-cover ${slot.file ? "" : "opacity-60 grayscale-[35%]"}`} />
@@ -48,7 +48,10 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
       <p className="truncate text-xs text-gray-400" title={slot.file ?? undefined}>
         {slot.file ? `${slot.folder_name ? `${slot.folder_name}/` : ""}${slot.file_name}` : "No file"}
       </p>
-      {origin && <p className="truncate text-xs text-gray-500">{origin}</p>}
+      {/* Always one line, so badges and buttons line up across the cards */}
+      <p className="min-h-4 truncate text-xs text-gray-500" title={origin ?? undefined}>
+        {origin}
+      </p>
       <div className="mt-1.5">
         {slot.waiting ? (
           <Badge tone="indigo">Waiting since {dateOnly(slot.waiting_since)}</Badge>
@@ -274,8 +277,8 @@ function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
               </Badge>
             ) : null}
             {detail.library && (
-              <Link to={`/library?library=${encodeURIComponent(detail.library.key)}`} className="rounded-full hover:opacity-90" title="Plex library">
-                <Badge tone="dark" icon={<RectangleStackIcon className="h-3.5 w-3.5" />}>
+              <Link to={`/library?library=${encodeURIComponent(detail.library.key)}`} className="inline-flex rounded-full hover:opacity-90" title="Plex library">
+                <Badge tone="dark" icon={<Squares2X2Icon className="h-3.5 w-3.5" />}>
                   {detail.library.title}
                 </Badge>
               </Link>

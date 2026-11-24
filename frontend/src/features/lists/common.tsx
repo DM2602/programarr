@@ -3,10 +3,10 @@ import { CalendarDaysIcon, ChartBarIcon, FilmIcon, SparklesIcon, Squares2X2Icon,
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { siImdb, siRottentomatoes } from "simple-icons";
+import { siRottentomatoes } from "simple-icons";
 import { api, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { BrandIcon } from "../../components/BrandIcon";
+import { BrandIcon, ImdbMark } from "../../components/BrandIcon";
 import { Button } from "../../components/Button";
 import { useDialogs } from "../../components/Dialogs";
 import { Popover } from "../../components/Popover";
@@ -83,7 +83,7 @@ export function Ratings({ media }: { media: Media }) {
   const parts: { key: string; icon: ReactNode; value: string; title: string }[] = [];
   if (media.imdb_rating) {
     const votes = media.imdb_votes ? `, ${media.imdb_votes.toLocaleString("en-US")} votes` : "";
-    parts.push({ key: "imdb", icon: <BrandIcon icon={siImdb} />, value: media.imdb_rating.toFixed(1), title: `IMDb ${media.imdb_rating.toFixed(1)}${votes}` });
+    parts.push({ key: "imdb", icon: <ImdbMark />, value: media.imdb_rating.toFixed(1), title: `IMDb ${media.imdb_rating.toFixed(1)}${votes}` });
   }
   if (media.rt_critics !== null && media.rt_critics !== undefined) {
     parts.push({ key: "rt", icon: <BrandIcon icon={siRottentomatoes} />, value: `${media.rt_critics}%`, title: `Rotten Tomatoes critics ${media.rt_critics}%` });
@@ -493,7 +493,7 @@ export function EntryRow({ entry, onFix, showList = false, grouped = false }: {
             {!grouped && <KindIcon kind={media?.kind ?? entry.kind} />}
             <StatusBadge entry={entry} />
             {entry.plex_key && (
-              <Link to={`/item/${entry.plex_key}`} className="rounded-full hover:opacity-90" title="Open in Programarr">
+              <Link to={`/item/${entry.plex_key}`} className="inline-flex rounded-full hover:opacity-90" title="Open in Programarr">
                 <Badge tone="green">In Plex</Badge>
               </Link>
             )}

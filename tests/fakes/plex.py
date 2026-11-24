@@ -91,7 +91,7 @@ class FakePlex:
     def add_season(self, show_key: str, number: int, episodes: int = 2) -> str:
         show = self.items[show_key]
         key = self._key()
-        folder_name = "Specials" if number == 0 else show["season_dir"].format(n=number)
+        folder_name = show["season_dir"].format(n=number)  # specials in "Season 00", like Sonarr can do
         folder = f"{show['location']}/{folder_name}"
         self.local(folder).mkdir(parents=True, exist_ok=True)
         now = int(time.time())
