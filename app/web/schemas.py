@@ -870,3 +870,19 @@ class ArrLink(Model):
     downloaded: bool | None = None
     url: str | None = None
     error: str | None = None
+
+
+class MissingSeason(Model):
+    number: int
+    episodes: int | None = None
+    air_date: str | None = None
+    poster: str | None = None
+    sonarr: Literal["monitored", "unmonitored", "absent"] | None = None
+    files: int | None = None
+
+
+class MissingSeasons(Model):
+    """Seasons Plex does not have yet (from TMDB and Sonarr)."""
+
+    seasons: list[MissingSeason]
+    sonarr_url: str | None = None

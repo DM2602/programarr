@@ -16,9 +16,11 @@ class FakeArr:
         self.titles.append({"id": len(self.titles) + 1, "tmdbId": tmdb, "title": title, "titleSlug": slug,
                             "hasFile": has_file, "monitored": monitored})
 
-    def add_series(self, tvdb: int, title: str, slug: str, episodes: int = 10, files: int = 10) -> None:
+    def add_series(self, tvdb: int, title: str, slug: str, episodes: int = 10, files: int = 10,
+                   seasons: list[dict] = ()) -> None:
         self.titles.append({"id": len(self.titles) + 1, "tvdbId": tvdb, "title": title, "titleSlug": slug,
-                            "monitored": True, "statistics": {"episodeCount": episodes, "episodeFileCount": files}})
+                            "monitored": True, "statistics": {"episodeCount": episodes, "episodeFileCount": files},
+                            "seasons": list(seasons)})
 
     def _make_app(self) -> FastAPI:
         app = FastAPI()

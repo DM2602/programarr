@@ -28,12 +28,14 @@ class FakeTmdb:
 
     def add_title(self, kind: str, tmdb: int, title: str, date: str, *, original: str | None = None,
                   popularity: float = 10.0, imdb: str | None = None, tvdb: int | None = None,
-                  alt: tuple[str, ...] = (), poster: bool = True) -> None:
+                  alt: tuple[str, ...] = (), poster: bool = True, seasons: list[tuple] = ()) -> None:
         """kind is TMDB's: movie or tv."""
         self.catalog[f"{kind}:{tmdb}"] = {
             "kind": kind, "id": tmdb, "title": title, "original": original or title, "date": date,
             "popularity": popularity, "imdb": imdb, "tvdb": tvdb, "alt": list(alt),
             "poster": f"/p{kind}{tmdb}.jpg" if poster else None,
+            "seasons": [{"season_number": n, "episode_count": count, "air_date": date, "poster_path": f"/p{tmdb}s{n}.jpg"}
+                        for n, count, date in seasons],
         }
 
     def _result(self, entry: dict, media_type: bool = False) -> dict:
@@ -157,7 +159,8 @@ class FakeTmdb:
                     row["imdb_id"] = full["imdb"]
                 else:
                     row["origin_country"] = ["US"]
-                    row["number_of_seasons"] = 2
+                    row["number_of_seasons"] = len(full["seasons"]) or 2
+                    row["seasons"] = full["seasons"]
                 row["status"] = "Released" if kind == "movie" else "Returning Series"
                 return row
             entry = fake.titles.get(f"{kind}:{tmdb}")

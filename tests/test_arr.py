@@ -37,3 +37,26 @@ def test_connection_tests(world, client):  # noqa: F811
     assert values["radarr_key"] is True and values["radarr_external_url"] == "https://radarr.example.ch"
     saved = client.post("/api/settings", json={"sonarr_external_url": "https://sonarr.example.ch/"}).json()
     assert saved["saved"] == ["sonarr_external_url"] and settings.get("sonarr_external_url") == "https://sonarr.example.ch"
+
+
+def test_seasons_missing_in_plex(world, client):  # noqa: F811
+    show, movie = setup_library(world, client)  # Severance with seasons 1 and 2 in Plex
+    world.tmdb.add_title("tv", 95396, "Severance", "2022-02-18", tvdb=371980, seasons=[
+        (0, 3, "2022-01-01"), (1, 9, "2022-02-18"), (2, 10, "2025-01-17"), (3, 10, "2027-01-16")])
+    stats = {"episodeFileCount": 0, "totalEpisodeCount": 10}
+    world.sonarr.add_series(371980, "Severance", "severance", seasons=[
+        {"seasonNumber": 0, "monitored": False, "statistics": stats},
+        {"seasonNumber": 1, "monitored": True}, {"seasonNumber": 2, "monitored": True},
+        {"seasonNumber": 3, "monitored": True, "statistics": stats},
+        {"seasonNumber": 4, "monitored": False, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 0}}])
+    data = client.get(f"/api/items/{show}/missing").json()
+    assert data["sonarr_url"] == "http://sonarr.test:8989/series/severance"
+    assert data["seasons"] == [
+        {"number": 3, "episodes": 10, "air_date": "2027-01-16", "poster": "/img/tmdb/p95396s3.jpg",
+         "sonarr": "monitored", "files": 0},
+        {"number": 4, "episodes": None, "air_date": None, "poster": None, "sonarr": "unmonitored", "files": 0},
+    ]
+    # Without Sonarr: what TMDB knows, specials left out.
+    settings.set("sonarr_url", "")
+    assert [s["number"] for s in client.get(f"/api/items/{show}/missing").json()["seasons"]] == [3]
+    assert client.get(f"/api/items/{movie}/missing").json() == {"seasons": [], "sonarr_url": None}

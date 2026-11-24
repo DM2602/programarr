@@ -60,6 +60,15 @@ export function useItemArr(key: string) {
   });
 }
 
+export function useItemMissing(key: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["item-missing", key],
+    queryFn: () => unwrap(api.GET("/api/items/{key}/missing", { params: { path: { key } } })),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useSets(key: string, enabled: boolean) {
   return useQuery({
     queryKey: ["sets", key],

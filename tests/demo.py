@@ -93,6 +93,12 @@ async def build(world) -> None:
     await build_lists(world)
     world.radarr.add_movie(438631, "Dune", "dune-438631")  # the other movies link to Radarr's search
     world.sonarr.add_series(371980, "Severance", "severance", episodes=19, files=10)
+    # The Bear: Plex has seasons 1-3; TMDB knows 5, Sonarr monitors season 4.
+    world.tmdb.add_title("tv", 136315, "The Bear", "2022-06-23", tvdb=412429, seasons=[
+        (1, 8, "2022-06-23"), (2, 10, "2023-06-22"), (3, 10, "2024-06-26"), (4, 10, "2025-06-25"), (5, None, None)])
+    world.sonarr.add_series(412429, "The Bear", "the-bear", seasons=[
+        {"seasonNumber": n, "monitored": n != 5, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 10}}
+        for n in (1, 2, 3, 4, 5)])
 
 
 async def build_lists(world) -> None:

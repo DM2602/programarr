@@ -655,6 +655,49 @@
         }
       }
     },
+    "/api/items/{key}/missing": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Missing",
+        "description": "Seasons TMDB or Sonarr know that Plex does not have yet.",
+        "operationId": "item_missing_api_items__key__missing_get",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissingSeasons"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/items/{key}": {
       "get": {
         "tags": [
@@ -5888,6 +5931,113 @@
           "ratings_at"
         ],
         "title": "MediaView"
+      },
+      "MissingSeason": {
+        "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "episodes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episodes"
+          },
+          "air_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Air Date"
+          },
+          "poster": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poster"
+          },
+          "sonarr": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "monitored",
+                  "unmonitored",
+                  "absent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sonarr"
+          },
+          "files": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "episodes",
+          "air_date",
+          "poster",
+          "sonarr",
+          "files"
+        ],
+        "title": "MissingSeason"
+      },
+      "MissingSeasons": {
+        "properties": {
+          "seasons": {
+            "items": {
+              "$ref": "#/components/schemas/MissingSeason"
+            },
+            "type": "array",
+            "title": "Seasons"
+          },
+          "sonarr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sonarr Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seasons",
+          "sonarr_url"
+        ],
+        "title": "MissingSeasons",
+        "description": "Seasons Plex does not have yet (from TMDB and Sonarr)."
       },
       "NamingDetected": {
         "properties": {

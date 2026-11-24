@@ -300,6 +300,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/items/{key}/missing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Item Missing
+         * @description Seasons TMDB or Sonarr know that Plex does not have yet.
+         */
+        get: operations["item_missing_api_items__key__missing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/items/{key}": {
         parameters: {
             query?: never;
@@ -2120,6 +2140,31 @@ export interface components {
             /** Ratings At */
             ratings_at: number | null;
         };
+        /** MissingSeason */
+        MissingSeason: {
+            /** Number */
+            number: number;
+            /** Episodes */
+            episodes: number | null;
+            /** Air Date */
+            air_date: string | null;
+            /** Poster */
+            poster: string | null;
+            /** Sonarr */
+            sonarr: ("monitored" | "unmonitored" | "absent") | null;
+            /** Files */
+            files: number | null;
+        };
+        /**
+         * MissingSeasons
+         * @description Seasons Plex does not have yet (from TMDB and Sonarr).
+         */
+        MissingSeasons: {
+            /** Seasons */
+            seasons: components["schemas"]["MissingSeason"][];
+            /** Sonarr Url */
+            sonarr_url: string | null;
+        };
         /** NamingDetected */
         NamingDetected: {
             /** Movie */
@@ -3387,6 +3432,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ArrLink"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    item_missing_api_items__key__missing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissingSeasons"];
                 };
             };
             /** @description Validation Error */

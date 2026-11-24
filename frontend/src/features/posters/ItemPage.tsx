@@ -5,7 +5,7 @@ import { siRadarr, siSonarr } from "simple-icons";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { api, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useItem, useItemArr } from "../../api/queries";
+import { useItem, useItemArr, useItemMissing } from "../../api/queries";
 import { BrandIcon } from "../../components/BrandIcon";
 import { Button, ButtonLink, ExternalButton, buttonClass } from "../../components/Button";
 import { useDialogs } from "../../components/Dialogs";
@@ -83,6 +83,43 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+type Missing = Schemas["MissingSeason"];
+
+function airDate(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/** A season TMDB or Sonarr knows that Plex does not have yet: greyed out, no poster to set. */
+function MissingSeasonCard({ season }: { season: Missing }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = !season.air_date || season.air_date > today;
+  const facts = [season.episodes ? `${season.episodes} ${season.episodes === 1 ? "episode" : "episodes"}` : null, season.air_date && !upcoming ? season.air_date.slice(0, 4) : null]
+    .filter(Boolean)
+    .join(", ");
+  const state = upcoming
+    ? season.air_date
+      ? `Airs ${airDate(season.air_date)}`
+      : "Not aired yet"
+    : season.sonarr === "monitored"
+      ? "Monitored in Sonarr"
+      : season.sonarr === "unmonitored"
+        ? "Not monitored"
+        : season.sonarr === "absent"
+          ? "Not in Sonarr"
+          : null;
+  return (
+    <div className="slot-card flex flex-col" data-missing={season.number}>
+      <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-dashed border-gray-700 bg-gray-800/40">
+        {season.poster && <img src={season.poster} alt="" loading="lazy" className="h-full w-full object-cover opacity-30 grayscale" />}
+      </div>
+      <h3 className="mt-2 text-sm font-semibold text-gray-400">{seasonLabel(season.number)}</h3>
+      <p className="text-xs text-gray-500">Not in Plex</p>
+      <p className="min-h-4 truncate text-xs text-gray-600">{facts}</p>
+      <div className="mt-1.5">{state && <Badge tone="gray">{state}</Badge>}</div>
     </div>
   );
 }
@@ -185,6 +222,13 @@ function DetailsCard({ detail }: { detail: Detail }) {
           <p className="mt-1 font-mono text-xs break-all text-gray-300">{detail.item.folder}</p>
         </>
       )}
+      {detail.item.search_title && detail.item.search_title !== detail.item.title && (
+        <>
+          <p className="mt-4 text-xs font-semibold text-gray-400">Poster search title</p>
+          <p className="mt-1 text-gray-200">{detail.item.search_title}</p>
+          <p className="mt-0.5 text-xs text-gray-500">English title from TMDB. ThePosterDB lists titles under it.</p>
+        </>
+      )}
       {detail.links.length > 0 && (
         <>
           <p className="mt-4 text-xs font-semibold text-gray-400">Links</p>
@@ -284,13 +328,7 @@ function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
               </Link>
             )}
           </div>
-          {(item.collection_name || (item.search_title && item.search_title !== item.title)) && (
-            <p className="mt-2 text-sm text-gray-400">
-              {item.collection_name && <span>Collection {item.collection_name}</span>}
-              {item.collection_name && item.search_title && item.search_title !== item.title && <span>, </span>}
-              {item.search_title && item.search_title !== item.title && <span>English title {item.search_title}</span>}
-            </p>
-          )}
+          {item.collection_name && <p className="mt-2 text-sm text-gray-400">Collection {item.collection_name}</p>}
         </div>
         <div className="flex shrink-0 flex-wrap justify-center gap-2">
           <ArrButton itemKey={item.key} />
@@ -315,6 +353,7 @@ export function ItemPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data, isPending, error } = useItem(key);
+  const missing = useItemMissing(key, data?.item.type === "show");
   const [picking, setPicking] = useState<string | null>(null);
   useTitle(data?.item.title ?? "Title");
 
@@ -337,6 +376,13 @@ export function ItemPage() {
   }
   const main = data.slots[0];
   const openMain = () => main && setPicking(main.id);
+
+  // Plex' slots and the seasons Plex does not have yet, in season order (the show poster first).
+  type Card = { order: number; slot?: Slot; missing?: Missing };
+  const cards: Card[] = [
+    ...data.slots.map((slot): Card => ({ order: slot.kind === "season" ? (slot.season ?? 0) : -1, slot })),
+    ...(missing.data?.seasons ?? []).map((season): Card => ({ order: season.number, missing: season })),
+  ].sort((a, b) => a.order - b.order || (a.slot ? -1 : 1));
 
   return (
     <>
@@ -361,9 +407,13 @@ export function ItemPage() {
         <div className="min-w-0">
           <Section title="Posters" id="posters">
             <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-x-4 gap-y-8">
-              {data.slots.map((slot) => (
-                <SlotCard key={slot.id} detail={data} slot={slot} onPick={setPicking} />
-              ))}
+              {cards.map((card) =>
+                card.slot ? (
+                  <SlotCard key={card.slot.id} detail={data} slot={card.slot} onPick={setPicking} />
+                ) : (
+                  <MissingSeasonCard key={`missing-${card.missing!.number}`} season={card.missing!} />
+                ),
+              )}
             </div>
           </Section>
           <Section title="History" id="item-history">

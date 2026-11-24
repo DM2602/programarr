@@ -8,14 +8,14 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from .. import arr, db, http, imaging, settings
 from ..plex import PlexError
-from ..posters import binding, catalog, detect, library, refsign, reviews, sources, status, tasks, views
+from ..posters import binding, catalog, detect, library, missing, refsign, reviews, sources, status, tasks, views
 from ..posters.sources import tpdb
 from ..posters.sources.base import ImageRef, SourceError
 from ..util import fold
 from .common import item_or_404, job_row, slot_of, start_job
 from .schemas import (ApplyBody, ArrLink, BindBody, ConfirmAll, DetectStats, Follows, HistoryPage, ImageUrlBody,
-                      ImageView, Images, ItemDetail, JobStarted, LibraryPage, Ok, OnlineResponse, ReviewsPage,
-                      SetsResponse, SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, WaitingPage)
+                      ImageView, Images, ItemDetail, JobStarted, LibraryPage, MissingSeasons, Ok, OnlineResponse,
+                      ReviewsPage, SetsResponse, SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, WaitingPage)
 
 router = APIRouter(prefix="/api", tags=["posters"])
 
@@ -71,6 +71,12 @@ async def item_arr(key: str):
     found = await arr.lookup(item["type"], item.get("tmdb_id"), item.get("tvdb_id"), item.get("imdb_id"),
                              item.get("search_title") or item.get("title") or "")
     return found or {}
+
+
+@router.get("/items/{key}/missing", response_model=MissingSeasons)
+async def item_missing(key: str):
+    """Seasons TMDB or Sonarr know that Plex does not have yet."""
+    return await missing.seasons(item_or_404(key))
 
 
 @router.get("/items/{key}", response_model=ItemDetail)

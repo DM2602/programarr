@@ -345,6 +345,11 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         page.wait_for_selector("[data-arr=radarr][data-present=false]")
         assert page.get_attribute("[data-arr=radarr]", "href").endswith(f"/add/new?term=tmdb%3A{sequel['tmdb_id']}")
         assert page.inner_text("[data-arr=radarr]").startswith("Add to Radarr")
+        bear = db.get().one("SELECT key FROM items WHERE title='The Bear'")["key"]
+        goto(page, f"/item/{bear}")
+        page.wait_for_selector("[data-missing='4']")
+        assert "Monitored in Sonarr" in page.inner_text("[data-missing='4']")
+        assert page.locator("[data-missing]").count() == 2
         steps.ok("Title pages link to Radarr: open there or add", page)
 
         # 20
