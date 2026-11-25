@@ -9,6 +9,8 @@ from app.arr import library
 from app.flows import engine, graph, schedule, store
 from app.flows.nodes import TYPES, ConfigError, Title
 from app.lists import scrape
+from app.media import normalize
+from app.media import store as media_store
 from tests.test_web import client, wait_job  # noqa: F401 - fixture and helper
 
 NETFLIX_CH = {"platform": "netflix", "region": "switzerland", "sections": ["movies", "shows"], "limit": 10}
@@ -117,16 +119,17 @@ def test_filters(world):
 
     def verdict(kind: str, config: dict, item: Title) -> tuple[str, str]:
         node = TYPES.types[kind]
-        result = node.test(node.clean(config), item)
-        return result.port, result.detail
+        ports, detail = node.route(node.clean(config), item)
+        return ",".join(ports), detail
 
     rating = {"metric": "imdb", "min": "7"}
-    assert verdict("rating", rating, title(imdb_rating=7.4)) == ("match", "IMDb 7.4 ≥ 7")
-    assert verdict("rating", rating, title(imdb_rating=6.9)) == ("no_match", "IMDb 6.9 < 7")
+    assert verdict("rating", rating, title(imdb_rating=7.4)) == ("match", "IMDb 7.4")
+    assert verdict("rating", rating, title(imdb_rating=6.9)) == ("no_match", "IMDb 6.9")
     assert verdict("rating", rating, title()) == ("no_match", "No IMDb rating")
     assert verdict("rating", {**rating, "missing": "match"}, title())[0] == "match"
-    assert verdict("rating", {"metric": "rt_critics", "min": 80}, title(rt_critics=85)) == ("match", "RT critics 85% ≥ 80%")
-    assert verdict("rating", {"metric": "imdb_votes", "min": 10000}, title(imdb_votes=9000))[1] == "IMDb votes 9'000 < 10'000"
+    assert verdict("rating", {"metric": "rt_critics", "min": 80}, title(rt_critics=85)) == ("match", "RT critics 85%")
+    assert verdict("rating", {"metric": "imdb_votes", "min": 10000}, title(imdb_votes=9000)) == \
+        ("no_match", "IMDb votes 9'000")
     with pytest.raises(ConfigError, match="0–100"):
         TYPES.types["rating"].clean({"metric": "rt_audience", "min": 120})
 
@@ -164,31 +167,87 @@ def test_filters(world):
     assert verdict("seasons", {"min": 1, "max": 2}, title(kind="show", seasons=1)) == ("match", "1 season")
     assert verdict("seasons", {"max": 2}, title()) == ("no_match", "Movie")
     assert verdict("type", {}, title(kind="show")) == ("show", "")
-    plex = TYPES.types["plex"]
-    assert plex.test({}, Title(1, {"kind": "movie"}, in_plex=True)).port == "match"
-    assert TYPES.types["year"].summary(TYPES.types["year"].clean({"mode": "recent", "months": 24})) == \
-        "Released in the last 2 years"
-    assert TYPES.types["genre"].summary({"mode": "none", "genres": ["horror", "kids"]}) == "Has none of Horror, Kids"
+    assert TYPES.types["plex"].route({}, Title(1, {"kind": "movie"}, in_plex=True)) == (["match"], "In Plex")
+    year = TYPES.types["year"]
+    assert year.summary(year.clean({"mode": "recent", "months": 24})) == "Released in the last 2 years"
+    genre = TYPES.types["genre"]
+    assert genre.summary(genre.clean({"mode": "none", "genres": ["horror", "kids"]})) == "Has none of Horror, Kids"
+
+
+def test_filters_with_several_outputs(world):
+    rating = TYPES.types["rating"]
+    # Older flat settings are one rule with the ports Match and No match.
+    flat = rating.clean({"metric": "imdb", "min": 7})
+    assert [rule["id"] for rule in flat["rules"]] == ["match"] and flat["each"] is False
+    assert [(port.key, port.label) for port in rating.ports_for(flat)] == [("match", "Match"), ("no_match", "No match")]
+
+    tiers = rating.clean({"rules": [{"id": "match", "metric": "imdb", "min": 8},
+                                    {"id": "r2", "metric": "imdb", "min": 7, "label": "Good"},
+                                    {"id": "r3", "metric": "rt_critics", "min": 90}]})
+    assert [(port.key, port.label) for port in rating.ports_for(tiers)] == [
+        ("match", "IMDb ≥ 8"), ("r2", "Good"), ("r3", "RT critics ≥ 90%"), ("no_match", "No match")]
+    assert rating.summary(tiers) == "3 outputs, first that fits"
+
+    def movie(**media) -> Title:
+        return Title(1, {"kind": "movie", "title": "X", **media})
+
+    # The first rule that fits wins; what the node saw is listed once per value.
+    assert rating.route(tiers, movie(imdb_rating=8.3, rt_critics=95)) == (["match"], "IMDb 8.3")
+    assert rating.route(tiers, movie(imdb_rating=7.4, rt_critics=95)) == (["r2"], "IMDb 7.4")
+    assert rating.route(tiers, movie(imdb_rating=6.1, rt_critics=95)) == (["r3"], "IMDb 6.1, RT critics 95%")
+    assert rating.route(tiers, movie(imdb_rating=6.1, rt_critics=40)) == (["no_match"], "IMDb 6.1, RT critics 40%")
+
+    # Genres: a title goes to every rule it fits by default.
+    genre = TYPES.types["genre"]
+    split = genre.clean({"rules": [{"id": "match", "mode": "any", "genres": ["action"]},
+                                   {"id": "r2", "mode": "any", "genres": ["comedy"]}]})
+    assert split["each"] is True
+    assert [port.label for port in genre.ports_for(split)] == ["Action", "Comedy", "No match"]
+    assert genre.route(split, movie(genres="[28, 35]")) == (["match", "r2"], "Action, Comedy")
+    assert genre.route({**split, "each": False}, movie(genres="[28, 35]"))[0] == ["match"]
+    assert genre.route(split, movie(genres="[18]")) == (["no_match"], "Drama")
+
+    with pytest.raises(ConfigError, match="Output 2: Genres: choose at least one"):
+        genre.clean({"rules": [{"id": "match", "genres": ["action"]}, {"id": "r2", "genres": []}]})
+    with pytest.raises(ConfigError, match="same id"):
+        genre.clean({"rules": [{"id": "match", "genres": ["action"]}, {"id": "match", "genres": ["comedy"]}]})
+    with pytest.raises(ConfigError, match="At most 12 outputs"):
+        genre.clean({"rules": [{"id": f"r{n}", "genres": ["action"]} for n in range(13)]})
+
+    # Connections from a removed output are dropped; those from an output with broken settings stay.
+    graph_ = top10()
+    graph_["nodes"].append({"id": "g", "type": "genre", "config": {"rules": [
+        {"id": "match", "genres": ["action"]}, {"id": "r2", "genres": []}]}})
+    graph_["edges"] += [{"source": "kind", "port": "movie", "target": "g"},
+                        {"source": "g", "port": "r2", "target": "radarr"},
+                        {"source": "g", "port": "r9", "target": "radarr"}]
+    checked = graph.check(graph_)
+    assert {"source": "g", "port": "r2", "target": "radarr"} in checked.graph["edges"]
+    assert not any(edge["port"] == "r9" for edge in checked.graph["edges"])
+    assert ("g", "Output 2: Genres: choose at least one") in {(p.node, p.message) for p in checked.problems}
 
 
 # -- running -----------------------------------------------------------------------------------------
 
 async def test_dry_run_reads_but_writes_nothing(lists):
-    lists.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # there already, without the tag
-    lists.radarr.excluded.append(1008)  # Russell Brand: on Radarr's exclusion list
-    lists.sonarr.add_series(383365, "Lupin", "lupin", tags=[1])
+    lists.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # in Radarr without the tag, and in Plex
+    db.get().execute("INSERT INTO items (key, type, title, tmdb_id, gone) VALUES ('g1', 'movie', 'The Grinch', '360920', 0)")
+    lists.radarr.exclude(1008, "Russell Brand – Open Secret", 2026)  # on Radarr's exclusion list
+    lists.sonarr.add_series(383365, "Lupin", "lupin", tags=[1])  # in Sonarr, not in Plex yet
     flow_id = store.create("Netflix CH", top10(radarr={"limit": 4}))
     result = await engine.run(flow_id)
     assert result["dry_run"] is True and result["outcome"] == "partial"  # the limit was reached
-    assert (result["added"], result["tagged"], result["skipped"], result["failed"]) == (9, 2, 6, 0)
-    assert result["message"] == "Dry run: 9 to add, 2 to tag"
+    assert (result["added"], result["tagged"], result["present"], result["skipped"], result["failed"]) == (9, 1, 1, 5, 0)
+    assert result["message"] == "Dry run: 9 to add, 1 to tag, 1 already there"
     assert lists.radarr.writes == lists.sonarr.writes == 0
     assert [tag["label"] for tag in lists.radarr.tags] == ["kids"]  # not even the tag is created
 
     movies = trace(result["run"], "radarr")
     assert movies["Guarding Stars"] == ("added", "HD-1080p, /data/movies")
-    assert movies["The Grinch"] == ("tagged", "Tags: top-10")
-    assert movies["Russell Brand – Open Secret"] == ("skipped", "On the Radarr exclusion list")
+    assert movies["The Grinch"] == ("present", "In Plex")  # in the library: no tags
+    # Excluded in Radarr: synced at the start of the run, so the title stops at the source.
+    assert "Russell Brand – Open Secret" not in movies
+    assert trace(result["run"], "fp")["Russell Brand – Open Secret"] == (None, "Excluded")
     # The best positions come first: #1 to #4 minus the Grinch (#5 is there), then the limit.
     assert [title for title, (port, _) in movies.items() if port == "added"] == \
         ["Guarding Stars", "Steps", "Heartland", "The Christmas Switch"]
@@ -201,19 +260,43 @@ async def test_dry_run_reads_but_writes_nothing(lists):
 
     run = db.get().one("SELECT * FROM flow_runs WHERE id=?", (result["run"],))
     assert run["status"] == "partial" and db.loads(run["notes"]) == ["Radarr: limit of 4 new titles reached"]
+    assert lists.radarr.writes == 0  # the sync only read Radarr's list
     assert db.get().scalar("SELECT flow_run_id FROM parser_runs") == result["run"]
     detail = store.run_detail(result["run"])
     assert [node["id"] for node in detail["nodes"]] == ["fp", "kind", "radarr", "sonarr"]
-    assert detail["nodes"][0]["entries"] == {"matched": 17, "uncertain": 2, "failed": 1, "excluded": 0}
-    assert {p["key"]: p["count"] for p in detail["nodes"][1]["ports"]} == {"movie": 8, "show": 9}
+    assert detail["nodes"][0]["entries"] == {"matched": 16, "uncertain": 2, "failed": 1, "excluded": 1}
+    assert {p["key"]: p["count"] for p in detail["nodes"][1]["ports"]} == {"movie": 7, "show": 9}
     assert detail["sources"][0]["label"] == "Netflix Switzerland – Movies, TV Shows"
     titles = store.run_titles(result["run"], "tagged")
-    assert titles["counts"] == {"all": 17, "added": 9, "tagged": 2, "present": 0, "skipped": 6, "failed": 0,
-                                "filtered": 0}
-    assert [row["media"]["title"] for row in titles["rows"]] == ["Lupin", "The Grinch"]
+    assert titles["counts"] == {"all": 17, "added": 9, "tagged": 1, "present": 1, "skipped": 5, "failed": 0,
+                                "filtered": 1}
+    assert [row["media"]["title"] for row in titles["rows"]] == ["Lupin"]
     lupin = titles["rows"][0]
+    # The path names the list a title came from, not just the source.
     assert [(step["label"], step["port_label"], step["detail"]) for step in lupin["steps"]] == [
-        ("FlixPatrol", "Titles", "#4 TV Shows"), ("Movie or show", "Shows", ""), ("Sonarr", "Tags added", "Tags: top-10")]
+        ("Netflix Switzerland", "Titles", "#4 TV Shows"), ("Movie or show", "Shows", ""),
+        ("Sonarr", "Tags added", "Tags: top-10")]
+
+
+async def test_flow_with_rating_tiers(lists):
+    graph_ = top10()
+    graph_["nodes"].append({"id": "tiers", "type": "rating", "config": {"rules": [
+        {"id": "match", "metric": "imdb", "min": 7.4, "label": "Great"},
+        {"id": "r2", "metric": "imdb", "min": 7}]}})
+    graph_["edges"] = [edge for edge in graph_["edges"] if edge["port"] != "show"]
+    graph_["edges"] += [{"source": "kind", "port": "show", "target": "tiers"},
+                        {"source": "tiers", "port": "match", "target": "sonarr"}]
+    flow_id = store.create("Tiers", graph_)
+    result = await engine.run(flow_id)
+    detail = store.run_detail(result["run"])
+    tiers = next(node for node in detail["nodes"] if node["id"] == "tiers")
+    assert [(port["label"], port["count"]) for port in tiers["ports"]] == [("Great", 1), ("IMDb ≥ 7", 1), ("No match", 7)]
+    assert trace(result["run"], "tiers")["Lupin"] == ("match", "IMDb 7.5")
+    assert trace(result["run"], "sonarr") == {"Lupin": ("added", "Ultra-HD, /data/tv")}
+    rows = store.run_titles(result["run"], "all", "Black Doves")["rows"]
+    assert [(step["label"], step["port_label"]) for step in rows[0]["steps"]][-1] == ("Rating", "IMDb ≥ 7")
+    view = store.view(store.get(flow_id))
+    assert [port["label"] for port in view["ports"]["tiers"]] == ["Great", "IMDb ≥ 7", "No match"]
 
 
 async def test_live_run_adds_once_and_then_only_tags(lists):
@@ -247,8 +330,8 @@ async def test_live_run_adds_once_and_then_only_tags(lists):
     writes = lists.radarr.writes
     second = await engine.run(flow_id)
     movies = trace(second["run"], "radarr")
-    assert movies["Guarding Stars"] == ("present", "Already in Radarr")
-    assert movies["The Grinch"] == ("present", "Already in Radarr")
+    assert movies["Guarding Stars"] == ("present", "")
+    assert movies["The Grinch"] == ("present", "")
     assert movies["Heartland"] == ("failed", "Radarr does not know /movie/lookup/tmdb")  # not in its lookup
     assert lists.radarr.writes == writes and second["outcome"] == "partial"
 
@@ -270,6 +353,7 @@ async def test_compare_with_the_mdblist_import_list(lists):
     radarr = next(node for node in detail["nodes"] if node["id"] == "radarr")
     compare = radarr["compare"]
     assert compare["lists"][0]["ref"] == "dominik/netflix-ch" and compare["lists"][0]["error"] is None
+    assert compare["lists"][0]["name"] == "Netflix CH"  # the list's title on MDBList
     # The list holds the Grinch and Guarding Stars (wrong TMDB id there, the IMDb id decides).
     assert compare["both"] == 2 and compare["list_only"] == []
     assert len(compare["flow_only"]) == 6 and compare["flow_only"][0]["kind"] == "movie"
@@ -285,7 +369,8 @@ async def test_failing_source_and_unreachable_radarr(lists):
     result = await engine.run(flow_id)
     run = db.get().one("SELECT * FROM flow_runs WHERE id=?", (result["run"],))
     assert run["status"] == "partial" and result["added"] == 0
-    assert db.loads(run["notes"])[0].startswith("FlixPatrol: ")
+    assert db.loads(run["notes"])[:2] == ["Exclusions: Radarr rejects the API key", db.loads(run["notes"])[1]]
+    assert db.loads(run["notes"])[1].startswith("FlixPatrol: ")
     lists.flixpatrol.challenge = False
     scrape.reset()
     result = await engine.run(flow_id)
@@ -387,3 +472,76 @@ def test_api(lists, client):  # noqa: F811
     assert db.get().scalar("SELECT COUNT(*) FROM parser_runs WHERE flow_run_id > 0") == 0
     # Flow runs stay out of the recent previews on the Lists page.
     assert client.get("/api/lists/runs", params={"previews": True}).json()["runs"] == []
+
+
+# -- exclusions in step with Radarr and Sonarr ---------------------------------------------------------
+
+async def test_exclusions_follow_radarr_and_sonarr_both_ways(lists):
+    from app.lists import exclusions, runs
+
+    lists.radarr.exclude(360920, "The Grinch", 2018)
+    lists.radarr.exclude(999001, "Never Listed", 2001)  # no title row in Programarr
+    lists.sonarr.exclude(383365, "Lupin")
+    power = await media_store.ensure("show", 2010)  # excluded in Programarr before the sync existed
+    db.get().execute("INSERT INTO exclusions (media_id, scope, created_at) VALUES (?, 'global', ?)", (power, db.now()))
+
+    results = await exclusions.sync()
+    assert results["radarr"]["new"] == 2 and results["sonarr"]["written"] == 1
+    assert lists.sonarr.excluded == [383365, 276562]  # Programarr's exclusion went to Sonarr
+    rows = {row["title"]: (row["id"] is not None, row["service"], row["pending"]) for row in exclusions.exclusions()}
+    assert rows == {"Power": (True, "sonarr", False), "The Grinch": (False, "radarr", False),
+                    "Never Listed": (False, "radarr", False), "Lupin": (False, "sonarr", False)}
+
+    # Previews and flows skip what Radarr and Sonarr exclude.
+    first = await runs.preview("flixpatrol", runs.prepare("flixpatrol", NETFLIX_CH))
+    statuses = {row["raw_title"]: row["status"] for row in db.get().query(
+        "SELECT raw_title, status FROM parser_entries WHERE run_id=?", (first["run"],))}
+    assert statuses["The Grinch"] == statuses["Lupin"] == statuses["Power"] == "excluded"
+
+    # Taken off Radarr's list: included here after the next sync, stored entries follow.
+    lists.radarr.exclusions = [row for row in lists.radarr.exclusions if row["external"] != 360920]
+    await exclusions.sync()
+    assert db.get().scalar("SELECT status FROM parser_entries WHERE run_id=? AND raw_title='The Grinch'",
+                           (first["run"],)) == "matched"
+
+    # Included in Programarr: off Sonarr's list.
+    await exclusions.unexclude_arr("sonarr", 383365)
+    assert lists.sonarr.excluded == [276562]
+    assert db.get().scalar("SELECT status FROM parser_entries WHERE run_id=? AND raw_title='Lupin'",
+                           (first["run"],)) == "matched"
+
+    # Radarr unreachable: the exclusion holds here at once and goes there with the next sync.
+    lists.radarr.down = True
+    grinch = media_store.find("movie", 360920)
+    await exclusions.exclude(None, None, grinch["id"], None)
+    assert next(row for row in exclusions.exclusions() if row["title"] == "The Grinch")["pending"] is True
+    assert (await exclusions.sync())["radarr"]["error"] == "Radarr: Unavailable"
+    lists.radarr.down = False
+    writes = lists.radarr.writes
+    await exclusions.sync(write=False)  # as in a dry run: read only
+    assert lists.radarr.writes == writes and 360920 not in lists.radarr.excluded
+    assert next(row for row in exclusions.exclusions() if row["title"] == "The Grinch")["pending"] is True
+    lists.radarr.paged = False  # an older Radarr without /paged
+    await exclusions.sync()
+    assert sorted(lists.radarr.excluded) == [360920, 999001]
+    assert next(row for row in exclusions.exclusions() if row["title"] == "The Grinch")["pending"] is False
+
+    # Included while Radarr is down: not excluded here any more, removed there with the next sync.
+    lists.radarr.down = True
+    await exclusions.unexclude_media(grinch["id"])
+    assert not normalize.excluded(grinch["id"])
+    lists.radarr.down = False
+    await exclusions.sync()
+    assert lists.radarr.excluded == [999001]
+
+
+def test_exclusions_api(lists, client):  # noqa: F811
+    lists.radarr.exclude(999001, "Never Listed", 2001)
+    job = wait_job(client, client.post("/api/exclusions/sync").json()["job"])
+    assert job["status"] == "done" and job["result"]["outcome"] == "ok"
+    assert job["result"]["message"] == "Radarr: 1 new; Sonarr: no changes"
+    page = client.get("/api/exclusions").json()
+    assert page["services"] == ["radarr", "sonarr"] and page["synced_at"] and page["errors"] == []
+    assert [(row["title"], row["service"], row["media"]) for row in page["rows"]] == [("Never Listed", "radarr", None)]
+    assert client.delete("/api/exclusions/arr/radarr/999001").json()["ok"] is True
+    assert lists.radarr.excluded == [] and client.get("/api/exclusions").json()["rows"] == []

@@ -32,6 +32,38 @@ export function fieldDefaults(fields: NodeField[]): Values {
   return Object.fromEntries(fields.map((field) => [field.key, field.default ?? (field.type === "multi" || field.type === "tokens" ? [] : field.type === "bool" ? false : "")]));
 }
 
+export type Rule = Values & { id: string; label?: string };
+export type PortInfo = { key: string; label: string };
+
+/** A filter's rules; older flat settings are one rule with the id "match". */
+export function rulesOf(config: Values): Rule[] {
+  if (Array.isArray(config.rules)) {
+    return (config.rules as Values[]).filter((rule) => rule && typeof rule === "object").map((rule, index) => ({ ...rule, id: String(rule.id || (index === 0 ? "match" : `r${index + 1}`)) }));
+  }
+  const flat = Object.fromEntries(Object.entries(config).filter(([key]) => key !== "rules" && key !== "each"));
+  return [{ ...flat, id: "match" }];
+}
+
+/** Settings for a new node: a filter with rules starts with one rule. */
+export function nodeDefaults(type: { fields: NodeField[]; rules?: boolean; each_default?: boolean | null }): Values {
+  if (!type.rules) return fieldDefaults(type.fields);
+  return { rules: [{ id: "match", label: "", ...fieldDefaults(type.fields) }], each: type.each_default ?? false };
+}
+
+/** A node's outputs: fixed ones, or one per rule plus No match (labels from the server when known). */
+export function portsOf(type: { ports: PortInfo[]; rules?: boolean }, config: Values, known?: PortInfo[]): PortInfo[] {
+  if (!type.rules) return type.ports;
+  const labels = new Map((known ?? []).map((port) => [port.key, port.label]));
+  const rules = rulesOf(config);
+  return [
+    ...rules.map((rule, index) => ({
+      key: rule.id,
+      label: (typeof rule.label === "string" && rule.label.trim()) || labels.get(rule.id) || (rules.length === 1 ? "Match" : `Output ${index + 1}`),
+    })),
+    { key: "no_match", label: "No match" },
+  ];
+}
+
 export function visible(field: NodeField, values: Values): boolean {
   if (!field.when) return true;
   return Object.entries(field.when).every(([key, allowed]) => allowed.includes(String(values[key] ?? "")));

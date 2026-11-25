@@ -17,6 +17,10 @@ SERVICES = {
 class ArrError(Exception):
     """Radarr or Sonarr could not answer; the message is meant for the UI."""
 
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
+
 
 def for_kind(kind: str) -> str:
     return "radarr" if kind == "movie" else "sonarr"
@@ -65,11 +69,11 @@ async def request(service: str, method: str, path: str, params: dict | None = No
         except httpx.HTTPError as exc:
             raise ArrError(f"Cannot reach {name} ({base}): {exc.__class__.__name__}") from exc
     if response.status_code == 401:
-        raise ArrError(f"{name} rejects the API key")
+        raise ArrError(f"{name} rejects the API key", 401)
     if response.status_code == 404:
-        raise ArrError(f"{name} does not know {path.split('?')[0]}")
+        raise ArrError(f"{name} does not know {path.split('?')[0]}", 404)
     if response.status_code >= 400:
-        raise ArrError(_problem(name, response))
+        raise ArrError(_problem(name, response), response.status_code)
     if not response.content:
         return None
     try:

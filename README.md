@@ -44,16 +44,25 @@ matched like the FlixPatrol script did: exact title and year, then year ±1, the
 year; TMDB's alternative titles count too. Anything else lands in Lists › Match log with candidates.
 A fix or an ignore holds for future runs; excluded titles never appear in a list.
 
+Lists › Exclusions is kept in step with the import list exclusions of Radarr (movies) and Sonarr
+(shows) in both directions: a title excluded there is excluded here, an exclusion here is written
+there, and removing it on either side removes it on the other. The sync runs before every flow run,
+every 6 hours and with Sync on the page. If Radarr or Sonarr cannot be reached, the change waits for
+the next sync.
+
 ### Flows
 
 Flows › Flows connects sources, filters (rating, release, genre, country, language, list position,
-seasons, movie or show, in Plex) and Radarr or Sonarr in an editor. Each filter sends a title to Match
-or No match. Radarr and Sonarr add new titles with the profile, root folder and tags of their node, at
-most the set number per run; titles they already have only get the missing tags, and titles on their
-exclusion lists are skipped. Sonarr needs a TVDB ID and Sonarr v4.
+seasons, movie or show, in Plex) and Radarr or Sonarr in an editor. A filter sends a title to Match or
+No match; rating, release, genre, country, language, list position and season filters can have
+several outputs (e.g. one per genre or rating tier), each with its own rule. A title that fits several
+goes to the first or to each of them, as set on the filter. Radarr and Sonarr add new titles with the
+profile, root folder and tags of their node, at most the set number per run. Titles in Plex are left
+alone, titles Radarr or Sonarr already have only get the missing tags, and excluded titles never get
+through. Sonarr needs a TVDB ID and Sonarr v4.
 
 New flows run as a dry run: each run shows what would be added, title by title, without writing
-anything. "Go live" switches a flow to real runs. An output can compare its titles with MDBList lists,
+anything to Radarr or Sonarr. "Go live" switches a flow to real runs. An output can compare its titles with MDBList lists,
 e.g. the import lists in Radarr and Sonarr, until the flow gives the same result. Flows run by hand,
 on an interval (`every:6h`) or by cron (`0 6 * * *`, container time zone). Runs are kept 60 days
 (Settings › Lists), the last run of every flow stays.

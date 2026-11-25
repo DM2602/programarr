@@ -268,7 +268,7 @@ async def test_posters_uploaded_into_plex_become_files(world):
 
 def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     database = db.Database(tmp_path / "programarr.db")
-    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 3
+    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 4
     database.close()
     # A file from version 1: copied before the migration, data kept, the list and flow tables added.
     path = tmp_path / "old.db"
@@ -278,12 +278,12 @@ def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
     database = db.Database(path)
-    assert database.scalar("PRAGMA user_version") == 3
+    assert database.scalar("PRAGMA user_version") == 4
     assert database.one("SELECT title, show_status FROM items WHERE key='1'") == {"title": "Old", "show_status": "ended"}
     assert (tmp_path / "programarr-pre-v1.db").exists()
     tables = {row["name"] for row in database.query("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"media_cache", "parser_runs", "parser_entries", "parser_overrides", "exclusions",
-            "flows", "flow_runs", "flow_trace"} <= tables
+            "flows", "flow_runs", "flow_trace", "arr_exclusions"} <= tables
     database.close()
     # A file from version 2 (match log in use): only the flow tables come in, the runs stay.
     path = tmp_path / "v2.db"
@@ -293,7 +293,7 @@ def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
     database = db.Database(path)
-    assert database.scalar("PRAGMA user_version") == 3
+    assert database.scalar("PRAGMA user_version") == 4
     assert database.scalar("SELECT COUNT(*) FROM parser_runs") == 1
     assert (tmp_path / "programarr-pre-v2.db").exists()
     database.close()

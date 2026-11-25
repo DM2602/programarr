@@ -115,14 +115,14 @@ class World:
         })
         self.mdblist.lists["dominik/netflix-ch"] = {
             "movies": [
-                {"id": 360920, "rank": 1, "title": "The Grinch", "imdb_id": "tt2709692", "mediatype": "movie",
+                {"id": 360920, "rank": 379328, "title": "The Grinch", "imdb_id": "tt2709692", "mediatype": "movie",
                  "release_year": 2018},
                 # MDBList's TMDB id is wrong here; the IMDb id decides.
-                {"id": 1002, "rank": 3, "title": "Guarding Stars", "imdb_id": "tt9000001", "mediatype": "movie",
+                {"id": 1002, "rank": 1544, "title": "Guarding Stars", "imdb_id": "tt9000001", "mediatype": "movie",
                  "release_year": 2026},
             ],
             "shows": [
-                {"id": 96677, "rank": 2, "title": "Lupin", "imdb_id": "tt2531336", "tvdb_id": 383365,
+                {"id": 96677, "rank": 2087, "title": "Lupin", "imdb_id": "tt2531336", "tvdb_id": 383365,
                  "mediatype": "show", "release_year": 2021},
             ],
         }

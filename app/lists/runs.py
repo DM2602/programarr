@@ -52,6 +52,9 @@ async def preview(source: str, params: dict, flow_run_id: int | None = None) -> 
         jobs.progress(message="Reading the list")
         fetched = await chosen.fetch(params)
         notes = list(fetched.notes)
+        if chosen.describe(params) != label:  # the source told its title while reading (MDBList)
+            label = chosen.describe(params)
+            database.update("parser_runs", "id", run_id, {"label": label})
         rows = []
         for index, entry in enumerate(fetched.entries):
             jobs.progress(index, len(fetched.entries), f"Matching {entry.title}")
@@ -427,66 +430,3 @@ async def remove_override(override_id: int) -> int:
             "candidates": db.dumps(match.candidates), "error": match.error,
         })
     return changed
-
-
-# -- exclusions ------------------------------------------------------------------------------------
-
-def _set_excluded(media_id: int, excluded: bool) -> None:
-    database = db.get()
-    old, new = ("matched", "excluded") if excluded else ("excluded", "matched")
-    run_ids = [row["run_id"] for row in database.query(
-        "SELECT DISTINCT run_id FROM parser_entries WHERE media_id=? AND status=?", (media_id, old)
-    )]
-    database.execute(
-        "UPDATE parser_entries SET status=? WHERE media_id=? AND status=? AND IFNULL(method,'')!='ignored'",
-        (new, media_id, old),
-    )
-    recount(run_ids)
-
-
-async def exclude(kind: str | None, tmdb_id: int | None, media_id: int | None, reason: str | None) -> int:
-    if media_id is None:
-        if kind not in ("movie", "show") or not tmdb_id:
-            raise SourceError("Choose a title")
-        media_id = await store.ensure(kind, tmdb_id)
-    if not media_id or not store.get(media_id):
-        raise SourceError("Title not found")
-    database = db.get()
-    database.upsert("exclusions", ("media_id", "scope"), {
-        "media_id": media_id, "scope": "global", "reason": (reason or "").strip()[:200] or None,
-        "created_at": db.now(),
-    })
-    _set_excluded(media_id, True)
-    row = store.get(media_id) or {}
-    event("info", "lists", f"Excluded from lists: {row.get('title')} ({row.get('year') or '?'})")
-    return database.scalar("SELECT id FROM exclusions WHERE media_id=? AND scope='global'", (media_id,))
-
-
-def unexclude_media(media_id: int) -> None:
-    row = db.get().one("SELECT id FROM exclusions WHERE media_id=? AND scope='global'", (media_id,))
-    if not row:
-        raise SourceError("Title is not excluded")
-    unexclude(row["id"])
-
-
-def unexclude(exclusion_id: int) -> None:
-    database = db.get()
-    row = database.one("SELECT * FROM exclusions WHERE id=?", (exclusion_id,))
-    if not row:
-        raise SourceError("Exclusion not found")
-    database.execute("DELETE FROM exclusions WHERE id=?", (exclusion_id,))
-    if not normalize.excluded(row["media_id"]):
-        _set_excluded(row["media_id"], False)
-
-
-def exclusions() -> list[dict]:
-    rows = db.get().query(
-        "SELECT x.id AS exclusion_id, x.scope, x.reason, x.created_at AS excluded_at, m.* FROM exclusions x "
-        "JOIN media_cache m ON m.id=x.media_id ORDER BY x.created_at DESC, x.id DESC"
-    )
-    plex = store.in_plex([row["id"] for row in rows])
-    return [
-        {"id": row["exclusion_id"], "scope": row["scope"], "reason": row["reason"], "created_at": row["excluded_at"],
-         "media": store.view(row), "plex_key": plex.get(row["id"])}
-        for row in rows
-    ]

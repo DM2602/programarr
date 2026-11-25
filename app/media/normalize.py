@@ -58,9 +58,18 @@ def override_for(source: str, fp: str) -> dict | None:
 
 
 def excluded(media_id: int | None, scope: str = "global") -> bool:
+    """Own exclusion, or on the import list exclusions of Radarr (movies) or Sonarr (shows)."""
     if not media_id:
         return False
-    return bool(db.get().scalar("SELECT 1 FROM exclusions WHERE media_id=? AND scope=?", (media_id, scope)))
+    database = db.get()
+    if database.scalar("SELECT 1 FROM exclusions WHERE media_id=? AND scope=?", (media_id, scope)):
+        return True
+    if scope != "global":
+        return False
+    return bool(database.scalar(
+        "SELECT 1 FROM media_cache m JOIN arr_exclusions a ON a.state!='remove' AND ("
+        "(a.service='radarr' AND m.kind='movie' AND a.external_id=m.tmdb_id) OR "
+        "(a.service='sonarr' AND m.kind='show' AND a.external_id=m.tvdb_id)) WHERE m.id=?", (media_id,)))
 
 
 # -- resolving -------------------------------------------------------------------------------------

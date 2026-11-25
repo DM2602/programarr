@@ -14,13 +14,24 @@ class FakeArr:
         self.root_folders = [{"id": 1, "path": "/data/movies" if service == "radarr" else "/data/tv",
                               "freeSpace": 4_000_000_000_000}]
         self.tags: list[dict] = [{"id": 1, "label": "kids"}]
-        self.excluded: list[int] = []  # TMDB ids (Radarr) or TVDB ids (Sonarr)
+        self.exclusions: list[dict] = []  # {"id", "external", "title", "year"}: TMDB ids (Radarr), TVDB ids (Sonarr)
+        self.paged = True  # False: an older version without /paged
+        self.down = False  # True: answers 503, as when the service is unreachable
         self.known: dict[int, dict] = {}  # lookup results by TMDB id (Radarr) or TVDB id (Sonarr)
         self.added: list[dict] = []  # POST bodies
         self.edits: list[dict] = []  # PUT .../editor bodies
         self.writes = 0
         self.fail_add: str | None = None
         self.app = self._make_app()
+
+    def exclude(self, external: int, title: str = "", year: int | None = None) -> None:
+        number = max([row["id"] for row in self.exclusions] or [0]) + 1
+        self.exclusions.append({"id": number, "external": external, "title": title or f"Excluded {external}",
+                                "year": year})
+
+    @property
+    def excluded(self) -> list[int]:
+        return [row["external"] for row in self.exclusions]
 
     def add_movie(self, tmdb: int, title: str, slug: str, has_file: bool = True, monitored: bool = True,
                   tags: list[int] = ()) -> None:
@@ -84,12 +95,54 @@ class FakeArr:
             fake.tags.append(row)
             return row
 
-        @app.get("/api/v3/exclusions" if self.service == "radarr" else "/api/v3/importlistexclusion")
-        async def exclusions():
+        path = "/api/v3/exclusions" if self.service == "radarr" else "/api/v3/importlistexclusion"
+
+        def shown(row: dict) -> dict:
             if fake.service == "radarr":
-                return [{"id": n, "tmdbId": tmdb, "movieTitle": f"Excluded {tmdb}", "movieYear": 2020}
-                        for n, tmdb in enumerate(fake.excluded, start=1)]
-            return [{"id": n, "tvdbId": tvdb, "title": f"Excluded {tvdb}"} for n, tvdb in enumerate(fake.excluded, 1)]
+                return {"id": row["id"], "tmdbId": row["external"], "movieTitle": row["title"],
+                        "movieYear": row["year"] or 0}
+            return {"id": row["id"], "tvdbId": row["external"], "title": row["title"]}
+
+        @app.get(path)
+        async def exclusions():
+            if fake.down:
+                return JSONResponse({"message": "Unavailable"}, status_code=503)
+            return [shown(row) for row in fake.exclusions]
+
+        @app.get(path + "/paged")
+        async def exclusions_paged(request: Request):
+            if not fake.paged:
+                return JSONResponse({"message": "NotFound"}, status_code=404)
+            if fake.down:
+                return JSONResponse({"message": "Unavailable"}, status_code=503)
+            page = int(request.query_params.get("page", 1))
+            size = int(request.query_params.get("pageSize", 10))
+            rows = fake.exclusions[(page - 1) * size: page * size]
+            return {"page": page, "pageSize": size, "totalRecords": len(fake.exclusions),
+                    "records": [shown(row) for row in rows]}
+
+        @app.post(path)
+        async def new_exclusion(request: Request):
+            if fake.down:
+                return JSONResponse({"message": "Unavailable"}, status_code=503)
+            body = await request.json()
+            external = body.get("tmdbId") if fake.service == "radarr" else body.get("tvdbId")
+            if any(row["external"] == external for row in fake.exclusions):
+                return JSONResponse([{"errorMessage": "This exclusion has already been added"}], status_code=400)
+            fake.writes += 1
+            fake.exclude(int(external), body.get("movieTitle") or body.get("title") or "", body.get("movieYear"))
+            return shown(fake.exclusions[-1])
+
+        @app.delete(path + "/{number}")
+        async def drop_exclusion(number: int):
+            if fake.down:
+                return JSONResponse({"message": "Unavailable"}, status_code=503)
+            before = len(fake.exclusions)
+            fake.exclusions = [row for row in fake.exclusions if row["id"] != number]
+            if len(fake.exclusions) == before:
+                return JSONResponse({"message": "NotFound"}, status_code=404)
+            fake.writes += 1
+            return {}
 
         def matching(request: Request) -> list[dict]:
             wanted = request.query_params.get(id_key)

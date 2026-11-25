@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -192,6 +192,20 @@ CREATE INDEX IF NOT EXISTS parser_runs_flow ON parser_runs (flow_run_id);
 """
 
 
+# Phase 3: the import list exclusions of Radarr and Sonarr, kept in step with Programarr's both ways.
+SCHEMA_V4 = """
+CREATE TABLE IF NOT EXISTS arr_exclusions (
+  service TEXT NOT NULL CHECK (service IN ('radarr','sonarr')),
+  external_id INTEGER NOT NULL,  -- TMDB id (Radarr) or TVDB id (Sonarr)
+  arr_id INTEGER,  -- the entry's id there, NULL until written there
+  title TEXT, year INTEGER,
+  state TEXT NOT NULL DEFAULT 'synced' CHECK (state IN ('synced','add','remove')),  -- add/remove: to write there
+  added_at INTEGER,  -- first seen on that list, or excluded in Programarr
+  PRIMARY KEY (service, external_id)
+);
+"""
+
+
 class Database:
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -227,6 +241,8 @@ class Database:
                 script += SCHEMA_V2
             if current < 3:
                 script += SCHEMA_V3
+            if current < 4:
+                script += SCHEMA_V4
             # executescript commits on its own, so the whole migration is one script.
             self.conn.executescript(f"BEGIN;\n{script}\nPRAGMA user_version={SCHEMA_VERSION};\nCOMMIT;")
 
@@ -281,6 +297,14 @@ class Database:
             return
         sets = ",".join(f"{c}=?" for c in values)
         self.execute(f"UPDATE {table} SET {sets} WHERE {key_col}=?", [*values.values(), key])
+
+    def update_where(self, table: str, where: dict, values: dict) -> None:
+        """UPDATE for a row with a key of several columns."""
+        if not values:
+            return
+        sets = ",".join(f"{c}=?" for c in values)
+        conditions = " AND ".join(f"{c}=?" for c in where)
+        self.execute(f"UPDATE {table} SET {sets} WHERE {conditions}", [*values.values(), *where.values()])
 
     def close(self) -> None:
         with self.lock:

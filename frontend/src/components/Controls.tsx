@@ -6,7 +6,7 @@ type Option = { value: string; label: ReactNode };
 /** A row of buttons for a few exclusive choices. */
 export function Segmented({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Option[] }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-md shadow-sm ring-1 ring-gray-600">
+    <div role="group" aria-label={label} className="inline-flex w-fit rounded-md shadow-sm ring-1 ring-gray-600">
       {options.map((option, index) => {
         const active = option.value === value;
         return (

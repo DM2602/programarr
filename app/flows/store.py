@@ -111,6 +111,8 @@ def view(flow: dict, with_graph: bool = True) -> dict:
         "updated_at": flow["updated_at"],
         "problems": [problem.as_dict() for problem in checked.problems],
         "summaries": {node_id: info["summary"] for node_id, info in graphs.summaries(checked).items()},
+        "ports": {node_id: [{"key": key, "label": label} for key, label in info["ports"].items()]
+                  for node_id, info in graphs.summaries(checked).items()},
         "outputs": sorted({TYPES.types[node["type"]].label for node in flow["graph"]["nodes"]
                            if node["type"] in TYPES.types and TYPES.types[node["type"]].category == "output"}),
         "nodes": len(flow["graph"]["nodes"]),
@@ -172,12 +174,18 @@ def _media(ids: list[int]) -> dict[int, dict]:
 
 
 def _port_label(node: dict, port: str | None) -> str:
+    """The label of a port as the node had it in that run; ports joined by commas (each fitting rule)."""
     if port is None:
         return ""
+    if "," in port:
+        return ", ".join(_port_label(node, part) for part in port.split(","))
     node_type = TYPES.get(node.get("type", ""))
+    if node_type is not None and node_type.category == "output":
+        return OUTCOMES.get(port, port)
+    labels = node.get("ports") or {}
+    if port in labels:
+        return labels[port]
     if node_type is not None:
-        if node_type.category == "output":
-            return OUTCOMES.get(port, port)
         for known in node_type.ports:
             if known.key == port:
                 return known.label
@@ -200,8 +208,8 @@ def run_detail(run_id: int) -> dict | None:
         if compare:
             media = _media([*compare.get("flow_only", []), *compare.get("list_only", [])])
             compare = {
-                "lists": [{"ref": entry["ref"], "run": entry.get("run"), "error": entry.get("error")}
-                          for entry in compare.get("lists", [])],
+                "lists": [{"ref": entry["ref"], "name": entry.get("name"), "run": entry.get("run"),
+                           "error": entry.get("error")} for entry in compare.get("lists", [])],
                 "both": len(compare.get("both", [])),
                 "flow_only": [media[i] for i in compare.get("flow_only", []) if i in media],
                 "list_only": [media[i] for i in compare.get("list_only", []) if i in media],
@@ -288,7 +296,7 @@ def run_titles(run_id: int, show: str = "all", q: str = "", page: int = 1) -> di
 
     def step_view(step: dict) -> dict:
         info = infos.get(step["node_id"]) or {}
-        return {"node": step["node_id"], "label": info.get("label", step["node_id"]),
+        return {"node": step["node_id"], "label": info.get("name") or info.get("label", step["node_id"]),
                 "category": info.get("category", ""), "port": step["port"],
                 "port_label": _port_label(info, step["port"]), "detail": step["detail"] or ""}
 

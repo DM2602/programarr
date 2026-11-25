@@ -103,11 +103,12 @@ def check(graph: dict | None) -> Checked:
     # Connections to removed nodes, to ports a node does not have or into a source are dropped.
     # Those to a node of unknown type stay, so nothing is lost while that node is reported.
     kept, edges = [], []
+    nodes_by_id = {node["id"]: node for node in nodes}
     for edge in graph["edges"]:
         if edge["source"] not in ids or edge["target"] not in ids:
             continue
         source, target = known.get(edge["source"]), known.get(edge["target"])
-        if source is not None and edge["port"] not in {port.key for port in source.ports}:
+        if source is not None and edge["port"] not in {port.key for port in source.raw_ports(nodes_by_id[edge["source"]]["config"])}:
             continue
         if target is not None and not target.inputs:
             continue
@@ -164,21 +165,26 @@ def check(graph: dict | None) -> Checked:
 
 
 def summaries(checked: Checked) -> dict[str, dict]:
-    """Type, label and a one-line description per node, kept with every run."""
+    """Type, label, a one-line description and the outputs per node, kept with every run."""
     result = {}
     for node in checked.graph["nodes"]:
         node_type = TYPES.get(node["type"])
         config = checked.configs.get(node["id"])
         summary = ""
-        if node_type is not None and config is not None:
-            try:
-                summary = node_type.summary(config)
-            except (KeyError, TypeError, ValueError):
-                summary = ""
+        ports = []
+        if node_type is not None:
+            ports = node_type.raw_ports(node["config"])
+            if config is not None:
+                try:
+                    summary = node_type.summary(config)
+                    ports = node_type.ports_for(config)
+                except (KeyError, TypeError, ValueError):
+                    summary = ""
         result[node["id"]] = {
             "type": node["type"],
             "label": node_type.label if node_type else node["type"],
             "category": node_type.category if node_type else "",
             "summary": summary,
+            "ports": {port.key: port.label for port in ports},
         }
     return result

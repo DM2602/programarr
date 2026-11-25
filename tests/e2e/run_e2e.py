@@ -305,7 +305,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert page.locator(".entry").count() == 20
         assert page.locator(".entry[data-status=uncertain]").count() == 2
         assert page.locator(".entry[data-status=failed]").count() == 1
-        assert page.locator(".entry[data-status=excluded]").count() == 1  # Power, excluded in the demo
+        assert page.locator(".entry[data-status=excluded]").count() == 2  # Power here, Hill 12 in Radarr
         grinch = page.locator(".entry", has_text="The Grinch")
         assert grinch.locator("a:has-text('In Plex')").count() == 1 and "IMDb 6.3" in grinch.inner_text()
         steps.ok("FlixPatrol preview from the form: 20 entries, 3 to check", page)
@@ -350,14 +350,36 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         page.fill("[role=dialog] input", "Seen it")
         page.click("[role=dialog] button[type=submit]")
         wait_for(lambda: page.locator(".entry", has_text="Lupin").get_attribute("data-status") == "excluded", what="excluded")
+        assert 383365 in world.sonarr.excluded  # on Sonarr's list too
         goto(page, "/lists/exclusions")
         page.wait_for_selector(".exclusion")
-        assert page.locator(".exclusion").count() == 2  # Power and Lupin
-        page.locator(".exclusion", has_text="Lupin").locator("button:has-text('Remove')").click()
-        wait_for(lambda: page.locator(".exclusion").count() == 1, what="exclusion removed")
-        steps.ok("Title excluded from a preview and included again", page)
+        # Lupin and Power from here, Cats, Hill 12 and The Idol from Radarr and Sonarr
+        assert page.locator(".exclusion").count() == 5
+        lupin = page.locator(".exclusion", has_text="Lupin")
+        assert lupin.get_attribute("data-service") == "sonarr" and "Seen it" in lupin.inner_text()
+        lupin.locator("button:has-text('Remove')").click()
+        wait_for(lambda: page.locator(".exclusion").count() == 4, what="exclusion removed")
+        assert 383365 not in world.sonarr.excluded
+        steps.ok("Title excluded from a preview and included again, in Sonarr too", page)
 
         # 19
+        world.radarr.exclude(1004, "The Christmas Switch", 2025)  # excluded in Radarr meanwhile
+        cats = page.locator(".exclusion", has_text="Cats")
+        assert cats.get_attribute("data-service") == "radarr" and "From Radarr" in cats.inner_text()
+        page.click("[data-action=sync-exclusions]")
+        page.wait_for_selector(".exclusion[data-service=radarr]:has-text('The Christmas Switch')")
+        assert "Synced with Radarr and Sonarr" in page.inner_text("h1 + p")
+        cats.locator("button:has-text('Remove')").click()
+        wait_for(lambda: cats.count() == 0, what="Cats included")
+        assert 536869 not in world.radarr.excluded and 1004 in world.radarr.excluded
+        page.click("button[aria-pressed]:has-text('Shows')")
+        assert page.locator(".exclusion").count() == 2  # Power and The Idol
+        page.fill("input[aria-label='Filter by title']", "idol")
+        assert page.locator(".exclusion").count() == 1
+        assert page.inner_text("button[aria-pressed=true]") == "Shows"
+        steps.ok("Exclusions synced with Radarr both ways, filtered", page)
+
+        # 20
         dune = db.get().one("SELECT key FROM items WHERE title='Dune'")["key"]
         sequel = db.get().one("SELECT key, tmdb_id FROM items WHERE title='Dune: Part Two'")
         goto(page, f"/item/{dune}")
@@ -374,7 +396,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert page.locator("[data-missing]").count() == 2
         steps.ok("Title pages link to Radarr: open there or add", page)
 
-        # 20
+        # 21
         goto(page, "/settings/lists")
         page.click("[data-test=mdblist]")
         page.wait_for_selector("[data-result=mdblist][data-ok=true]")
@@ -382,7 +404,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         page.wait_for_selector("[data-result=trakt][data-ok=true]")
         steps.ok("MDBList key and Trakt client ID checked", page)
 
-        # 21
+        # 22
         top10 = db.get().one("SELECT id, version FROM flows WHERE name='Netflix Switzerland'")
         goto(page, "/flows")
         page.wait_for_selector(".flow-row")
@@ -391,12 +413,12 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert " ".join(row.locator("[data-total=added]").inner_text().split()) == "10 to add"
         row.locator(f"a[href='/flows/{top10['id']}']").click()
         page.wait_for_selector("[data-node=radarr1] [data-outcome=added]")
-        assert page.get_attribute("[data-node=flixpatrol1] [data-count-in]", "data-count-in") == "16"
+        assert page.get_attribute("[data-node=flixpatrol1] [data-count-in]", "data-count-in") == "15"
         assert page.inner_text("[data-node=radarr1] [data-outcome=added]").split() == ["To", "add", "5"]
         page.wait_for_selector("[data-checks=ok]")
         steps.ok("Flow editor shows the last dry run on its nodes", page)
 
-        # 22
+        # 23
         page.click("[data-node=radarr1]")
         page.wait_for_selector("[data-panel=radarr1]")
         assert page.input_value("[data-panel=radarr1] select[data-field=quality_profile]") == "1"
@@ -406,19 +428,24 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         wait_for(lambda: db.get().scalar("SELECT version FROM flows WHERE id=?", (top10["id"],)) == top10["version"] + 1,
                  what="flow saved")
         page.wait_for_selector("text=Unsaved", state="detached")
+        writes = (world.radarr.writes, world.sonarr.writes)
         page.click("[data-action=dry-run]")
         page.wait_for_url(re.compile(r".*/flows/runs/\d+$"))
         page.wait_for_selector(".output-card [data-output=radarr1]")
         radarr_card = page.locator(".output-card").filter(has=page.locator("[data-output=radarr1]"))
         assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 to add"
         assert radarr_card.locator("[data-both]").get_attribute("data-both") == "2"  # the MDBList import list
-        assert world.radarr.writes == world.sonarr.writes == 0
+        assert (world.radarr.writes, world.sonarr.writes) == writes  # a dry run writes nothing there
         radarr_card.locator("[data-outcome=tagged]").click()
         wait_for(lambda: page.locator(".flow-title").count() == 1, what="titles to tag")
-        assert page.locator(".flow-title").first.get_attribute("data-title") == "The Grinch"
+        assert page.locator(".flow-title").first.get_attribute("data-title") == "Woodwalkers 2"
+        radarr_card.locator("[data-outcome=present]").click()
+        grinch_row = page.locator(".flow-title[data-title='The Grinch']")
+        grinch_row.wait_for()
+        assert page.locator(".flow-title").count() == 1 and "In Plex" in grinch_row.inner_text()
         steps.ok("Limit saved, the dry run shows what Radarr would get and compares with MDBList", page)
 
-        # 23
+        # 24
         goto(page, "/flows")
         page.click("[data-action=new-flow]")
         page.fill("[role=dialog] input", "TMDB to Radarr")
@@ -446,7 +473,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert (radarr_node["config"]["quality_profile"], radarr_node["config"]["root_folder"]) == (1, "/data/movies")
         steps.ok("New flow built in the editor: TMDB connected to Radarr", page)
 
-        # 24
+        # 25
         goto(page, f"/flows/{top10['id']}")
         page.click("[data-action=go-live]")
         page.click("[role=dialog] button[type=submit]")
@@ -458,12 +485,13 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert [body["tmdbId"] for body in world.radarr.added] == [1001, 1002, 1003]
         assert sorted(body["tvdbId"] for body in world.sonarr.added) == [383365, 420005, 450003, 480001, 480002]
         grinch = next(row for row in world.radarr.titles if row["tmdbId"] == 360920)
-        assert world.radarr.tag_labels(grinch) == ["top-10"]
+        woodwalkers = next(row for row in world.radarr.titles if row["tmdbId"] == 1006)
+        assert world.radarr.tag_labels(grinch) == [] and world.radarr.tag_labels(woodwalkers) == ["top-10"]
         radarr_card = page.locator(".output-card").filter(has=page.locator("[data-output=radarr1]"))
         assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 added"
-        steps.ok("Flow live: Radarr and Sonarr get the titles, the Grinch only its tag", page)
+        steps.ok("Flow live: Radarr and Sonarr get the titles, Woodwalkers 2 its tag, the Grinch (in Plex) nothing", page)
 
-        # 25
+        # 26
         goto(page, "/flows/history")
         page.wait_for_selector(".history-run")
         assert page.locator(".history-run").count() == 3
@@ -473,7 +501,34 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert page.locator("[data-testid=todo] a[href='/flows']").count() == 0
         steps.ok("Flow history lists the runs, filtered by flow", page)
 
-        # 26
+        # 27
+        trakt = db.get().one("SELECT id FROM flows WHERE name='Trakt trending'")
+        goto(page, f"/flows/{trakt['id']}")
+        page.wait_for_selector("[data-node=genre1]")
+        handles = page.locator("[data-node=genre1] .react-flow__handle.source")
+        assert handles.count() == 3  # Action, Family, No match
+        page.click("[data-node=genre1]")
+        page.wait_for_selector("[data-panel=genre1] [data-rule]")
+        assert page.locator("[data-panel=genre1] [data-rule]").count() == 2
+        page.click("[data-panel=genre1] [data-action=add-rule]")
+        wait_for(lambda: handles.count() == 4, what="a third output")
+        page.locator("[data-panel=genre1] [data-rule]").last.locator("[data-action=remove-rule]").click()
+        wait_for(lambda: handles.count() == 3, what="two outputs again")
+        page.click("[data-action=close-panel]")
+        page.click("[data-action=dry-run]")
+        page.wait_for_url(re.compile(r".*/flows/runs/\d+$"))
+        page.wait_for_selector("[data-step=genre1]")
+        wait_for(lambda: "No match 1" in " ".join(page.inner_text("[data-step=genre1]").split()), what="genre counts")
+        genre_step = " ".join(page.inner_text("[data-step=genre1]").split())
+        assert "Action, Thriller 1" in genre_step and "Animation, Family 1" in genre_step, genre_step
+        page.fill("input[aria-label='Filter by title']", "Guarding")
+        page.press("input[aria-label='Filter by title']", "Enter")
+        wait_for(lambda: page.locator(".flow-title").count() == 1, what="one title")
+        path = " ".join(page.inner_text(".flow-title").split())
+        assert "Action, Thriller" in path and "To tag" in path, path
+        steps.ok("Genre filter with two outputs: each goes to its own Radarr output", page)
+
+        # 28
         visited: set[str] = set()
         for path in MAIN_PAGES:
             goto(page, path)

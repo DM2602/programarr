@@ -8,6 +8,7 @@ import logging
 from dataclasses import replace
 
 from .. import db, jobs, notify, settings
+from ..lists import exclusions as exclusion_sync
 from ..lists import runs as list_runs
 from ..lists.flixpatrol import SECTIONS
 from ..media import store as media_store
@@ -142,7 +143,10 @@ async def _read(run_id: int, node_id: str, source: str, config: dict, info: dict
                 trace: dict[tuple[int, str], tuple[str | None, str]]) -> tuple[dict[int, Title], dict]:
     jobs.progress(message=f"Reading {info['summary'] or info['label']}")
     outcome = await list_runs.preview(source, config, flow_run_id=run_id)
-    stats: dict = {"run": outcome["run"], "in": 0, "out": {"out": 0}}
+    adapter = list_runs.adapter(source)
+    # Read again: a source can learn its title while reading (MDBList).
+    stats: dict = {"run": outcome["run"], "in": 0, "out": {"out": 0}, "name": adapter.name(config),
+                   "summary": adapter.describe(config)}
     if outcome["outcome"] == "error":
         notes.append(f"{info['label']}: {outcome['message']}")
         stats["error"] = outcome["message"]
@@ -181,6 +185,12 @@ async def _read(run_id: int, node_id: str, source: str, config: dict, info: dict
 
 
 async def _execute(run_id: int, checked: graphs.Checked, infos: dict, dry: bool, notes: list[str]) -> dict:
+    # Exclusions first, so titles excluded in Radarr or Sonarr since the last run never get through.
+    # A dry run only reads them: what waits to be written there stays for the next sync.
+    jobs.progress(message="Syncing exclusions with Radarr and Sonarr")
+    for result in (await exclusion_sync.sync(write=not dry)).values():
+        if result.get("error"):
+            notes.append(f"Exclusions: {result['error']}")
     sent: dict[str, dict[str, dict[int, Title]]] = {}
     trace: dict[tuple[int, str], tuple[str | None, str]] = {}
     nodes: dict[str, dict] = {node_id: dict(info) for node_id, info in infos.items()}
@@ -201,11 +211,12 @@ async def _execute(run_id: int, checked: graphs.Checked, infos: dict, dry: bool,
             if isinstance(node_type, PlexFilter):
                 plex = media_store.in_plex(list(incoming))
                 incoming = {media_id: replace(title, in_plex=media_id in plex) for media_id, title in incoming.items()}
-            ports: dict[str, dict[int, Title]] = {port.key: {} for port in node_type.ports}
+            ports: dict[str, dict[int, Title]] = {port.key: {} for port in node_type.ports_for(config)}
             for title in incoming.values():
-                verdict = node_type.test(config, title)
-                ports.setdefault(verdict.port, {})[title.media_id] = title
-                trace[(title.media_id, node_id)] = (verdict.port, verdict.detail)
+                keys, detail = node_type.route(config, title)
+                for key in keys:
+                    ports.setdefault(key, {})[title.media_id] = title
+                trace[(title.media_id, node_id)] = (",".join(keys), detail)  # several when each fitting rule counts
             sent[node_id] = ports
             info["out"] = {port: len(titles) for port, titles in ports.items()}
             continue

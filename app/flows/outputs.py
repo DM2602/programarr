@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 
 from .. import arr, db, jobs
 from ..arr import library
+from ..media import mdblist
+from ..media import store as media_store
 from ..lists import runs
 from ..lists.base import SourceError
 from .nodes import ArrOutput, Title, Verdict
@@ -58,6 +60,7 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
         sent.notes.append(message)
         return sent
     labels_by_id = {tag_id: label for label, tag_id in tag_ids.items()}
+    in_plex = media_store.in_plex([title.media_id for title in titles])
     added = 0
     ordered = _order(titles)
     for index, title in enumerate(ordered):
@@ -65,6 +68,10 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
         media = title.media
         if media["kind"] != kind:
             sent.put(title, "skipped", "Not a movie" if kind == "movie" else "Not a show")
+            continue
+        if title.media_id in in_plex:
+            # In the library already: neither added nor tagged, whatever Radarr or Sonarr hold.
+            sent.put(title, "present", "In Plex")
             continue
         external = media.get("tmdb_id") if service == "radarr" else media.get("tvdb_id")
         if not external:
@@ -83,7 +90,7 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
             missing_ids = [tag_id for tag_id in tag_ids.values() if tag_id not in have]
             missing = [labels_by_id[tag_id] for tag_id in missing_ids] + to_create
             if not missing:
-                sent.put(title, "present", f"Already in {name}")
+                sent.put(title, "present", "")
                 continue
             if dry_run:
                 sent.put(title, "tagged", "Tags: " + ", ".join(missing))
@@ -150,7 +157,7 @@ async def compare(node: ArrOutput, config: dict, titles: list[Title], flow_run_i
         if ref not in read:
             read[ref] = await _read_list(ref, flow_run_id)
         found = read[ref]
-        lists.append({"ref": ref, "run": found["run"], "error": found["error"]})
+        lists.append({"ref": ref, "name": mdblist.cached_list_name(ref), "run": found["run"], "error": found["error"]})
         listed.update(media_id for media_id, media_kind in found["titles"] if media_kind == kind)
     flow = {title.media_id for title in titles if title.media.get("kind") == kind}
     return {

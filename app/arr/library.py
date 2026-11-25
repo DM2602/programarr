@@ -60,13 +60,66 @@ async def tags(service: str, labels: list[str], create: bool) -> tuple[dict[str,
     return ids, missing
 
 
+EXCLUSIONS = {"radarr": "/exclusions", "sonarr": "/importlistexclusion"}
+PAGE_SIZE = 1000
+
+
+def _exclusion(service: str, row: dict) -> tuple[int, dict] | None:
+    if service == "radarr":
+        external, title, year = row.get("tmdbId"), row.get("movieTitle") or row.get("title"), row.get("movieYear")
+    else:
+        external, title, year = row.get("tvdbId"), row.get("title"), row.get("year")
+    if not external:
+        return None
+    return int(external), {"arr_id": row.get("id"), "title": title or "", "year": year or None}
+
+
+async def exclusion_list(service: str) -> dict[int, dict]:
+    """The import list exclusions: TMDB ids (Radarr) or TVDB ids (Sonarr) -> {arr_id, title, year}.
+
+    Newer versions page them (/paged); older ones only return the whole list.
+    """
+    path = EXCLUSIONS[service]
+    rows: list = []
+    try:
+        page = 1
+        while True:
+            data = await get(service, f"{path}/paged", {"page": page, "pageSize": PAGE_SIZE})
+            records = (data or {}).get("records") or [] if isinstance(data, dict) else []
+            rows += records
+            total = int((data or {}).get("totalRecords") or 0) if isinstance(data, dict) else 0
+            if not records or len(rows) >= total or page >= 100:
+                break
+            page += 1
+    except ArrError as exc:
+        if exc.status not in (404, 405):
+            raise
+        data = await get(service, path)
+        rows = data if isinstance(data, list) else []
+    result: dict[int, dict] = {}
+    for row in rows:
+        if isinstance(row, dict) and (found := _exclusion(service, row)):
+            result[found[0]] = found[1]
+    return result
+
+
 async def exclusions(service: str) -> set[int]:
     """TMDB ids (Radarr) or TVDB ids (Sonarr) on the import list exclusions: list imports skip them."""
+    return set(await exclusion_list(service))
+
+
+async def add_exclusion(service: str, external_id: int, title: str, year: int | None) -> int | None:
+    """Puts a title on the exclusion list there; returns the entry's id."""
     if service == "radarr":
-        rows = await get(service, "/exclusions")
-        return {int(row["tmdbId"]) for row in rows or [] if isinstance(row, dict) and row.get("tmdbId")}
-    rows = await get(service, "/importlistexclusion")
-    return {int(row["tvdbId"]) for row in rows or [] if isinstance(row, dict) and row.get("tvdbId")}
+        body = {"tmdbId": external_id, "movieTitle": title, "movieYear": year or 0}
+    else:
+        body = {"tvdbId": external_id, "title": title}
+    row = await request(service, "POST", EXCLUSIONS[service], body=body, timeout=8.0)
+    return row.get("id") if isinstance(row, dict) else None
+
+
+async def remove_exclusion(service: str, arr_id: int) -> None:
+    await request(service, "DELETE", f"{EXCLUSIONS[service]}/{arr_id}", timeout=8.0)
 
 
 async def find(service: str, media: dict) -> dict | None:

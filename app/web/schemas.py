@@ -830,16 +830,25 @@ class OverridesPage(Model):
 
 
 class ExclusionView(Model):
-    id: int
+    id: int | None = None  # Programarr's own exclusion; None: only on Radarr's or Sonarr's list
     scope: str
     reason: str | None = None
     created_at: int | None = None
-    media: MediaView
+    media: MediaView | None = None  # None when the title was never read from a list
     plex_key: str | None = None
+    title: str
+    year: int | None = None
+    kind: MediaKind
+    service: Literal["radarr", "sonarr"] | None = None  # also on that service's exclusion list
+    external_id: int | None = None  # TMDB id (Radarr) or TVDB id (Sonarr)
+    pending: bool = False  # waits to be written to Radarr or Sonarr
 
 
 class ExclusionsPage(Model):
     rows: list[ExclusionView]
+    synced_at: int | None = None
+    services: list[Literal["radarr", "sonarr"]] = []
+    errors: list[str] = []
 
 
 class ExclusionBody(Body):
@@ -898,6 +907,11 @@ class MissingSeasons(Model):
 # -- flows -----------------------------------------------------------------------------
 FlowRunStatus = Literal["running", "ok", "partial", "error"]
 NodeCategory = Literal["source", "filter", "output"]
+
+
+class NodeTypePort(Model):
+    key: str
+    label: str
 
 
 class FlowPosition(Model):
@@ -960,6 +974,7 @@ class FlowView(Model):
     updated_at: int | None = None
     problems: list[FlowProblem]
     summaries: dict[str, str]
+    ports: dict[str, list[NodeTypePort]]  # outputs per node; a filter's depend on its rules
     outputs: list[str]
     nodes: int
     last_run: FlowRunBrief | None = None
@@ -996,6 +1011,7 @@ class FlowCheckBody(Body):
 class FlowCheck(Model):
     problems: list[FlowProblem]
     summaries: dict[str, str]  # one line per node, for the editor
+    ports: dict[str, list[NodeTypePort]]
 
 
 class ScheduleCheck(Model):
@@ -1014,6 +1030,7 @@ class PortCount(Model):
 
 class CompareList(Model):
     ref: str
+    name: str | None = None  # the list's title on MDBList
     run: int | None = None
     error: str | None = None
 
@@ -1078,19 +1095,16 @@ class FlowTitlesPage(Model):
     pages: int
 
 
-class NodeTypePort(Model):
-    key: str
-    label: str
-
-
 class NodeTypeView(Model):
     type: str
     label: str
     category: NodeCategory
     inputs: bool
     ports: list[NodeTypePort]
-    fields: list[SourceField]
+    fields: list[SourceField]  # for a filter with rules: the fields of one rule
     missing: str | None = None
+    rules: bool = False  # one output per rule, plus No match
+    each_default: bool | None = None  # a title fitting several rules goes to each of them
 
 
 class NodeTypes(Model):

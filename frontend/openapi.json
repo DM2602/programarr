@@ -2648,6 +2648,27 @@
         }
       }
     },
+    "/api/exclusions/sync": {
+      "post": {
+        "tags": [
+          "lists"
+        ],
+        "summary": "Sync Exclusions",
+        "operationId": "sync_exclusions_api_exclusions_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/exclusions/media/{media_id}": {
       "delete": {
         "tags": [
@@ -2663,6 +2684,61 @@
             "schema": {
               "type": "integer",
               "title": "Media Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exclusions/arr/{service}/{external_id}": {
+      "delete": {
+        "tags": [
+          "lists"
+        ],
+        "summary": "Unexclude Arr",
+        "operationId": "unexclude_arr_api_exclusions_arr__service___external_id__delete",
+        "parameters": [
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "radarr",
+                "sonarr"
+              ],
+              "type": "string",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "external_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "External Id"
             }
           }
         ],
@@ -4317,6 +4393,17 @@
             "type": "string",
             "title": "Ref"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "run": {
             "anyOf": [
               {
@@ -4343,6 +4430,7 @@
         "type": "object",
         "required": [
           "ref",
+          "name",
           "run",
           "error"
         ],
@@ -4877,7 +4965,14 @@
       "ExclusionView": {
         "properties": {
           "id": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "scope": {
@@ -4907,7 +5002,14 @@
             "title": "Created At"
           },
           "media": {
-            "$ref": "#/components/schemas/MediaView"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MediaView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "plex_key": {
             "anyOf": [
@@ -4919,6 +5021,60 @@
               }
             ],
             "title": "Plex Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Kind"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "radarr",
+                  "sonarr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending",
+            "default": false
           }
         },
         "type": "object",
@@ -4928,7 +5084,13 @@
           "reason",
           "created_at",
           "media",
-          "plex_key"
+          "plex_key",
+          "title",
+          "year",
+          "kind",
+          "service",
+          "external_id",
+          "pending"
         ],
         "title": "ExclusionView"
       },
@@ -4940,11 +5102,45 @@
             },
             "type": "array",
             "title": "Rows"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "services": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "radarr",
+                "sonarr"
+              ]
+            },
+            "type": "array",
+            "title": "Services",
+            "default": []
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
           }
         },
         "type": "object",
         "required": [
-          "rows"
+          "rows",
+          "synced_at",
+          "services",
+          "errors"
         ],
         "title": "ExclusionsPage"
       },
@@ -5021,12 +5217,23 @@
             },
             "type": "object",
             "title": "Summaries"
+          },
+          "ports": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeTypePort"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Ports"
           }
         },
         "type": "object",
         "required": [
           "problems",
-          "summaries"
+          "summaries",
+          "ports"
         ],
         "title": "FlowCheck"
       },
@@ -5823,6 +6030,16 @@
             "type": "object",
             "title": "Summaries"
           },
+          "ports": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeTypePort"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Ports"
+          },
           "outputs": {
             "items": {
               "type": "string"
@@ -5869,6 +6086,7 @@
           "updated_at",
           "problems",
           "summaries",
+          "ports",
           "outputs",
           "nodes",
           "last_run",
@@ -7864,6 +8082,22 @@
               }
             ],
             "title": "Missing"
+          },
+          "rules": {
+            "type": "boolean",
+            "title": "Rules",
+            "default": false
+          },
+          "each_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Each Default"
           }
         },
         "type": "object",
@@ -7874,7 +8108,9 @@
           "inputs",
           "ports",
           "fields",
-          "missing"
+          "missing",
+          "rules",
+          "each_default"
         ],
         "title": "NodeTypeView"
       },

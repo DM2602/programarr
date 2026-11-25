@@ -160,6 +160,10 @@ class Adapter:
     def describe(self, params: dict) -> str:
         raise NotImplementedError
 
+    def name(self, params: dict) -> str:
+        """Which list, in a few words, for a title's path through a flow."""
+        return self.describe(params)
+
     async def fetch(self, params: dict) -> Fetched:
         raise NotImplementedError
 

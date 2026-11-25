@@ -125,10 +125,14 @@ TOP10_FLOW = {
 
 
 async def build_flows(world) -> None:
-    """Netflix Switzerland to Radarr and Sonarr with one dry run, and a Trakt flow not run yet."""
+    """Netflix Switzerland to Radarr and Sonarr with one dry run, and Trakt trending split by genre, not run yet."""
     from app.flows import engine, store
 
-    world.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # there already: only the tag is missing
+    world.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # in Plex too: the flow leaves it alone
+    world.radarr.add_movie(1006, "Woodwalkers 2", "woodwalkers-2-1006", has_file=False)  # only the tag is missing
+    world.radarr.exclude(1007, "Hill 12", 2026)  # excluded in Radarr: no flow adds it
+    world.radarr.exclude(536869, "Cats", 2019)
+    world.sonarr.exclude(418004, "The Idol", 2023)
     for tmdb_id, name in ((1001, "Guarding Stars"), (1002, "Steps"), (1003, "Heartland"), (1004, "The Christmas Switch")):
         world.radarr.know(tmdb_id, name, 2026)
     for tvdb_id, name, year in ((480001, "The Law of Beasts", 2026), (480002, "The Body", 2026), (450003, "Black Doves", 2024),
@@ -138,20 +142,26 @@ async def build_flows(world) -> None:
     await engine.run(flow_id)
     store.create("Trakt trending", {
         "nodes": [
-            {"id": "trakt1", "type": "trakt", "position": {"x": 0, "y": 0},
+            {"id": "trakt1", "type": "trakt", "position": {"x": 0, "y": 120},
              "config": {"chart": "trending", "type": "movies", "limit": 20}},
-            {"id": "year1", "type": "year", "position": {"x": 290, "y": 0}, "config": {"mode": "recent", "months": 12}},
+            {"id": "genre1", "type": "genre", "position": {"x": 290, "y": 120}, "config": {"rules": [
+                {"id": "action", "mode": "any", "genres": ["action", "thriller"]},
+                {"id": "family", "mode": "any", "genres": ["family", "animation"]},
+            ], "each": False}},
             {"id": "radarr1", "type": "radarr", "position": {"x": 580, "y": 0},
-             "config": {"quality_profile": 4, "root_folder": "/data/movies", "tags": ["trakt"]}},
+             "config": {"quality_profile": 4, "root_folder": "/data/movies", "tags": ["trakt", "action"]}},
+            {"id": "radarr2", "type": "radarr", "position": {"x": 580, "y": 260},
+             "config": {"quality_profile": 1, "root_folder": "/data/movies", "tags": ["trakt", "family"]}},
         ],
-        "edges": [{"source": "trakt1", "port": "out", "target": "year1"},
-                  {"source": "year1", "port": "match", "target": "radarr1"}],
+        "edges": [{"source": "trakt1", "port": "out", "target": "genre1"},
+                  {"source": "genre1", "port": "action", "target": "radarr1"},
+                  {"source": "genre1", "port": "family", "target": "radarr2"}],
     })
 
 
 async def build_lists(world) -> None:
     """Previews of a FlixPatrol TOP 10, an MDBList list and a Trakt chart, one excluded title."""
-    from app.lists import runs, scrape
+    from app.lists import exclusions, runs, scrape
     from app.media import store
 
     world.fill_lists()
@@ -161,7 +171,7 @@ async def build_lists(world) -> None:
     await runs.preview("mdblist", runs.prepare("mdblist", {"list": "dominik/netflix-ch", "limit": 100}))
     await runs.preview("trakt", runs.prepare("trakt", {"chart": "trending", "type": "movies", "limit": 10}))
     power = store.find("show", 2010)
-    await runs.exclude(None, None, power["id"], "Seen it")
+    await exclusions.exclude(None, None, power["id"], "Seen it")
 
 
 def main() -> None:

@@ -215,7 +215,10 @@ class FlixPatrol(Adapter):
 
     def describe(self, params: dict) -> str:
         sections = ", ".join(SECTIONS[name] for name in params["sections"])
-        return f"{_name(params['platform'], PLATFORMS)} {_name(params['region'], {'world': 'World'})} – {sections}"
+        return f"{self.name(params)} – {sections}"
+
+    def name(self, params: dict) -> str:
+        return f"{_name(params['platform'], PLATFORMS)} {_name(params['region'], {'world': 'World'})}"
 
     def base(self) -> str:
         return (settings.get("flixpatrol_base") or "https://flixpatrol.com").rstrip("/")

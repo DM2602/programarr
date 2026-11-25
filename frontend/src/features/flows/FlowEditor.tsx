@@ -1,4 +1,4 @@
-import { CheckCircleIcon, Cog6ToothIcon, ExclamationTriangleIcon, PlayIcon, PlusIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, Cog6ToothIcon, ExclamationTriangleIcon, PlayIcon, PlusIcon, TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   addEdge,
@@ -13,6 +13,7 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useUpdateNodeInternals,
   type Connection,
   type Edge,
   type IsValidConnection,
@@ -34,15 +35,21 @@ import { Badge, Loading, Notice, Spinner } from "../../components/ui";
 import { timeUntil } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
 import { ModeBadge, NodeIcon, outcomeLabel, type FlowGraph, type FlowView, type NodeType, type RunNode } from "./common";
-import { ConfigField, fieldDefaults, visible } from "./fields";
+import { ConfigField, fieldDefaults, nodeDefaults, portsOf, rulesOf, visible, type PortInfo, type Rule } from "./fields";
 
 type StepData = { type: string; config: Record<string, unknown> };
 type StepNode = Node<StepData, "step">;
-type Check = { problems: { node?: string | null; message: string }[]; summaries: Record<string, string> };
-type Decor = { summaries: Record<string, string>; problems: Record<string, string[]>; counts: Record<string, RunNode> | null; dry: boolean };
+type Check = { problems: { node?: string | null; message: string }[]; summaries: Record<string, string>; ports: Record<string, PortInfo[]> };
+type Decor = {
+  summaries: Record<string, string>;
+  ports: Record<string, PortInfo[]>;
+  problems: Record<string, string[]>;
+  counts: Record<string, RunNode> | null;
+  dry: boolean;
+};
 
 const TypesContext = createContext<Map<string, NodeType>>(new Map());
-const DecorContext = createContext<Decor>({ summaries: {}, problems: {}, counts: null, dry: true });
+const DecorContext = createContext<Decor>({ summaries: {}, ports: {}, problems: {}, counts: null, dry: true });
 const DRAG_TYPE = "application/x-programarr-node";
 const ACCENT: Record<string, string> = { source: "border-l-indigo-400", filter: "border-l-gray-500", output: "border-l-emerald-500" };
 
@@ -90,6 +97,16 @@ function StepCard({ id, data, selected }: NodeProps<StepNode>) {
   const counts = decor.counts?.[id];
   const summary = decor.summaries[id];
   const titles = counts ? (category === "source" ? portCount(counts, "out") : counts.count_in) : null;
+  const ports = info ? portsOf(info, data.config, decor.ports[id]) : [];
+  const portKeys = ports.map((port) => port.key).join("|");
+  const updateInternals = useUpdateNodeInternals();
+  const shownKeys = useRef(portKeys);
+  useEffect(() => {
+    // Handles come and go with a filter's rules; React Flow measures them again (not on first render: fitView).
+    if (shownKeys.current === portKeys) return;
+    shownKeys.current = portKeys;
+    updateInternals(id);
+  }, [portKeys, id, updateInternals]);
   return (
     <div
       className={`step w-56 rounded-lg border border-l-4 bg-gray-800 text-left shadow-lg ${ACCENT[category]} ${
@@ -125,13 +142,13 @@ function StepCard({ id, data, selected }: NodeProps<StepNode>) {
           ))}
         </ul>
       )}
-      {info && info.ports.length > 0 && (
+      {ports.length > 0 && (
         <div className="border-t border-gray-700 py-1">
-          {info.ports.map((port) => {
+          {ports.map((port) => {
             const count = portCount(counts, port.key);
             return (
               <div key={port.key} className="relative flex items-center justify-end gap-2 py-1 pr-4 pl-3 text-xs text-gray-300" data-port={port.key}>
-                {info.ports.length > 1 || category !== "source" ? port.label : "Out"}
+                <span className="truncate">{ports.length > 1 || category !== "source" ? port.label : "Out"}</span>
                 {count !== null && <span className="rounded-full bg-gray-700 px-1.5 font-semibold tabular-nums text-gray-100">{count}</span>}
                 <Handle type="source" position={Position.Right} id={port.key} className="!h-3 !w-3 !border-2 !border-gray-900 !bg-indigo-400" />
               </div>
@@ -196,10 +213,89 @@ function AddMenu({ types, category, onAdd }: { types: NodeType[]; category: stri
   );
 }
 
-function NodePanel({ node, info, problems, onChange, onRemove, onClose }: {
+function RulesEditor({ info, config, ports, onChange }: {
+  info: NodeType;
+  config: Record<string, unknown>;
+  ports: PortInfo[];
+  onChange: (config: Record<string, unknown>) => void;
+}) {
+  const defaults = fieldDefaults(info.fields);
+  const rules: Rule[] = rulesOf(config).map((rule) => ({ ...defaults, label: "", ...rule }));
+  const each = typeof config.each === "boolean" ? config.each : info.each_default ?? false;
+  const write = (next: Rule[], nextEach = each) => onChange({ rules: next, each: nextEach });
+  const add = () => {
+    const numbers = rules.map((rule) => /^r(\d+)$/.exec(rule.id)).filter(Boolean).map((found) => Number((found as RegExpExecArray)[1]));
+    const id = `r${Math.max(rules.length, ...numbers) + 1}`;
+    write([...rules, { ...defaults, id, label: "" }]);
+  };
+  const move = (index: number, step: number) => {
+    const next = [...rules];
+    [next[index], next[index + step]] = [next[index + step], next[index]];
+    write(next);
+  };
+  const several = rules.length > 1;
+  return (
+    <div className="mt-4 space-y-3" data-rules={rules.length}>
+      {rules.map((rule, index) => (
+        <div key={rule.id} className={several ? "rule rounded-md border border-gray-700 p-3" : "rule"} data-rule={rule.id}>
+          {several && (
+            <div className="mb-3 flex items-center gap-1">
+              <input
+                className="field-input h-8 flex-1 py-1 text-sm"
+                value={String(rule.label ?? "")}
+                placeholder={ports.find((port) => port.key === rule.id)?.label ?? `Output ${index + 1}`}
+                aria-label={`Name of output ${index + 1}`}
+                data-field="label"
+                onChange={(event) => write(rules.map((other, at) => (at === index ? { ...other, label: event.target.value } : other)))}
+              />
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30" disabled={index === 0} onClick={() => move(index, -1)} aria-label="Move up">
+                <ChevronUpIcon className="h-4 w-4" />
+              </button>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30" disabled={index === rules.length - 1} onClick={() => move(index, 1)} aria-label="Move down">
+                <ChevronDownIcon className="h-4 w-4" />
+              </button>
+              <button type="button" className="rounded p-1 text-gray-400 hover:bg-gray-700 hover:text-red-300" onClick={() => write(rules.filter((_, at) => at !== index))} aria-label={`Remove output ${index + 1}`} data-action="remove-rule">
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          <div className="space-y-4">
+            {info.fields
+              .filter((field) => visible(field, rule))
+              .map((field) => (
+                <ConfigField
+                  key={`${rule.id}-${field.key}`}
+                  field={field}
+                  value={rule[field.key]}
+                  onChange={(value) => write(rules.map((other, at) => (at === index ? { ...other, [field.key]: value } : other)))}
+                />
+              ))}
+          </div>
+        </div>
+      ))}
+      <Button size="sm" variant="ghost" icon={<PlusIcon className="h-4 w-4" />} onClick={add} disabled={rules.length >= 12} data-action="add-rule">
+        Add output
+      </Button>
+      {several && (
+        <div>
+          <label htmlFor="rules-each" className="mb-1 block text-xs font-semibold text-gray-400">
+            A title that fits several outputs
+          </label>
+          <select id="rules-each" className="field-input" value={each ? "each" : "first"} onChange={(event) => write(rules, event.target.value === "each")} data-field="each">
+            <option value="first">Goes to the first</option>
+            <option value="each">Goes to each</option>
+          </select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NodePanel({ node, info, problems, ports, onChange, onRemove, onClose }: {
   node: StepNode;
   info: NodeType | undefined;
   problems: string[];
+  ports: PortInfo[];
   onChange: (config: Record<string, unknown>) => void;
   onRemove: () => void;
   onClose: () => void;
@@ -234,7 +330,8 @@ function NodePanel({ node, info, problems, onChange, onRemove, onClose }: {
           ))}
         </ul>
       )}
-      {info && (
+      {info?.rules && <RulesEditor info={info} config={node.data.config} ports={ports} onChange={onChange} />}
+      {info && !info.rules && (
         <div className="mt-4 space-y-4">
           {info.fields
             .filter((field) => visible(field, config))
@@ -421,7 +518,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial.edges);
   const [settings, setSettings] = useState<Settings>({ name: flow.name, schedule: flow.schedule ?? null, enabled: flow.enabled });
   const [saved, setSaved] = useState(() => JSON.stringify({ graph: flow.graph, name: flow.name, schedule: flow.schedule ?? null, enabled: flow.enabled }));
-  const [check, setCheck] = useState<Check>({ problems: flow.problems, summaries: flow.summaries });
+  const [check, setCheck] = useState<Check>({ problems: flow.problems, summaries: flow.summaries, ports: flow.ports });
   const [busy, setBusy] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
 
@@ -455,7 +552,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
     const problems: Record<string, string[]> = {};
     for (const problem of check.problems) if (problem.node) (problems[problem.node] ??= []).push(problem.message);
     const counts = runFits && run.data && !graphDirty ? Object.fromEntries(run.data.nodes.map((node) => [node.id, node])) : null;
-    return { summaries: check.summaries, problems, counts, dry: run.data?.dry_run ?? true };
+    return { summaries: check.summaries, ports: check.ports, problems, counts, dry: run.data?.dry_run ?? true };
   }, [check, run.data, graphDirty, runFits]);
 
   const selectedNodes = nodes.filter((node) => node.selected);
@@ -510,7 +607,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
     while (taken.has(`${type.type}${number}`)) number += 1;
     const id = `${type.type}${number}`;
     const spot = position ?? placeFor(type);
-    const node: StepNode = { id, type: "step", position: spot, data: { type: type.type, config: fieldDefaults(type.fields) }, selected: true };
+    const node: StepNode = { id, type: "step", position: spot, data: { type: type.type, config: nodeDefaults(type) }, selected: true };
     setNodes((list) => [...list.map((other) => ({ ...other, selected: false })), node]);
     setEdges((list) => list.map((edge) => ({ ...edge, selected: false })));
     // Pan just enough to show it; the settings panel covers the right edge of the canvas.
@@ -536,7 +633,14 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
 
   const updateConfig = useCallback((id: string, config: Record<string, unknown>) => {
     setNodes((list) => list.map((node) => (node.id === id ? { ...node, data: { ...node.data, config } } : node)));
-  }, [setNodes]);
+    const node = flowApi.getNode(id);
+    const info = node ? typeMap.get((node.data as StepData).type) : undefined;
+    if (info?.rules) {
+      // An output that is gone takes its connections along.
+      const keys = new Set(portsOf(info, config).map((port) => port.key));
+      setEdges((list) => list.filter((edge) => edge.source !== id || keys.has(edge.sourceHandle ?? "")));
+    }
+  }, [setNodes, setEdges, flowApi, typeMap]);
 
   const deselect = () => {
     setNodes((list) => list.map((node) => ({ ...node, selected: false })));
@@ -561,7 +665,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
       queryClient.invalidateQueries({ queryKey: ["flows"] });
       setSaved(JSON.stringify({ graph: updated.graph, name: updated.name, schedule: updated.schedule ?? null, enabled: updated.enabled }));
       setSettings({ name: updated.name, schedule: updated.schedule ?? null, enabled: updated.enabled });
-      setCheck({ problems: updated.problems, summaries: updated.summaries });
+      setCheck({ problems: updated.problems, summaries: updated.summaries, ports: updated.ports });
       if (JSON.stringify(updated.graph) !== graphKey) {
         // The server dropped broken connections: show what it kept.
         const kept = toFlow(updated.graph ?? { nodes: [], edges: [] });
@@ -768,6 +872,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
                 node={selectedNode}
                 info={typeMap.get(selectedNode.data.type)}
                 problems={decor.problems[selectedNode.id] ?? []}
+                ports={check.ports[selectedNode.id] ?? []}
                 onChange={(config) => updateConfig(selectedNode.id, config)}
                 onRemove={() => void flowApi.deleteElements({ nodes: [{ id: selectedNode.id }] })}
                 onClose={deselect}

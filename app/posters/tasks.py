@@ -112,12 +112,13 @@ async def check_sets(item_keys: list[str] | None = None) -> dict:
 
 async def maintenance() -> dict:
     from ..flows import store as flows  # late imports: lists and flows depend on the media modules
-    from ..lists import runs
+    from ..lists import exclusions, runs
 
     prune_events(60)
     cache.prune()
     flows.prune()
     runs.prune()
+    await exclusions.sync()  # both ways with Radarr and Sonarr, every six hours with the clean-up
     database = db.get()
     database.execute("DELETE FROM jobs WHERE finished_at IS NOT NULL AND finished_at < ?", (db.now() - 30 * 86400,))
     uploads = config.DATA_DIR / "uploads"

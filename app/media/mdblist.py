@@ -75,9 +75,50 @@ async def account(key: str | None = None) -> dict:
     }
 
 
+LIST_NAME_SECONDS = 7 * 86400
+
+
+def cached_list_name(ref: str) -> str | None:
+    """The list's title on MDBList, by 'user/slug' or number, if it was read before."""
+    return cache.get(f"mdblist:list:{ref}")
+
+
+def remember_list_name(row: dict, *refs: str) -> None:
+    name = " ".join(str(row.get("name") or "").split())
+    if not name:
+        return
+    user = row.get("user_name") or row.get("username")
+    keys = {ref for ref in refs if ref}
+    if user and row.get("slug"):
+        keys.add(f"{user}/{row['slug']}")
+    if row.get("id"):
+        keys.add(str(row["id"]))
+    for key in keys:
+        cache.put(f"mdblist:list:{key}", name, LIST_NAME_SECONDS)
+
+
+async def list_name(ref: str) -> str | None:
+    """The list's title; one request, then a week from the cache. None if MDBList does not say."""
+    cached = cached_list_name(ref)
+    if cached:
+        return cached
+    try:
+        data = await request("GET", f"/lists/{ref}")
+    except MdblistError:
+        return None
+    row = data[0] if isinstance(data, list) and data else data if isinstance(data, dict) else None
+    if not isinstance(row, dict):
+        return None
+    remember_list_name(row, ref)
+    return cached_list_name(ref)
+
+
 async def my_lists() -> list[dict]:
     data = await request("GET", "/lists/user") or []
     rows = data if isinstance(data, list) else data.get("lists") or []
+    for row in rows:
+        if isinstance(row, dict):
+            remember_list_name(row)
     return [
         {
             "id": row.get("id"),

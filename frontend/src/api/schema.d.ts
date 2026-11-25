@@ -1123,6 +1123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/exclusions/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Exclusions */
+        post: operations["sync_exclusions_api_exclusions_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/exclusions/media/{media_id}": {
         parameters: {
             query?: never;
@@ -1135,6 +1152,23 @@ export interface paths {
         post?: never;
         /** Unexclude Media */
         delete: operations["unexclude_media_api_exclusions_media__media_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/exclusions/arr/{service}/{external_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unexclude Arr */
+        delete: operations["unexclude_arr_api_exclusions_arr__service___external_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1682,6 +1716,8 @@ export interface components {
         CompareList: {
             /** Ref */
             ref: string;
+            /** Name */
+            name: string | null;
             /** Run */
             run: number | null;
             /** Error */
@@ -1850,21 +1886,51 @@ export interface components {
         /** ExclusionView */
         ExclusionView: {
             /** Id */
-            id: number;
+            id: number | null;
             /** Scope */
             scope: string;
             /** Reason */
             reason: string | null;
             /** Created At */
             created_at: number | null;
-            media: components["schemas"]["MediaView"];
+            media: components["schemas"]["MediaView"] | null;
             /** Plex Key */
             plex_key: string | null;
+            /** Title */
+            title: string;
+            /** Year */
+            year: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "movie" | "show";
+            /** Service */
+            service: ("radarr" | "sonarr") | null;
+            /** External Id */
+            external_id: number | null;
+            /**
+             * Pending
+             * @default false
+             */
+            pending: boolean;
         };
         /** ExclusionsPage */
         ExclusionsPage: {
             /** Rows */
             rows: components["schemas"]["ExclusionView"][];
+            /** Synced At */
+            synced_at: number | null;
+            /**
+             * Services
+             * @default []
+             */
+            services: ("radarr" | "sonarr")[];
+            /**
+             * Errors
+             * @default []
+             */
+            errors: string[];
         };
         /** FieldOption */
         FieldOption: {
@@ -1897,6 +1963,10 @@ export interface components {
             /** Summaries */
             summaries: {
                 [key: string]: string;
+            };
+            /** Ports */
+            ports: {
+                [key: string]: components["schemas"]["NodeTypePort"][];
             };
         };
         /** FlowCheckBody */
@@ -2196,6 +2266,10 @@ export interface components {
             /** Summaries */
             summaries: {
                 [key: string]: string;
+            };
+            /** Ports */
+            ports: {
+                [key: string]: components["schemas"]["NodeTypePort"][];
             };
             /** Outputs */
             outputs: string[];
@@ -2759,6 +2833,13 @@ export interface components {
             fields: components["schemas"]["SourceField"][];
             /** Missing */
             missing: string | null;
+            /**
+             * Rules
+             * @default false
+             */
+            rules: boolean;
+            /** Each Default */
+            each_default: boolean | null;
         };
         /** NodeTypes */
         NodeTypes: {
@@ -5550,12 +5631,64 @@ export interface operations {
             };
         };
     };
+    sync_exclusions_api_exclusions_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+        };
+    };
     unexclude_media_api_exclusions_media__media_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 media_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unexclude_arr_api_exclusions_arr__service___external_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service: "radarr" | "sonarr";
+                external_id: number;
             };
             cookie?: never;
         };

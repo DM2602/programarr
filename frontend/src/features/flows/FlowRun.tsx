@@ -19,7 +19,8 @@ type Row = Schemas["FlowTitle"];
 function stepText(step: Step, dry: boolean): string {
   if (step.category === "source") return step.port ? `${step.label} ${step.detail}`.trim() : `${step.label}: ${step.detail}`;
   if (step.category === "output") return `${step.label}: ${outcomeLabel(step.port ?? "", dry)}`;
-  return `${step.label}: ${step.port_label}${step.detail ? ` (${step.detail})` : ""}`;
+  const detail = step.detail && step.detail !== step.port_label ? ` (${step.detail})` : "";
+  return `${step.label}: ${step.port_label}${detail}`;
 }
 
 function MediaPills({ media }: { media: Media[] }) {
@@ -68,11 +69,11 @@ function OutputCard({ node, dry, onShow }: { node: RunNode; dry: boolean; onShow
               <span key={list.ref}>
                 {index > 0 && ", "}
                 {list.run ? (
-                  <Link to={`/lists/runs/${list.run}`} className="text-indigo-300 hover:underline">
-                    {list.ref}
+                  <Link to={`/lists/runs/${list.run}`} title={list.ref} className="text-indigo-300 hover:underline">
+                    {list.name ?? list.ref}
                   </Link>
                 ) : (
-                  list.ref
+                  <span title={list.ref}>{list.name ?? list.ref}</span>
                 )}
                 {list.error && <span className="text-red-300"> ({list.error})</span>}
               </span>
@@ -225,7 +226,7 @@ function Titles({ run, show, setShow }: { run: FlowRunDetail; show: string; setS
           }))}
         />
         <form role="search" onSubmit={submit} className="lg:w-64">
-          <input type="search" className="field-input" placeholder="Search titles" aria-label="Search titles" value={q} onChange={(event) => setQ(event.target.value)} />
+          <input type="search" className="field-input" placeholder="Title" aria-label="Filter by title" value={q} onChange={(event) => setQ(event.target.value)} />
         </form>
       </div>
       <div className="mt-4">
