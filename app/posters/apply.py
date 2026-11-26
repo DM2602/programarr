@@ -293,8 +293,9 @@ async def take_plex_choice(item_key: str, slot: str, plex: Plex | None = None, u
     """A poster picked or uploaded in Plex becomes the file in the folder; the lock goes.
 
     Plex locks the poster field when you pick or upload one; that lock is what counts. With
-    uploads=True an unlocked upload counts too, for slots without a file. Returns "saved",
-    "unlocked" (Plex already showed the file) or None.
+    uploads=True an unlocked upload counts too, for slots without a file. Without a lock the file
+    in the folder wins: Plex reads it again. Returns "saved", "unlocked" (Plex showed the file),
+    "refreshed" or None.
     """
     plex = plex or Plex.from_settings()
     database = db.get()
@@ -307,7 +308,7 @@ async def take_plex_choice(item_key: str, slot: str, plex: Plex | None = None, u
         return None
     meta = await plex.metadata(rating_key)
     locked = bool(meta) and "thumb" in locked_fields(meta)
-    if not locked and not (uploads and not row["file"]):
+    if not locked and not row["file"] and not uploads:
         return None
     chosen = next((p for p in await plex.posters(rating_key) if p["selected"]), None)
     if chosen is None:
@@ -318,6 +319,9 @@ async def take_plex_choice(item_key: str, slot: str, plex: Plex | None = None, u
         await plex.unlock(item["library_key"], plex_type, rating_key)
         database.update("slots", "id", slot, {"plex_state": "ok", "plex_checked_at": db.now()})
         return "unlocked"
+    if not locked and row["file"]:
+        await refresh_in_plex(item, [slot], plex)  # Plex shows another poster although the folder has one
+        return "refreshed"
     if not locked and not _is_upload(chosen):
         return None
     kind, _, season = parse_slot_id(slot)

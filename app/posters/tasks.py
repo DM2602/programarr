@@ -114,6 +114,7 @@ async def _follow_up(result: library.SyncResult) -> dict:
                 event("warning", "plex", f"Poster chosen in Plex not saved: {exc}", item_key)
                 continue
             summary["plex_choices"] += outcome == "saved"
+            summary["refreshed"] += outcome == "refreshed"
     if backup.enabled():
         for item_key, slots in _by_item(result.vanished, new_items).items():
             summary["restored"] += len(await backup.restore(item_key, slots))
@@ -183,7 +184,7 @@ async def take_from_plex() -> dict:
         "AND (s.kind <> 'season' OR EXISTS (SELECT 1 FROM seasons z WHERE z.show_key=s.item_key "
         "     AND z.number=s.season AND z.gone=0)) ORDER BY i.sort_title, s.kind, s.season"
     )
-    adopted = unlocked = failed = 0
+    adopted = unlocked = refreshed = failed = 0
     for index, row in enumerate(rows):
         jobs.progress(index, len(rows), "Checking Plex posters …")
         try:
@@ -193,11 +194,12 @@ async def take_from_plex() -> dict:
             continue
         adopted += outcome == "saved"
         unlocked += outcome == "unlocked"
+        refreshed += outcome == "refreshed"
     files = await keep_plex_posters(limit=None)
     event("info", "plex", f"Posters from Plex: {adopted} chosen there saved as files, {files['kept']} kept as files"
                           f"{f', {failed} failed' if failed else ''} ({len(rows)} checked)")
     return {"checked": len(rows), "adopted": adopted, "kept": files["kept"], "restored": files["restored"],
-            "unlocked": unlocked, "failed": failed}
+            "unlocked": unlocked, "refreshed": refreshed, "failed": failed}
 
 
 async def backup_now() -> dict:

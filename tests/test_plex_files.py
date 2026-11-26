@@ -88,6 +88,20 @@ async def test_lock_on_the_file_itself_is_released(world):
     assert "thumb" not in world.plex.items[movie]["locked"]
 
 
+async def test_plex_falling_back_to_its_own_poster_reads_the_file_again(world):
+    movie = world.plex.add_movie("Dune", 2021, "438631")
+    await world.enable_libraries()
+    await library.sync()
+    await apply.apply(movie, [Assignment(f"m:{movie}", upload_ref("movie"))], "manual", "manual")
+    world.plex.choose(movie, "agent")
+    world.plex.items[movie]["locked"].discard("thumb")  # shows the agent poster, nothing locked
+    summary = await tasks.sync_and_process()
+    assert summary["refreshed"] == 1 and "plex_choices" not in summary
+    assert world.plex.selected_is_local(movie)
+    assert imaging.strip_stamp((world.media / "movies" / "Dune (2021)" / "poster.jpg").read_bytes()) == \
+        poster_for("upload-1", "UP")
+
+
 async def test_nothing_is_taken_with_automation_off(world):
     movie = world.plex.add_movie("Dune", 2021, "438631")
     await world.enable_libraries()
