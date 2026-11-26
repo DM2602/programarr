@@ -11,7 +11,7 @@ import { Badge, Card, Empty, Loading, Notice, PageHeader, Section } from "../../
 import { plural, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
 import { KindIcon, POSTER_FALLBACK, Ratings, type Media } from "../lists/common";
-import { ModeBadge, NodeIcon, OUTCOME_TONES, outcomeCount, outcomeLabel, RunStatus, triggerLabel, type FlowRunDetail, type RunNode } from "./common";
+import { ModeBadge, NodeIcon, OUTCOME_TONES, OutputFacts, outcomeCount, outcomeLabel, RunStatus, triggerLabel, type FlowRunDetail, type RunNode } from "./common";
 
 type Step = Schemas["TraceStep"];
 type Row = Schemas["FlowTitle"];
@@ -43,8 +43,9 @@ function OutputCard({ node, dry, onShow }: { node: RunNode; dry: boolean; onShow
       <div className="flex items-center gap-2" data-output={node.id}>
         <NodeIcon type={node.type} category="output" className="h-5 w-5" />
         <h3 className="font-semibold text-gray-100">{node.label}</h3>
-        <span className="truncate text-xs text-gray-400">{node.summary}</span>
+        {!node.facts.length && <span className="truncate text-xs text-gray-400">{node.summary}</span>}
       </div>
+      {node.facts.length > 0 && <OutputFacts facts={node.facts} />}
       {node.error && <p className="mt-2 text-sm text-red-300">{node.error}</p>}
       <ul className="mt-3 flex flex-wrap gap-2">
         {node.ports.length ? (

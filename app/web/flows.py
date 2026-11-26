@@ -38,6 +38,19 @@ def _flow_or_404(flow_id: int) -> dict:
     return flow
 
 
+async def _profile_names(graph: dict | None) -> None:
+    """Quality profile names for the summaries: read from Radarr or Sonarr when one is not known yet."""
+    for node in (graph or {}).get("nodes", []):
+        service, profile = node.get("type"), (node.get("config") or {}).get("quality_profile")
+        if service not in ("radarr", "sonarr") or profile in (None, "") or not arr.configured(service):
+            continue
+        if library.profile_name(service, profile) is None:
+            try:
+                await library.options(service)
+            except arr.ArrError:
+                pass
+
+
 @router.get("/flows", response_model=FlowsPage)
 async def flows():
     return {"flows": store.flows()}
@@ -49,7 +62,9 @@ async def create(body: FlowCreate):
         flow_id = store.create(body.name, body.graph.model_dump() if body.graph else None, body.schedule)
     except (ValueError, schedule.ScheduleError) as exc:
         raise HTTPException(400, str(exc)) from exc
-    return store.view(store.get(flow_id))
+    flow = store.get(flow_id)
+    await _profile_names(flow["graph"])
+    return store.view(flow)
 
 
 @router.get("/flows/nodes", response_model=NodeTypes)
@@ -59,10 +74,13 @@ async def node_types():
 
 @router.post("/flows/check", response_model=FlowCheck)
 async def check(body: FlowCheckBody):
-    checked = graphs.check(body.graph.model_dump())
+    graph = body.graph.model_dump()
+    await _profile_names(graph)
+    checked = graphs.check(graph)
     infos = graphs.summaries(checked)
     return {"problems": [problem.as_dict() for problem in checked.problems],
             "summaries": {node_id: info["summary"] for node_id, info in infos.items()},
+            "facts": {node_id: info["facts"] for node_id, info in infos.items() if info["facts"]},
             "ports": {node_id: [{"key": key, "label": label} for key, label in info["ports"].items()]
                       for node_id, info in infos.items()}}
 
@@ -100,7 +118,9 @@ async def run_titles(run_id: int, show: str = "all", q: str = "", page: int = 1)
 
 @router.get("/flows/{flow_id}", response_model=FlowView)
 async def flow(flow_id: int):
-    return store.view(_flow_or_404(flow_id))
+    found = _flow_or_404(flow_id)
+    await _profile_names(found["graph"])
+    return store.view(found)
 
 
 @router.put("/flows/{flow_id}", response_model=FlowView)
@@ -125,6 +145,7 @@ async def update(flow_id: int, body: FlowUpdate):
         )
     except (ValueError, schedule.ScheduleError) as exc:
         raise HTTPException(400, str(exc)) from exc
+    await _profile_names(updated["graph"])
     return store.view(updated)
 
 

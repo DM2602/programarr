@@ -104,3 +104,34 @@ export function RunTotals({ run }: { run: FlowRunBrief }) {
 export function triggerLabel(trigger: string): string {
   return trigger === "schedule" ? "Scheduled" : "Manual";
 }
+
+export type NodeFact = { label: string; value: string };
+
+/**
+ * Profile, folder and tags of a Radarr or Sonarr output, each with its name, so outputs of the same
+ * service tell apart: in a row on run pages, one per line on the editor's nodes.
+ */
+export function OutputFacts({ facts, stacked = false }: { facts: NodeFact[]; stacked?: boolean }) {
+  if (stacked) {
+    return (
+      <dl className="space-y-0.5 px-3 pt-1 pb-2.5 text-xs leading-4" data-facts>
+        {facts.map((fact) => (
+          <div key={fact.label} className="flex min-w-0 gap-1.5" data-fact={fact.label}>
+            <dt className="w-11 shrink-0 text-gray-500">{fact.label}</dt>
+            <dd className="min-w-0 truncate text-gray-300">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+  return (
+    <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm" data-facts>
+      {facts.map((fact) => (
+        <div key={fact.label} className="flex min-w-0 items-baseline gap-1.5" data-fact={fact.label}>
+          <dt className="text-xs text-gray-400">{fact.label}</dt>
+          <dd className="min-w-0 truncate font-medium text-gray-200">{fact.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}

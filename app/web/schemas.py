@@ -909,6 +909,12 @@ FlowRunStatus = Literal["running", "ok", "partial", "error"]
 NodeCategory = Literal["source", "filter", "output"]
 
 
+class NodeFact(Model):
+    """One labelled setting of an output, e.g. Profile: HD-1080p."""
+    label: str
+    value: str
+
+
 class NodeTypePort(Model):
     key: str
     label: str
@@ -974,6 +980,7 @@ class FlowView(Model):
     updated_at: int | None = None
     problems: list[FlowProblem]
     summaries: dict[str, str]
+    facts: dict[str, list[NodeFact]] = {}  # outputs: profile, folder, tags
     ports: dict[str, list[NodeTypePort]]  # outputs per node; a filter's depend on its rules
     outputs: list[str]
     nodes: int
@@ -1011,6 +1018,7 @@ class FlowCheckBody(Body):
 class FlowCheck(Model):
     problems: list[FlowProblem]
     summaries: dict[str, str]  # one line per node, for the editor
+    facts: dict[str, list[NodeFact]] = {}  # outputs: profile, folder, tags
     ports: dict[str, list[NodeTypePort]]
 
 
@@ -1048,6 +1056,7 @@ class RunNode(Model):
     label: str
     category: str
     summary: str
+    facts: list[NodeFact] = []  # outputs: profile, folder, tags
     count_in: int
     ports: list[PortCount]
     entries: dict[str, int] | None = None

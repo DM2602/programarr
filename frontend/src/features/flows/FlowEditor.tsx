@@ -34,14 +34,20 @@ import { useToast } from "../../components/Toasts";
 import { Badge, Loading, Notice, Spinner } from "../../components/ui";
 import { timeUntil } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
-import { ModeBadge, NodeIcon, outcomeLabel, type FlowGraph, type FlowView, type NodeType, type RunNode } from "./common";
+import { ModeBadge, NodeIcon, OutputFacts, outcomeLabel, type FlowGraph, type FlowView, type NodeFact, type NodeType, type RunNode } from "./common";
 import { ConfigField, fieldDefaults, nodeDefaults, portsOf, rulesOf, visible, type PortInfo, type Rule } from "./fields";
 
 type StepData = { type: string; config: Record<string, unknown> };
 type StepNode = Node<StepData, "step">;
-type Check = { problems: { node?: string | null; message: string }[]; summaries: Record<string, string>; ports: Record<string, PortInfo[]> };
+type Check = {
+  problems: { node?: string | null; message: string }[];
+  summaries: Record<string, string>;
+  facts?: Record<string, NodeFact[]>;
+  ports: Record<string, PortInfo[]>;
+};
 type Decor = {
   summaries: Record<string, string>;
+  facts: Record<string, NodeFact[]>;
   ports: Record<string, PortInfo[]>;
   problems: Record<string, string[]>;
   counts: Record<string, RunNode> | null;
@@ -49,7 +55,7 @@ type Decor = {
 };
 
 const TypesContext = createContext<Map<string, NodeType>>(new Map());
-const DecorContext = createContext<Decor>({ summaries: {}, ports: {}, problems: {}, counts: null, dry: true });
+const DecorContext = createContext<Decor>({ summaries: {}, facts: {}, ports: {}, problems: {}, counts: null, dry: true });
 const DRAG_TYPE = "application/x-programarr-node";
 const ACCENT: Record<string, string> = { source: "border-l-indigo-400", filter: "border-l-gray-500", output: "border-l-emerald-500" };
 
@@ -96,6 +102,7 @@ function StepCard({ id, data, selected }: NodeProps<StepNode>) {
   const problems = decor.problems[id] ?? [];
   const counts = decor.counts?.[id];
   const summary = decor.summaries[id];
+  const facts = decor.facts[id];
   const titles = counts ? (category === "source" ? portCount(counts, "out") : counts.count_in) : null;
   const ports = info ? portsOf(info, data.config, decor.ports[id]) : [];
   const portKeys = ports.map((port) => port.key).join("|");
@@ -126,7 +133,11 @@ function StepCard({ id, data, selected }: NodeProps<StepNode>) {
           </span>
         )}
       </div>
-      <p className="line-clamp-2 px-3 pt-1 pb-2.5 text-xs leading-4 text-gray-400">{summary || (info ? "Not set up" : "Unknown type")}</p>
+      {facts?.length ? (
+        <OutputFacts facts={facts} stacked />
+      ) : (
+        <p className="line-clamp-2 px-3 pt-1 pb-2.5 text-xs leading-4 text-gray-400">{summary || (info ? "Not set up" : "Unknown type")}</p>
+      )}
       {titles !== null && (
         <p className="border-t border-gray-700 px-3 py-1.5 text-xs text-gray-300" data-count-in={titles}>
           <span className="font-semibold tabular-nums text-gray-100">{titles}</span> {titles === 1 ? "title" : "titles"}
@@ -518,7 +529,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial.edges);
   const [settings, setSettings] = useState<Settings>({ name: flow.name, schedule: flow.schedule ?? null, enabled: flow.enabled });
   const [saved, setSaved] = useState(() => JSON.stringify({ graph: flow.graph, name: flow.name, schedule: flow.schedule ?? null, enabled: flow.enabled }));
-  const [check, setCheck] = useState<Check>({ problems: flow.problems, summaries: flow.summaries, ports: flow.ports });
+  const [check, setCheck] = useState<Check>({ problems: flow.problems, summaries: flow.summaries, facts: flow.facts, ports: flow.ports });
   const [busy, setBusy] = useState(false);
   const wrapper = useRef<HTMLDivElement>(null);
 
@@ -552,7 +563,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
     const problems: Record<string, string[]> = {};
     for (const problem of check.problems) if (problem.node) (problems[problem.node] ??= []).push(problem.message);
     const counts = runFits && run.data && !graphDirty ? Object.fromEntries(run.data.nodes.map((node) => [node.id, node])) : null;
-    return { summaries: check.summaries, ports: check.ports, problems, counts, dry: run.data?.dry_run ?? true };
+    return { summaries: check.summaries, facts: check.facts ?? {}, ports: check.ports, problems, counts, dry: run.data?.dry_run ?? true };
   }, [check, run.data, graphDirty, runFits]);
 
   const selectedNodes = nodes.filter((node) => node.selected);
@@ -665,7 +676,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
       queryClient.invalidateQueries({ queryKey: ["flows"] });
       setSaved(JSON.stringify({ graph: updated.graph, name: updated.name, schedule: updated.schedule ?? null, enabled: updated.enabled }));
       setSettings({ name: updated.name, schedule: updated.schedule ?? null, enabled: updated.enabled });
-      setCheck({ problems: updated.problems, summaries: updated.summaries, ports: updated.ports });
+      setCheck({ problems: updated.problems, summaries: updated.summaries, facts: updated.facts, ports: updated.ports });
       if (JSON.stringify(updated.graph) !== graphKey) {
         // The server dropped broken connections: show what it kept.
         const kept = toFlow(updated.graph ?? { nodes: [], edges: [] });

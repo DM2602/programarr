@@ -435,6 +435,9 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         radarr_card = page.locator(".output-card").filter(has=page.locator("[data-output=radarr1]"))
         assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 to add"
         assert radarr_card.locator("[data-both]").get_attribute("data-both") == "2"  # the MDBList import list
+        facts = {fact.get_attribute("data-fact"): fact.locator("dd").inner_text()
+                 for fact in radarr_card.locator("[data-fact]").all()}
+        assert facts == {"Profile": "HD-1080p", "Folder": "/data/movies", "Tags": "top-10"}, facts
         assert (world.radarr.writes, world.sonarr.writes) == writes  # a dry run writes nothing there
         assert radarr_card.locator("[data-outcome=tagged]").count() == 0  # no tags afterwards
         radarr_card.locator("[data-outcome=present]").click()
@@ -511,6 +514,9 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         page.wait_for_selector("[data-node=genre1]")
         handles = page.locator("[data-node=genre1] .react-flow__handle.source")
         assert handles.count() == 3  # Action, Family, No match
+        # The two Radarr outputs tell apart by profile and tags on the canvas.
+        assert page.inner_text("[data-node=radarr1] [data-fact=Profile] dd") == "Ultra-HD"
+        assert page.inner_text("[data-node=radarr2] [data-fact=Profile] dd") == "HD-1080p"
         page.click("[data-node=genre1]")
         page.wait_for_selector("[data-panel=genre1] [data-rule]")
         assert page.locator("[data-panel=genre1] [data-rule]").count() == 2

@@ -5218,6 +5218,17 @@
             "type": "object",
             "title": "Summaries"
           },
+          "facts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeFact"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facts",
+            "default": {}
+          },
           "ports": {
             "additionalProperties": {
               "items": {
@@ -5233,6 +5244,7 @@
         "required": [
           "problems",
           "summaries",
+          "facts",
           "ports"
         ],
         "title": "FlowCheck"
@@ -6030,6 +6042,17 @@
             "type": "object",
             "title": "Summaries"
           },
+          "facts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeFact"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facts",
+            "default": {}
+          },
           "ports": {
             "additionalProperties": {
               "items": {
@@ -6086,6 +6109,7 @@
           "updated_at",
           "problems",
           "summaries",
+          "facts",
           "ports",
           "outputs",
           "nodes",
@@ -8017,6 +8041,25 @@
         ],
         "title": "NamingDetected"
       },
+      "NodeFact": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "NodeFact",
+        "description": "One labelled setting of an output, e.g. Profile: HD-1080p."
+      },
       "NodeTypePort": {
         "properties": {
           "key": {
@@ -9123,6 +9166,14 @@
             "type": "string",
             "title": "Summary"
           },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/NodeFact"
+            },
+            "type": "array",
+            "title": "Facts",
+            "default": []
+          },
           "count_in": {
             "type": "integer",
             "title": "Count In"
@@ -9188,6 +9239,7 @@
           "label",
           "category",
           "summary",
+          "facts",
           "count_in",
           "ports",
           "entries",

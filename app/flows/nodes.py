@@ -11,7 +11,7 @@ from datetime import date
 from typing import Any, ClassVar
 
 from .. import arr, db
-from ..arr.library import TAG, clean_tag
+from ..arr.library import TAG, clean_tag, profile_name
 from ..lists import runs
 from ..lists.base import Adapter, Field, SourceError, clean_values
 from ..lists.mdblist import list_ref
@@ -574,10 +574,24 @@ class ArrOutput(NodeType):
         clean["compare"] = refs
         return clean
 
-    def summary(self, config: dict) -> str:
-        parts = [config.get("root_folder") or "No root folder"]
+    def facts(self, config: dict) -> list[dict]:
+        """Profile, folder and tags, labelled, for the output cards of a run."""
+        profile = config.get("quality_profile")
+        if profile in (None, ""):
+            profile_text = "None"
+        else:
+            profile_text = profile_name(self.service, profile) or f"ID {profile}"
+        facts = [{"label": "Profile", "value": profile_text},
+                 {"label": "Folder", "value": config.get("root_folder") or "None"}]
         if config.get("tags"):
-            parts.append("tags " + ", ".join(config["tags"]))
+            facts.append({"label": "Tags", "value": ", ".join(config["tags"])})
+        return facts
+
+    def summary(self, config: dict) -> str:
+        facts = {fact["label"]: fact["value"] for fact in self.facts(config)}
+        parts = [facts["Profile"], facts["Folder"]]
+        if "Tags" in facts:
+            parts.append("tags " + facts["Tags"])
         return ", ".join(parts)
 
 

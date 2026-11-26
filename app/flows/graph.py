@@ -171,12 +171,14 @@ def summaries(checked: Checked) -> dict[str, dict]:
         node_type = TYPES.get(node["type"])
         config = checked.configs.get(node["id"])
         summary = ""
+        facts: list[dict] = []
         ports = []
         if node_type is not None:
             ports = node_type.raw_ports(node["config"])
             if config is not None:
                 try:
                     summary = node_type.summary(config)
+                    facts = node_type.facts(config) if hasattr(node_type, "facts") else []
                     ports = node_type.ports_for(config)
                 except (KeyError, TypeError, ValueError):
                     summary = ""
@@ -185,6 +187,7 @@ def summaries(checked: Checked) -> dict[str, dict]:
             "label": node_type.label if node_type else node["type"],
             "category": node_type.category if node_type else "",
             "summary": summary,
+            "facts": facts,
             "ports": {port.key: port.label for port in ports},
         }
     return result

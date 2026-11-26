@@ -9,9 +9,11 @@ from __future__ import annotations
 import re
 import time
 
+from .. import cache
 from .client import ArrError, get, label, request
 
 OPTIONS_SECONDS = 60
+PROFILE_NAMES_SECONDS = 365 * 86400  # names for summaries, renewed whenever the options are read
 TAG = re.compile(r"^[a-z0-9-]+$")
 _options: dict[str, tuple[float, dict]] = {}
 
@@ -42,7 +44,15 @@ async def options(service: str, fresh: bool = False) -> dict:
                  for row in tags or [] if isinstance(row, dict) and row.get("id") is not None],
     }
     _options[service] = (time.monotonic(), result)
+    cache.put(f"arr:profiles:{service}", {str(row["id"]): row["name"] for row in result["profiles"]},
+              PROFILE_NAMES_SECONDS)
     return result
+
+
+def profile_name(service: str, profile_id) -> str | None:
+    """A quality profile's name as last read from Radarr or Sonarr, without asking them."""
+    names = cache.get(f"arr:profiles:{service}") or {}
+    return names.get(str(profile_id)) if isinstance(names, dict) else None
 
 
 async def tags(service: str, labels: list[str], create: bool) -> tuple[dict[str, int], list[str]]:

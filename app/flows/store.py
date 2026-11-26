@@ -97,6 +97,7 @@ def delete(flow_id: int) -> bool:
 
 def view(flow: dict, with_graph: bool = True) -> dict:
     checked = graphs.check(flow["graph"])
+    infos = graphs.summaries(checked)
     last = db.get().one("SELECT * FROM flow_runs WHERE flow_id=? ORDER BY id DESC LIMIT 1", (flow["id"],))
     result = {
         "id": flow["id"],
@@ -110,9 +111,10 @@ def view(flow: dict, with_graph: bool = True) -> dict:
         "created_at": flow["created_at"],
         "updated_at": flow["updated_at"],
         "problems": [problem.as_dict() for problem in checked.problems],
-        "summaries": {node_id: info["summary"] for node_id, info in graphs.summaries(checked).items()},
+        "summaries": {node_id: info["summary"] for node_id, info in infos.items()},
+        "facts": {node_id: info["facts"] for node_id, info in infos.items() if info["facts"]},
         "ports": {node_id: [{"key": key, "label": label} for key, label in info["ports"].items()]
-                  for node_id, info in graphs.summaries(checked).items()},
+                  for node_id, info in infos.items()},
         "outputs": sorted({TYPES.types[node["type"]].label for node in flow["graph"]["nodes"]
                            if node["type"] in TYPES.types and TYPES.types[node["type"]].category == "output"}),
         "nodes": len(flow["graph"]["nodes"]),
@@ -220,6 +222,7 @@ def run_detail(run_id: int) -> dict | None:
             "label": info.get("label", node_id),
             "category": info.get("category", ""),
             "summary": info.get("summary", ""),
+            "facts": info.get("facts") or [],
             "count_in": int(info.get("in") or 0),
             "ports": [{"key": key, "label": _port_label(info, key), "count": int(count)}
                       for key, count in (info.get("out") or {}).items()],

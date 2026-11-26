@@ -223,6 +223,7 @@ async def _execute(run_id: int, checked: graphs.Checked, infos: dict, dry: bool,
         assert isinstance(node_type, ArrOutput)
         titles = list(incoming.values())
         result = await outputs.send(node_type, config, titles, dry)
+        info["summary"], info["facts"] = node_type.summary(config), node_type.facts(config)  # profile name as read now
         for media_id, verdict in result.verdicts.items():
             trace[(media_id, node_id)] = (verdict.port, verdict.detail)
         notes.extend(result.notes)

@@ -1964,6 +1964,13 @@ export interface components {
             summaries: {
                 [key: string]: string;
             };
+            /**
+             * Facts
+             * @default {}
+             */
+            facts: {
+                [key: string]: components["schemas"]["NodeFact"][];
+            };
             /** Ports */
             ports: {
                 [key: string]: components["schemas"]["NodeTypePort"][];
@@ -2266,6 +2273,13 @@ export interface components {
             /** Summaries */
             summaries: {
                 [key: string]: string;
+            };
+            /**
+             * Facts
+             * @default {}
+             */
+            facts: {
+                [key: string]: components["schemas"]["NodeFact"][];
             };
             /** Ports */
             ports: {
@@ -2807,6 +2821,16 @@ export interface components {
             /** Season */
             season: string | null;
         };
+        /**
+         * NodeFact
+         * @description One labelled setting of an output, e.g. Profile: HD-1080p.
+         */
+        NodeFact: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
         /** NodeTypePort */
         NodeTypePort: {
             /** Key */
@@ -3159,6 +3183,11 @@ export interface components {
             category: string;
             /** Summary */
             summary: string;
+            /**
+             * Facts
+             * @default []
+             */
+            facts: components["schemas"]["NodeFact"][];
             /** Count In */
             count_in: number;
             /** Ports */

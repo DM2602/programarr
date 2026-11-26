@@ -268,6 +268,12 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     assert [node["id"] for node in detail["nodes"]] == ["fp", "kind", "radarr", "sonarr"]
     assert detail["nodes"][0]["entries"] == {"matched": 16, "uncertain": 2, "failed": 1, "excluded": 1}
     assert {p["key"]: p["count"] for p in detail["nodes"][1]["ports"]} == {"movie": 7, "show": 9}
+    # Output cards name the quality profile as read from Radarr during the run.
+    assert detail["nodes"][2]["facts"] == [{"label": "Profile", "value": "HD-1080p"},
+                                           {"label": "Folder", "value": "/data/movies"},
+                                           {"label": "Tags", "value": "top-10"}]
+    assert detail["nodes"][2]["summary"] == "HD-1080p, /data/movies, tags top-10"
+    assert detail["nodes"][1]["facts"] == []
     assert detail["sources"][0]["label"] == "Netflix Switzerland – Movies, TV Shows"
     titles = store.run_titles(result["run"], "present")
     assert titles["counts"] == {"all": 17, "added": 9, "tagged": 0, "present": 2, "skipped": 5, "failed": 0,
@@ -467,7 +473,7 @@ def test_api(lists, client):  # noqa: F811
     assert client.post(f"/api/flows/{flow_id}/run", json={}).json()["detail"] == "Fix the flow first: Add a source"
     assert client.put(f"/api/flows/{flow_id}", json={"dry_run": False}).status_code == 400
     checked = client.post("/api/flows/check", json={"graph": top10()}).json()
-    assert checked["problems"] == [] and checked["summaries"]["radarr"] == "/data/movies, tags top-10"
+    assert checked["problems"] == [] and checked["summaries"]["radarr"] == "HD-1080p, /data/movies, tags top-10"
 
     updated = client.put(f"/api/flows/{flow_id}", json={"graph": top10(), "schedule": None}).json()
     assert updated["version"] == 2 and updated["problems"] == [] and updated["schedule_text"] == "Manual"
