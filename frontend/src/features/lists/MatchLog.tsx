@@ -25,9 +25,9 @@ function Problem({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start" data-entry={entry.id}>
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <KindIcon kind={entry.kind} />
             <span className="font-semibold text-gray-100">{entry.title}</span>
             {entry.year && <span className="text-sm text-gray-400">{entry.year}</span>}
-            <KindIcon kind={entry.kind} />
             <StatusBadge entry={entry} />
           </p>
           <p className="mt-0.5 text-sm text-gray-400">{entry.error}</p>
@@ -150,9 +150,9 @@ function CorrectionsTab() {
           <img src={row.media?.poster ?? POSTER_FALLBACK} alt="" loading="lazy" className="hidden aspect-[2/3] w-11 shrink-0 rounded object-cover ring-1 ring-gray-700 sm:block" />
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-x-2">
+              <KindIcon kind={row.kind} />
               <span className="font-semibold text-gray-100">{row.title}</span>
               {row.year && <span className="text-sm text-gray-400">{row.year}</span>}
-              {row.kind && <span className="text-xs text-gray-500">{KIND_LABELS[row.kind]}</span>}
             </p>
             <p className="text-sm text-gray-400">
               {row.ignore ? "Ignored" : row.media ? `${row.media.title} (${row.media.year ?? "?"}), TMDB ${row.media.tmdb_id}` : "Title missing"}

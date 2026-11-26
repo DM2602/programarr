@@ -112,6 +112,8 @@ async def _by_ids(entry: RawEntry) -> Match | None:
     if not media_id and ids.get("tvdb") and kind != "movie":
         media_id = await store.by_external("tvdb_id", int(ids["tvdb"]), "show")
     if media_id:
+        if ids.get("tvdb"):
+            store.note_tvdb(media_id, ids["tvdb"])  # the list may know the TVDB ID TMDB lacks
         return Match("matched", "id", media_id, 1.0)
     if entry.title:
         return None  # IDs unknown to TMDB: try the title

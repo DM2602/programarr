@@ -129,7 +129,7 @@ async def build_flows(world) -> None:
     from app.flows import engine, store
 
     world.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # in Plex too: the flow leaves it alone
-    world.radarr.add_movie(1006, "Woodwalkers 2", "woodwalkers-2-1006", has_file=False)  # only the tag is missing
+    world.radarr.add_movie(1006, "Woodwalkers 2", "woodwalkers-2-1006", has_file=False)  # in Radarr, not in Plex
     world.radarr.exclude(1007, "Hill 12", 2026)  # excluded in Radarr: no flow adds it
     world.radarr.exclude(536869, "Cats", 2019)
     world.sonarr.exclude(418004, "The Idol", 2023)

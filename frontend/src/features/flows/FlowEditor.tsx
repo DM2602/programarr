@@ -708,7 +708,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
     if (live) {
       const ok = await dialogs.confirm({
         title: "Go live?",
-        body: "Runs of this flow add titles to Radarr and Sonarr and add tags there. Each output adds at most its limit of new titles per run.",
+        body: "Runs of this flow add new titles to Radarr and Sonarr, with the output's tags. Each output adds at most its limit of new titles per run.",
         confirm: "Go live",
       });
       if (!ok) return;

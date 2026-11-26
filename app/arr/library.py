@@ -1,6 +1,8 @@
-"""What flows need from Radarr and Sonarr: profiles, root folders, tags and exclusions; adding titles and tags.
+"""What flows need from Radarr and Sonarr: profiles, root folders, tags and exclusions, adding titles,
+and TVDB IDs that TMDB does not know.
 
-Titles that are already there keep their profile, folder and monitoring. They only get the missing tags.
+Titles that are already there stay as they are: profile, folder, monitoring and tags. Tags only go on
+with a new title.
 """
 from __future__ import annotations
 
@@ -178,11 +180,20 @@ async def add_series(media: dict, config: dict, tag_ids: list[int]) -> dict:
     return await request("sonarr", "POST", "/series", body=body, timeout=60.0)
 
 
-async def add_tags(service: str, arr_id: int, tag_ids: list[int]) -> None:
-    """Adds tags to one title and leaves everything else as it is."""
-    if service == "radarr":
-        body = {"movieIds": [arr_id], "tags": tag_ids, "applyTags": "add"}
-        await request(service, "PUT", "/movie/editor", body=body)
-    else:
-        body = {"seriesIds": [arr_id], "tags": tag_ids, "applyTags": "add"}
-        await request(service, "PUT", "/series/editor", body=body)
+async def tvdb_id(media: dict) -> int | None:
+    """The TVDB ID of a show as Sonarr finds it by its TMDB or IMDb ID.
+
+    Sonarr asks TVDB (through Skyhook), which keeps its own links to TMDB and IMDb, so this helps where
+    TMDB has no TVDB link. Only an answer with the same TMDB or IMDb ID counts, never a title match.
+    """
+    asks = []
+    if media.get("tmdb_id"):
+        asks.append((f"tmdb:{media['tmdb_id']}", "tmdbId", str(media["tmdb_id"])))
+    if media.get("imdb_id"):
+        asks.append((f"imdb:{media['imdb_id']}", "imdbId", str(media["imdb_id"])))
+    for term, field, value in asks:
+        rows = await request("sonarr", "GET", "/series/lookup", {"term": term}, timeout=20.0)
+        for row in rows or []:
+            if isinstance(row, dict) and row.get("tvdbId") and str(row.get(field) or "") == value:
+                return int(row["tvdbId"])
+    return None

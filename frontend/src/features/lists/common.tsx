@@ -68,11 +68,12 @@ export function StatusBadge({ entry }: { entry: Entry }) {
   return null;
 }
 
+/** Movie or show icon. It leads the title line, so it sits in the same place on every row. */
 export function KindIcon({ kind, className = "h-4 w-4" }: { kind: string | null | undefined; className?: string }) {
-  if (kind !== "movie" && kind !== "show") return null;
+  if (kind !== "movie" && kind !== "show") return <span className={`inline-block shrink-0 ${className}`} aria-hidden="true" />;
   const Icon = kind === "show" ? TvIcon : FilmIcon;
   return (
-    <span title={KIND_LABELS[kind]} className="inline-flex text-gray-500">
+    <span title={KIND_LABELS[kind]} className="inline-flex shrink-0 text-gray-400">
       <Icon className={className} aria-hidden="true" />
       <span className="sr-only">{KIND_LABELS[kind]}</span>
     </span>
@@ -482,6 +483,7 @@ export function EntryRow({ entry, onFix, showList = false, grouped = false }: {
       <div className="flex min-w-0 flex-1 flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
         <div className={`min-w-0 flex-1 space-y-1 ${dim ? "opacity-60" : ""}`}>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {!grouped && <KindIcon kind={media?.kind ?? entry.kind} />}
             {media && tmdbUrl(media) ? (
               <a href={tmdbUrl(media)!} target="_blank" rel="noopener noreferrer" className="truncate font-semibold text-gray-100 hover:underline" title="Open on TMDB">
                 {title}
@@ -490,7 +492,6 @@ export function EntryRow({ entry, onFix, showList = false, grouped = false }: {
               <span className="truncate font-semibold text-gray-100">{title}</span>
             )}
             {year && <span className="text-sm text-gray-400">{year}</span>}
-            {!grouped && <KindIcon kind={media?.kind ?? entry.kind} />}
             <StatusBadge entry={entry} />
             {entry.plex_key && (
               <Link to={`/item/${entry.plex_key}`} className="inline-flex rounded-full hover:opacity-90" title="Open in Programarr">

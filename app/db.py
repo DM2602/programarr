@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS flow_trace (
   run_id INTEGER NOT NULL REFERENCES flow_runs(id) ON DELETE CASCADE,
   media_id INTEGER NOT NULL REFERENCES media_cache(id),
   node_id TEXT NOT NULL,
-  port TEXT,  -- sources: out; filters: match, no_match or a switch port; outputs: added, tagged, present, skipped, failed
+  port TEXT,  -- sources: out; filters: rule ids, match, no_match or a switch port; outputs: added, present, skipped, failed (tagged in older runs)
   detail TEXT,  -- e.g. 'IMDb 7.1 < 7.5' or what Radarr answered
   PRIMARY KEY (run_id, media_id, node_id)
 );

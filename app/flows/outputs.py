@@ -1,7 +1,7 @@
-"""The Radarr and Sonarr outputs: add new titles, give existing ones the missing tags, compare with MDBList.
+"""The Radarr and Sonarr outputs: add new titles with their tags, compare with MDBList.
 
-Titles that are already there keep their profile, folder and monitoring. A dry run reads Radarr and
-Sonarr but writes nothing, not even new tags.
+Titles in Plex, Radarr or Sonarr stay as they are: no tags afterwards. A dry run reads Radarr and
+Sonarr but writes nothing.
 """
 from __future__ import annotations
 
@@ -44,7 +44,6 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
         return sent
     try:
         excluded = await library.exclusions(service)
-        tag_ids, to_create = await library.tags(service, config["tags"], create=not dry_run)
         options = await library.options(service)
     except arr.ArrError as exc:
         for title in titles:
@@ -59,8 +58,8 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
             sent.put(title, "failed", message)
         sent.notes.append(message)
         return sent
-    labels_by_id = {tag_id: label for label, tag_id in tag_ids.items()}
     in_plex = media_store.in_plex([title.media_id for title in titles])
+    tag_ids: list[int] | None = None  # looked up (and created) with the first title added
     added = 0
     ordered = _order(titles)
     for index, title in enumerate(ordered):
@@ -70,9 +69,10 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
             sent.put(title, "skipped", "Not a movie" if kind == "movie" else "Not a show")
             continue
         if title.media_id in in_plex:
-            # In the library already: neither added nor tagged, whatever Radarr or Sonarr hold.
             sent.put(title, "present", "In Plex")
             continue
+        if service == "sonarr" and not media.get("tvdb_id"):
+            media = title.media = {**media, "tvdb_id": await media_store.fill_tvdb(title.media_id)}
         external = media.get("tmdb_id") if service == "radarr" else media.get("tvdb_id")
         if not external:
             sent.put(title, "skipped", "No TVDB ID" if service == "sonarr" else "No TMDB ID")
@@ -85,22 +85,8 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
         except arr.ArrError as exc:
             sent.put(title, "failed", str(exc))
             continue
-        if found:
-            have = set(found.get("tags") or [])
-            missing_ids = [tag_id for tag_id in tag_ids.values() if tag_id not in have]
-            missing = [labels_by_id[tag_id] for tag_id in missing_ids] + to_create
-            if not missing:
-                sent.put(title, "present", "")
-                continue
-            if dry_run:
-                sent.put(title, "tagged", "Tags: " + ", ".join(missing))
-                continue
-            try:
-                await library.add_tags(service, int(found["id"]), missing_ids)
-            except arr.ArrError as exc:
-                sent.put(title, "failed", str(exc))
-                continue
-            sent.put(title, "tagged", "Tags: " + ", ".join(missing))
+        if found:  # tags only go on with a new title
+            sent.put(title, "present", "")
             continue
         if added >= config["limit"]:
             sent.put(title, "skipped", f"Over the limit of {config['limit']} new titles per run")
@@ -112,10 +98,12 @@ async def send(node: ArrOutput, config: dict, titles: list[Title], dry_run: bool
             sent.put(title, "added", detail)
             continue
         try:
+            if tag_ids is None:
+                tag_ids = list((await library.tags(service, config["tags"], create=True))[0].values())
             if service == "radarr":
-                await library.add_movie(media, config, list(tag_ids.values()))
+                await library.add_movie(media, config, tag_ids)
             else:
-                await library.add_series(media, config, list(tag_ids.values()))
+                await library.add_series(media, config, tag_ids)
         except arr.ArrError as exc:
             sent.put(title, "failed", str(exc))
             continue

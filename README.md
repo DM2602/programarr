@@ -57,9 +57,10 @@ seasons, movie or show, in Plex) and Radarr or Sonarr in an editor. A filter sen
 No match; rating, release, genre, country, language, list position and season filters can have
 several outputs (e.g. one per genre or rating tier), each with its own rule. A title that fits several
 goes to the first or to each of them, as set on the filter. Radarr and Sonarr add new titles with the
-profile, root folder and tags of their node, at most the set number per run. Titles in Plex are left
-alone, titles Radarr or Sonarr already have only get the missing tags, and excluded titles never get
-through. Sonarr needs a TVDB ID and Sonarr v4.
+profile, root folder and tags of their node, at most the set number per run. Titles already in Plex,
+Radarr or Sonarr are left as they are, tags included: tags only go on with a new title. Excluded titles
+never get through. Sonarr needs Sonarr v4 and a TVDB ID: from TMDB, or where TMDB has none, from the
+list itself, from MDBList or from Sonarr's own lookup by TMDB or IMDb ID.
 
 New flows run as a dry run: each run shows what would be added, title by title, without writing
 anything to Radarr or Sonarr. "Go live" switches a flow to real runs. An output can compare its titles with MDBList lists,

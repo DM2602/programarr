@@ -436,13 +436,16 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 to add"
         assert radarr_card.locator("[data-both]").get_attribute("data-both") == "2"  # the MDBList import list
         assert (world.radarr.writes, world.sonarr.writes) == writes  # a dry run writes nothing there
-        radarr_card.locator("[data-outcome=tagged]").click()
-        wait_for(lambda: page.locator(".flow-title").count() == 1, what="titles to tag")
-        assert page.locator(".flow-title").first.get_attribute("data-title") == "Woodwalkers 2"
+        assert radarr_card.locator("[data-outcome=tagged]").count() == 0  # no tags afterwards
         radarr_card.locator("[data-outcome=present]").click()
         grinch_row = page.locator(".flow-title[data-title='The Grinch']")
         grinch_row.wait_for()
-        assert page.locator(".flow-title").count() == 1 and "In Plex" in grinch_row.inner_text()
+        wait_for(lambda: page.locator(".flow-title").count() == 2, what="titles there already")
+        assert "In Plex" in grinch_row.inner_text()
+        assert page.locator(".flow-title[data-title='Woodwalkers 2']").count() == 1  # in Radarr, not in Plex yet
+        # The type icon leads every title line, before the title.
+        line = page.locator(".flow-title").first.locator("div.flex-wrap").first
+        assert line.locator(":scope > *").first.get_attribute("title") == "Movie"
         steps.ok("Limit saved, the dry run shows what Radarr would get and compares with MDBList", page)
 
         # 24
@@ -486,10 +489,11 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         assert sorted(body["tvdbId"] for body in world.sonarr.added) == [383365, 420005, 450003, 480001, 480002]
         grinch = next(row for row in world.radarr.titles if row["tmdbId"] == 360920)
         woodwalkers = next(row for row in world.radarr.titles if row["tmdbId"] == 1006)
-        assert world.radarr.tag_labels(grinch) == [] and world.radarr.tag_labels(woodwalkers) == ["top-10"]
+        assert world.radarr.tag_labels(grinch) == world.radarr.tag_labels(woodwalkers) == []
+        assert world.radarr.edits == []  # tags only go on with a new title
         radarr_card = page.locator(".output-card").filter(has=page.locator("[data-output=radarr1]"))
         assert radarr_card.locator("[data-outcome=added]").inner_text().strip() == "3 added"
-        steps.ok("Flow live: Radarr and Sonarr get the titles, Woodwalkers 2 its tag, the Grinch (in Plex) nothing", page)
+        steps.ok("Flow live: Radarr and Sonarr get the new titles, those already there keep their tags", page)
 
         # 26
         goto(page, "/flows/history")
@@ -525,7 +529,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         page.press("input[aria-label='Filter by title']", "Enter")
         wait_for(lambda: page.locator(".flow-title").count() == 1, what="one title")
         path = " ".join(page.inner_text(".flow-title").split())
-        assert "Action, Thriller" in path and "To tag" in path, path
+        assert "Action, Thriller" in path and "Already there" in path, path  # added by the other flow
         steps.ok("Genre filter with two outputs: each goes to its own Radarr output", page)
 
         # 28

@@ -528,7 +528,7 @@ class PlexFilter(Filter):
 
 OUTCOMES = {
     "added": "Added",
-    "tagged": "Tags added",
+    "tagged": "Tags added",  # runs from before 26 Nov 2026 only
     "present": "Already there",
     "skipped": "Skipped",
     "failed": "Failed",

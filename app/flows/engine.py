@@ -252,8 +252,6 @@ def _message(dry: bool, totals: dict) -> str:
     parts = []
     if totals["added"]:
         parts.append(f"{totals['added']} to add" if dry else f"{totals['added']} added")
-    if totals["tagged"]:
-        parts.append(f"{totals['tagged']} to tag" if dry else f"{totals['tagged']} tagged")
     if totals["present"]:
         parts.append(f"{totals['present']} already there")
     if totals["failed"]:
@@ -264,7 +262,7 @@ def _message(dry: bool, totals: dict) -> str:
 
 async def _notify(flow: dict, run_id: int, dry: bool, status: str, totals: dict, error: str | None,
                   stats: dict | None = None) -> None:
-    """Discord summary: what was added or tagged, and errors (once per error, not every schedule)."""
+    """Discord summary: what was added, and errors (once per error, not every schedule)."""
     if not settings.get("discord_webhook"):
         return
     path = f"/flows/runs/{run_id}"
@@ -276,31 +274,26 @@ async def _notify(flow: dict, run_id: int, dry: bool, status: str, totals: dict,
             return
         await notify.send("error", f"Flow failed: {title}", error or "", path=path)
         return
-    if not (totals.get("added") or totals.get("tagged") or totals.get("failed")):
+    if not (totals.get("added") or totals.get("failed")):
         return
     lines = []
-    names = _added_names(run_id, stats or {})
-    for label, verb_dry, verb_live, key in (("Add", "to add", "added", "added"), ("Tags", "to tag", "tagged", "tagged")):
-        count = totals.get(key) or 0
-        if count:
-            listed = ", ".join(names.get(key, [])[:8])
-            more = f" and {count - 8} more" if count > 8 else ""
-            lines.append(f"**{count} {verb_dry if dry else verb_live}**: {listed}{more}")
+    count = totals.get("added") or 0
+    if count:
+        names = _added_names(run_id, stats or {})
+        more = f" and {count - 8} more" if count > 8 else ""
+        lines.append(f"**{count} {'to add' if dry else 'added'}**: {', '.join(names[:8])}{more}")
     if totals.get("failed"):
         lines.append(f"**{totals['failed']} failed**")
     await notify.send("flow_dry" if dry else "flow", title, "\n".join(lines), path=path)
 
 
-def _added_names(run_id: int, stats: dict) -> dict[str, list[str]]:
+def _added_names(run_id: int, stats: dict) -> list[str]:
     outputs_ids = [node_id for node_id, info in (stats.get("nodes") or {}).items() if info.get("category") == "output"]
     if not outputs_ids:
-        return {}
+        return []
     marks = ",".join("?" for _ in outputs_ids)
     rows = db.get().query(
-        f"SELECT t.port, m.title, m.year FROM flow_trace t JOIN media_cache m ON m.id=t.media_id "
-        f"WHERE t.run_id=? AND t.node_id IN ({marks}) AND t.port IN ('added','tagged') ORDER BY m.title",
+        f"SELECT m.title, m.year FROM flow_trace t JOIN media_cache m ON m.id=t.media_id "
+        f"WHERE t.run_id=? AND t.node_id IN ({marks}) AND t.port='added' ORDER BY m.title",
         (run_id, *outputs_ids))
-    names: dict[str, list[str]] = {}
-    for row in rows:
-        names.setdefault(row["port"], []).append(f"{row['title']} ({row['year']})" if row["year"] else row["title"])
-    return names
+    return [f"{row['title']} ({row['year']})" if row["year"] else row["title"] for row in rows]

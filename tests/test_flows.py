@@ -9,6 +9,7 @@ from app.arr import library
 from app.flows import engine, graph, schedule, store
 from app.flows.nodes import TYPES, ConfigError, Title
 from app.lists import scrape
+from app.lists.base import RawEntry
 from app.media import normalize
 from app.media import store as media_store
 from tests.test_web import client, wait_job  # noqa: F401 - fixture and helper
@@ -233,12 +234,12 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     lists.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # in Radarr without the tag, and in Plex
     db.get().execute("INSERT INTO items (key, type, title, tmdb_id, gone) VALUES ('g1', 'movie', 'The Grinch', '360920', 0)")
     lists.radarr.exclude(1008, "Russell Brand – Open Secret", 2026)  # on Radarr's exclusion list
-    lists.sonarr.add_series(383365, "Lupin", "lupin", tags=[1])  # in Sonarr, not in Plex yet
+    lists.sonarr.add_series(383365, "Lupin", "lupin", tags=[1])  # in Sonarr without the tag, not in Plex yet
     flow_id = store.create("Netflix CH", top10(radarr={"limit": 4}))
     result = await engine.run(flow_id)
     assert result["dry_run"] is True and result["outcome"] == "partial"  # the limit was reached
-    assert (result["added"], result["tagged"], result["present"], result["skipped"], result["failed"]) == (9, 1, 1, 5, 0)
-    assert result["message"] == "Dry run: 9 to add, 1 to tag, 1 already there"
+    assert (result["added"], result["tagged"], result["present"], result["skipped"], result["failed"]) == (9, 0, 2, 5, 0)
+    assert result["message"] == "Dry run: 9 to add, 2 already there"
     assert lists.radarr.writes == lists.sonarr.writes == 0
     assert [tag["label"] for tag in lists.radarr.tags] == ["kids"]  # not even the tag is created
 
@@ -253,8 +254,9 @@ async def test_dry_run_reads_but_writes_nothing(lists):
         ["Guarding Stars", "Steps", "Heartland", "The Christmas Switch"]
     assert movies["Woodwalkers 2"] == ("skipped", "Over the limit of 4 new titles per run")
     shows = trace(result["run"], "sonarr")
-    assert shows["ChiaroScuro"] == ("skipped", "No TVDB ID")
-    assert shows["Lupin"] == ("tagged", "Tags: top-10")
+    assert shows["ChiaroScuro"] == ("skipped", "No TVDB ID")  # neither TMDB, MDBList nor Sonarr know one
+    assert sorted(lists.sonarr.lookups) == ["tmdb:2006", "tmdb:2007", "tmdb:2009"]  # the shows without one
+    assert shows["Lupin"] == ("present", "")  # there already: no tag afterwards
     assert shows["The Body"] == ("added", "Ultra-HD, /data/tv")
     assert trace(result["run"], "fp")["Lupin"] == ("out", "#4 TV Shows")
 
@@ -267,15 +269,45 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     assert detail["nodes"][0]["entries"] == {"matched": 16, "uncertain": 2, "failed": 1, "excluded": 1}
     assert {p["key"]: p["count"] for p in detail["nodes"][1]["ports"]} == {"movie": 7, "show": 9}
     assert detail["sources"][0]["label"] == "Netflix Switzerland – Movies, TV Shows"
-    titles = store.run_titles(result["run"], "tagged")
-    assert titles["counts"] == {"all": 17, "added": 9, "tagged": 1, "present": 1, "skipped": 5, "failed": 0,
+    titles = store.run_titles(result["run"], "present")
+    assert titles["counts"] == {"all": 17, "added": 9, "tagged": 0, "present": 2, "skipped": 5, "failed": 0,
                                 "filtered": 1}
-    assert [row["media"]["title"] for row in titles["rows"]] == ["Lupin"]
+    assert [row["media"]["title"] for row in titles["rows"]] == ["Lupin", "The Grinch"]
     lupin = titles["rows"][0]
     # The path names the list a title came from, not just the source.
     assert [(step["label"], step["port_label"], step["detail"]) for step in lupin["steps"]] == [
         ("Netflix Switzerland", "Titles", "#4 TV Shows"), ("Movie or show", "Shows", ""),
-        ("Sonarr", "Tags added", "Tags: top-10")]
+        ("Sonarr", "Already there", "")]
+
+
+async def test_tvdb_ids_where_tmdb_has_none(lists):
+    """TMDB has no TVDB link for these shows; the list, MDBList or Sonarr (through TVDB) fill it in."""
+    lists.sonarr.know(470006, "ChiaroScuro", 2026, tmdb=2006)  # TVDB links it to TMDB 2006
+    lists.mdblist.ratings["show:2007"] = {"imdb": (6.8, 900)}
+    lists.mdblist.tvdb[2007] = 470007  # MDBList knows Murder in Galicia's
+    flow_id = store.create("Netflix CH", top10())
+    result = await engine.run(flow_id)
+    shows = trace(result["run"], "sonarr")
+    assert shows["ChiaroScuro"] == ("added", "Ultra-HD, /data/tv")
+    assert shows["Murder in Galicia"] == ("added", "Ultra-HD, /data/tv")
+    assert shows["Alicia's Law"] == ("skipped", "No TVDB ID")
+    tvdb = {row["tmdb_id"]: row["tvdb_id"] for row in db.get().query("SELECT tmdb_id, tvdb_id FROM media_cache")}
+    assert (tvdb[2006], tvdb[2007], tvdb[2009]) == (470006, 470007, None)
+    assert sorted(lists.sonarr.lookups) == ["tmdb:2006", "tmdb:2009"]  # MDBList had answered for 2007
+
+    # Sonarr is asked once: not again for the one it found, not within a day for the one it did not.
+    lists.sonarr.lookups.clear()
+    await engine.run(flow_id)
+    assert lists.sonarr.lookups == []
+
+    # A refresh from TMDB keeps the TVDB ID found elsewhere.
+    media_id = db.get().scalar("SELECT id FROM media_cache WHERE kind='show' AND tmdb_id=2006")
+    await media_store.ensure("show", 2006, max_age_days=0)
+    assert media_store.get(media_id)["tvdb_id"] == 470006
+
+    # A list that carries the TVDB ID (Trakt, MDBList lists) fills it in while matching.
+    _, match = await normalize.resolve("trakt", RawEntry(1, "Alicia's Law", 2026, "show", {"tmdb": 2009, "tvdb": 470009}))
+    assert match.status == "matched" and media_store.get(match.media_id)["tvdb_id"] == 470009
 
 
 async def test_flow_with_rating_tiers(lists):
@@ -299,7 +331,7 @@ async def test_flow_with_rating_tiers(lists):
     assert [port["label"] for port in view["ports"]["tiers"]] == ["Great", "IMDb ≥ 7", "No match"]
 
 
-async def test_live_run_adds_once_and_then_only_tags(lists):
+async def test_live_run_adds_once_and_never_tags_afterwards(lists):
     lists.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")
     for tmdb_id, name, year in ((1001, "Guarding Stars", 2026), (1002, "Steps", 2026)):
         lists.radarr.know(tmdb_id, name, year)
@@ -308,8 +340,8 @@ async def test_live_run_adds_once_and_then_only_tags(lists):
     flow_id = store.create("Netflix CH", graph_)
     store.update(flow_id, dry_run=False)
     first = await engine.run(flow_id)
-    assert first["dry_run"] is False and (first["added"], first["tagged"]) == (3, 1)
-    assert first["message"] == "3 added, 1 tagged"
+    assert first["dry_run"] is False and (first["added"], first["tagged"], first["present"]) == (3, 0, 1)
+    assert first["message"] == "3 added, 1 already there"
     top10_tag = next(tag["id"] for tag in lists.radarr.tags if tag["label"] == "top-10")
     added = {body["tmdbId"]: body for body in lists.radarr.added}
     assert list(added) == [1001, 1002]
@@ -318,15 +350,15 @@ async def test_live_run_adds_once_and_then_only_tags(lists):
     assert added[1001]["addOptions"] == {"searchForMovie": False, "monitor": "movieOnly"}
     assert added[1001]["titleSlug"] == "guarding-stars-1001" and added[1001]["monitored"] is True
     grinch = next(row for row in lists.radarr.titles if row["tmdbId"] == 360920)
-    assert lists.radarr.tag_labels(grinch) == ["top-10"]  # only the tag; profile untouched
-    assert lists.radarr.edits == [{"movieIds": [grinch["id"]], "tags": [top10_tag], "applyTags": "add"}]
+    assert trace(first["run"], "radarr")["The Grinch"] == ("present", "")
+    assert lists.radarr.tag_labels(grinch) == [] and lists.radarr.edits == []  # tags only go on with a new title
     series = lists.sonarr.added[0]
     assert series["tvdbId"] == 480001 and series["addOptions"]["monitor"] == "future"
     assert series["seasonFolder"] is True and series["seriesType"] == "standard" and series["monitored"] is True
     shows = trace(first["run"], "sonarr")
     assert shows["The Body"] == ("skipped", "Over the limit of 1 new titles per run")
 
-    # Second run: what was added is there now, the Grinch has its tag; only the next titles move.
+    # Second run: what was added is there now; only the next titles move.
     writes = lists.radarr.writes
     second = await engine.run(flow_id)
     movies = trace(second["run"], "radarr")

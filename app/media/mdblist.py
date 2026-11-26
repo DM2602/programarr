@@ -161,6 +161,17 @@ def parse_ratings(item: dict) -> dict:
     return values
 
 
+def _tvdb_id(item: dict) -> int | None:
+    ids = item.get("ids") if isinstance(item.get("ids"), dict) else {}
+    for value in (ids.get("tvdb"), ids.get("tvdbid"), item.get("tvdbid"), item.get("tvdb_id")):
+        try:
+            if value and int(value) > 0:
+                return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def _tmdb_id(item: dict) -> int | None:
     ids = item.get("ids") if isinstance(item.get("ids"), dict) else {}
     for value in (ids.get("tmdb"), ids.get("tmdbid"), item.get("tmdbid"), item.get("tmdb_id")):
@@ -210,7 +221,7 @@ async def refresh_ratings(media_ids: list[int], max_age_days: int | None = None)
     limit = db.now() - days * 86400
     marks = ",".join("?" for _ in media_ids)
     rows = db.get().query(
-        f"SELECT id, kind, tmdb_id FROM media_cache WHERE id IN ({marks}) AND tmdb_id IS NOT NULL "
+        f"SELECT id, kind, tmdb_id, tvdb_id FROM media_cache WHERE id IN ({marks}) AND tmdb_id IS NOT NULL "
         "AND (ratings_at IS NULL OR ratings_at < ?)",
         [*media_ids, limit],
     )
@@ -224,8 +235,11 @@ async def refresh_ratings(media_ids: list[int], max_age_days: int | None = None)
             database = db.get()
             with database.transaction():
                 for row in chunk:
-                    values = parse_ratings(by_tmdb.get(row["tmdb_id"]) or {})
+                    item = by_tmdb.get(row["tmdb_id"]) or {}
+                    values = parse_ratings(item)
                     values["ratings_at"] = db.now()
+                    if kind == "show" and not row["tvdb_id"] and (tvdb := _tvdb_id(item)):
+                        values["tvdb_id"] = tvdb  # TMDB has no TVDB link for it, MDBList does
                     database.update("media_cache", "id", row["id"], values)
             asked += len(chunk)
     return asked

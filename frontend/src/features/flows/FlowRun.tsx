@@ -157,9 +157,9 @@ function TitleRow({ row, dry }: { row: Row; dry: boolean }) {
       <img src={media.poster ?? POSTER_FALLBACK} alt="" loading="lazy" className="h-[60px] w-10 shrink-0 rounded bg-gray-700 object-cover" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <KindIcon kind={media.kind} />
           <span className="font-semibold text-gray-100">{media.title}</span>
           {media.year && <span className="text-sm text-gray-400">{media.year}</span>}
-          <KindIcon kind={media.kind} />
           <Ratings media={media} />
         </div>
         <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-gray-400">

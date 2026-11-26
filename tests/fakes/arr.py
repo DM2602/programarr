@@ -1,4 +1,4 @@
-"""Radarr and Sonarr stand-ins: status, lookups, profiles, root folders, tags, exclusions, adding and tagging."""
+"""Radarr and Sonarr stand-ins: status, lookups, profiles, root folders, tags, exclusions, adding titles."""
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
@@ -18,6 +18,7 @@ class FakeArr:
         self.paged = True  # False: an older version without /paged
         self.down = False  # True: answers 503, as when the service is unreachable
         self.known: dict[int, dict] = {}  # lookup results by TMDB id (Radarr) or TVDB id (Sonarr)
+        self.lookups: list[str] = []  # Sonarr lookup terms asked for
         self.added: list[dict] = []  # POST bodies
         self.edits: list[dict] = []  # PUT .../editor bodies
         self.writes = 0
@@ -45,14 +46,14 @@ class FakeArr:
                             "monitored": True, "statistics": {"episodeCount": episodes, "episodeFileCount": files},
                             "seasons": list(seasons), "tags": list(tags), "qualityProfileId": 1})
 
-    def know(self, external: int, title: str, year: int) -> None:
-        """A title the service's metadata lookup finds."""
+    def know(self, external: int, title: str, year: int, tmdb: int | None = None, imdb: str | None = None) -> None:
+        """A title the service's metadata lookup finds; for Sonarr also by TMDB or IMDb ID, as TVDB links them."""
         slug = f"{title.lower().replace(' ', '-')}-{external}"
         row = {"title": title, "year": year, "titleSlug": slug, "images": [], "added": "0001-01-01T00:00:00Z"}
         if self.service == "radarr":
             row["tmdbId"] = external
         else:
-            row.update(tvdbId=external, seasons=[{"seasonNumber": 1, "monitored": False}])
+            row.update(tvdbId=external, tmdbId=tmdb, imdbId=imdb, seasons=[{"seasonNumber": 1, "monitored": False}])
         self.known[external] = row
 
     def tag_labels(self, row: dict) -> list[str]:
@@ -201,8 +202,12 @@ class FakeArr:
             @app.get("/api/v3/series/lookup")
             async def lookup_series(request: Request):
                 term = request.query_params.get("term", "")
-                tvdb = int(term.split(":", 1)[1]) if term.startswith("tvdb:") else 0
-                return [fake.known[tvdb]] if tvdb in fake.known else []
+                fake.lookups.append(term)
+                prefix, _, value = term.partition(":")
+                if prefix == "tvdb":
+                    return [fake.known[int(value)]] if int(value) in fake.known else []
+                field = {"tmdb": "tmdbId", "imdb": "imdbId"}.get(prefix)
+                return [row for row in fake.known.values() if field and str(row.get(field)) == value]
 
             @app.post("/api/v3/series")
             async def add_series(request: Request):

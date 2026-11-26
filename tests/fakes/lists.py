@@ -169,6 +169,7 @@ class FakeMdblist:
         self.lists: dict[str, dict] = {}  # "user/slug" -> {"movies": [...], "shows": [...]}
         self.names: dict[str, str] = {"dominik/netflix-ch": "Netflix CH"}  # list titles
         self.ratings: dict[str, dict] = {}  # "movie:603" -> {"imdb": (7.5, 1200), "tomatoes": 88, "popcorn": 91}
+        self.tvdb: dict[int, int] = {}  # TMDB show id -> the TVDB id MDBList knows
         self.app = self._make_app()
 
     def _media(self, kind: str, tmdb_id: int) -> dict | None:
@@ -184,7 +185,8 @@ class FakeMdblist:
         if "popcorn" in values:
             ratings.append({"source": "popcorn", "value": values["popcorn"], "score": values["popcorn"], "votes": 900})
         ratings.append({"source": "metacritic", "value": None, "score": None, "votes": None})
-        return {"title": "x", "type": kind, "ids": {"tmdb": tmdb_id, "imdb": None}, "ratings": ratings}
+        ids = {"tmdb": tmdb_id, "imdb": None, "tvdb": self.tvdb.get(tmdb_id) if kind == "show" else None}
+        return {"title": "x", "type": kind, "ids": ids, "ratings": ratings}
 
     def _make_app(self) -> FastAPI:
         app = FastAPI()

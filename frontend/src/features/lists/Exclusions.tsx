@@ -11,7 +11,7 @@ import { Pager } from "../../components/Pager";
 import { Badge, Card, Empty, Loading, Notice, PageHeader } from "../../components/ui";
 import { dateOnly, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
-import { KIND_LABELS, POSTER_FALLBACK, Ratings } from "./common";
+import { KindIcon, POSTER_FALLBACK, Ratings } from "./common";
 import { TitleSearch } from "./FixDialog";
 
 type Row = Schemas["ExclusionView"];
@@ -166,9 +166,9 @@ function ExclusionRow({ row, onRemove }: { row: Row; onRemove: () => void }) {
         <img src={row.media?.poster ?? POSTER_FALLBACK} alt="" loading="lazy" className="aspect-[2/3] w-11 shrink-0 rounded object-cover ring-1 ring-gray-700" />
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-x-2">
+            <KindIcon kind={row.kind} />
             <span className="font-semibold text-gray-100">{row.title}</span>
             <span className="text-sm text-gray-400">{row.year ?? "?"}</span>
-            <span className="text-xs text-gray-500">{KIND_LABELS[row.kind]}</span>
             {row.plex_key && (
               <Link to={`/item/${row.plex_key}`} className="text-xs font-semibold text-green-300 hover:underline">
                 In Plex

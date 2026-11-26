@@ -14,6 +14,7 @@ export type NodeField = Schemas["SourceField"];
 export type RunNode = Schemas["RunNode"];
 export type Outcome = "added" | "tagged" | "present" | "skipped" | "failed";
 
+/** "tagged" only appears in runs from before 26 Nov 2026, when existing titles still got missing tags. */
 export const OUTCOMES: Outcome[] = ["added", "tagged", "present", "skipped", "failed"];
 
 export function outcomeLabel(outcome: string, dry: boolean): string {
@@ -33,7 +34,7 @@ export function outcomeLabel(outcome: string, dry: boolean): string {
   }
 }
 
-/** The outcome after a count: "3 to add", "3 added", "1 tagged". */
+/** The outcome after a count: "3 to add", "3 added", "25 already there". */
 export function outcomeCount(outcome: string, dry: boolean): string {
   switch (outcome) {
     case "added":
@@ -69,7 +70,7 @@ export function ModeBadge({ dryRun }: { dryRun: boolean }) {
       Dry run
     </Badge>
   ) : (
-    <Badge tone="green" title="Adds titles and tags in Radarr and Sonarr">
+    <Badge tone="green" title="Adds new titles to Radarr and Sonarr">
       Live
     </Badge>
   );
@@ -82,7 +83,7 @@ export function RunStatus({ run }: { run: Pick<FlowRunBrief, "status" | "error">
   return <Badge tone="green">Done</Badge>;
 }
 
-/** What a run did, e.g. "3 to add, 2 to tag, 25 already there". */
+/** What a run did, e.g. "3 to add, 25 already there". */
 export function RunTotals({ run }: { run: FlowRunBrief }) {
   if (run.status === "running" || (run.status === "error" && !run.titles)) return null;
   const parts: ReactNode[] = [];
