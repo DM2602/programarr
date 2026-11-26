@@ -293,6 +293,20 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         wait_for(lambda: world.plex.selected_is_local(lotr), what="Plex showing the adopted file")
         steps.ok("Poster uploaded to Plex saved as a file", page)
 
+        # 13b
+        from app.posters import backup
+
+        goto(page, "/settings/files")
+        page.wait_for_selector("text=Copy every poster to the backup")
+        page.click("[data-action=backup]")
+        wait_for(lambda: backup.stats()["files"] > 0, what="poster copies in the backup")
+        lotr_item = db.get().one("SELECT * FROM items WHERE key=?", (lotr,))
+        wait_for(lambda: backup.find(lotr_item, "movie", None) is not None, what="backup copy of the adopted poster")
+        (lotr_folder / "poster.jpg").unlink()
+        page.click("[data-action=restore-backup]")
+        wait_for(lambda: (lotr_folder / "poster.jpg").exists(), what="poster restored from the backup")
+        steps.ok("Posters backed up, a deleted one restored", page)
+
         # 14
         goto(page, "/lists")
         page.click("[data-preview-form] button:has-text('FlixPatrol')")

@@ -53,6 +53,12 @@ export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+export function fileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(bytes < 10 * 1024 ** 2 ? 1 : 0)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+}
+
 /** Caption under a set image: "Show", "Movie", "S2", "Specials". */
 export function imageCaption(image: { kind: string | null; season: number | null }): string {
   if (image.kind === "season") return image.season === 0 ? "Specials" : `S${image.season}`;

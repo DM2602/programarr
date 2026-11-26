@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import time
 
-from . import apply, auto, binding, catalog, detect, library, paths, reviews, status
+from . import apply, auto, backup, binding, catalog, detect, library, paths, reviews, status
 from .. import cache, config, db, jobs, notify, settings
 from .apply import Assignment
-from ..plex import PlexError
-from .sources.base import ImageRef, PosterSet, SourceError
+from ..plex import Plex, PlexError
+from .sources.base import ImageRef, PosterSet, SourceError, parse_slot_id
 from ..util import event, prune_events
+
+PLEX_FILE_KINDS = {"movies": ("movie",), "all": ("movie", "show", "season")}
+PLEX_FILE_RETRY = 7 * 86400  # a title whose Plex poster could not be saved is tried again after a week
 
 _last_error_notice = 0.0
 
@@ -74,6 +77,8 @@ async def sync_and_process(full_scan: bool = False) -> dict:
         done += 1
     if result.new_items or result.new_seasons:
         event("info", "sync", f"Sync: {len(result.new_items)} new titles, {len(result.new_seasons)} new seasons")
+    if settings.get("automation"):
+        summary.update(await _follow_up(result))
     if settings.get("verify_plex"):
         try:
             summary["rechecked"] = await apply.recheck_pending()
@@ -84,6 +89,135 @@ async def sync_and_process(full_scan: bool = False) -> dict:
     except Exception as exc:  # noqa: BLE001 - only a hint for "Complete"
         event("warning", "status", f"Show status: {exc}")
     return summary
+
+
+def _by_item(slots: list[str], skip: set[str]) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for slot in slots:
+        item_key = parse_slot_id(slot)[1]
+        if item_key not in skip and slot not in grouped.get(item_key, []):
+            grouped.setdefault(item_key, []).append(slot)
+    return grouped
+
+
+async def _follow_up(result: library.SyncResult) -> dict:
+    """After a sync, with automation on: a poster picked in Plex becomes the file, a missing file
+    comes back from the backup, and a file that appeared or changed in the folder is read by Plex."""
+    new_items = set(result.new_items)
+    plex = Plex.from_settings()
+    summary = {"plex_choices": 0, "restored": 0, "refreshed": 0}
+    for item_key, slots in _by_item(result.thumb_changed, new_items).items():
+        for slot in slots:
+            try:
+                outcome = await apply.take_plex_choice(item_key, slot, plex)
+            except (PlexError, SourceError) as exc:
+                event("warning", "plex", f"Poster chosen in Plex not saved: {exc}", item_key)
+                continue
+            summary["plex_choices"] += outcome == "saved"
+    if backup.enabled():
+        for item_key, slots in _by_item(result.vanished, new_items).items():
+            summary["restored"] += len(await backup.restore(item_key, slots))
+    appeared = [slot for slot in result.appeared if slot not in result.vanished]
+    for item_key, slots in _by_item(appeared, new_items).items():
+        item = db.get().one("SELECT * FROM items WHERE key=?", (item_key,))
+        if item and not item.get("gone"):
+            await apply.refresh_in_plex(item, slots, plex)
+            summary["refreshed"] += 1
+    return {key: value for key, value in summary.items() if value}
+
+
+async def keep_plex_posters(limit: int | None = 200) -> dict:
+    """Titles without a poster file get the poster Plex shows, as file (setting plex_poster_files).
+
+    A copy in the backup comes first. Titles waiting under Review are left alone, and so are
+    posters removed on purpose. A title gets an hour after it appeared, so Plex has its poster by then.
+    """
+    kinds = PLEX_FILE_KINDS.get(settings.get("plex_poster_files"))
+    if not kinds:
+        return {"kept": 0, "restored": 0, "checked": 0}
+    database = db.get()
+    marks = ",".join("?" for _ in kinds)
+    rows = database.query(
+        "SELECT s.id, s.item_key FROM slots s JOIN items i ON i.key=s.item_key "
+        f"WHERE s.file IS NULL AND i.gone=0 AND s.kind IN ({marks}) AND COALESCE(i.added_at, 0) < ? "
+        "AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.item_key=i.key AND r.status='open' AND r.kind='new_item') "
+        "AND (s.kind <> 'season' OR EXISTS (SELECT 1 FROM seasons z WHERE z.show_key=s.item_key "
+        "     AND z.number=s.season AND z.gone=0)) "
+        "AND COALESCE((SELECT h.action FROM history h WHERE h.slot_id=s.id AND h.action IN ('write', 'remove') "
+        "     ORDER BY h.id DESC LIMIT 1), '') <> 'remove' "
+        "ORDER BY i.added_at DESC",
+        (*kinds, db.now() - 3600),
+    )
+    plex = Plex.from_settings()
+    kept = restored = checked = 0
+    for index, row in enumerate(rows):
+        if limit is not None and checked >= limit:
+            break
+        if cache.get(f"plexfile:tried:{row['id']}"):
+            continue
+        jobs.progress(index, len(rows), "Keeping Plex posters as files …")
+        checked += 1
+        if await backup.restore(row["item_key"], [row["id"]]):
+            restored += 1
+            continue
+        try:
+            if await apply.keep_plex_poster(row["item_key"], row["id"], plex):
+                kept += 1
+                continue
+        except PlexError:
+            break  # Plex not reachable: next time
+        except SourceError:
+            pass
+        cache.put(f"plexfile:tried:{row['id']}", 1, PLEX_FILE_RETRY)
+    if kept:
+        event("info", "plex", f"Plex posters kept as files: {kept}")
+    return {"kept": kept, "restored": restored, "checked": checked}
+
+
+async def take_from_plex() -> dict:
+    """Posters picked or uploaded in Plex become files, then titles without a file get Plex' poster."""
+    database = db.get()
+    plex = Plex.from_settings()
+    rows = database.query(
+        "SELECT s.id, s.item_key FROM slots s JOIN items i ON i.key=s.item_key WHERE i.gone=0 "
+        "AND (s.kind <> 'season' OR EXISTS (SELECT 1 FROM seasons z WHERE z.show_key=s.item_key "
+        "     AND z.number=s.season AND z.gone=0)) ORDER BY i.sort_title, s.kind, s.season"
+    )
+    adopted = unlocked = failed = 0
+    for index, row in enumerate(rows):
+        jobs.progress(index, len(rows), "Checking Plex posters …")
+        try:
+            outcome = await apply.take_plex_choice(row["item_key"], row["id"], plex, uploads=True)
+        except (PlexError, SourceError):
+            failed += 1
+            continue
+        adopted += outcome == "saved"
+        unlocked += outcome == "unlocked"
+    files = await keep_plex_posters(limit=None)
+    event("info", "plex", f"Posters from Plex: {adopted} chosen there saved as files, {files['kept']} kept as files"
+                          f"{f', {failed} failed' if failed else ''} ({len(rows)} checked)")
+    return {"checked": len(rows), "adopted": adopted, "kept": files["kept"], "restored": files["restored"],
+            "unlocked": unlocked, "failed": failed}
+
+
+async def backup_now() -> dict:
+    jobs.progress(message="Checking the folders …")
+    library.scan_files(None)
+    return backup.run()
+
+
+async def restore_backup() -> dict:
+    """Every poster that is missing in its folder and has a copy in the backup comes back."""
+    jobs.progress(message="Checking the folders …")
+    library.scan_files(None)
+    database = db.get()
+    keys = [row["item_key"] for row in database.query(
+        "SELECT DISTINCT s.item_key FROM slots s JOIN items i ON i.key=s.item_key WHERE s.file IS NULL AND i.gone=0")]
+    restored = 0
+    for index, key in enumerate(keys):
+        jobs.progress(index, len(keys), "Restoring from the backup …")
+        restored += len(await backup.restore(key))
+    return {"restored": restored, "checked": len(keys)}
 
 
 async def check_sets(item_keys: list[str] | None = None) -> dict:
@@ -133,7 +267,27 @@ async def maintenance() -> dict:
     if keep:
         for row in database.query("SELECT DISTINCT slot_id FROM history WHERE archived IS NOT NULL"):
             paths.prune_archive(row["slot_id"], keep)
-    return {"ok": True}
+    result: dict = {"ok": True}
+    # Every folder, for files added, changed or deleted outside Programarr (a sync looks only at
+    # titles Plex changed).
+    notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
+    library.scan_files(None, notes)
+    if settings.get("automation"):
+        try:
+            result["files"] = await _follow_up(library.SyncResult(vanished=notes["vanished"],
+                                                                  appeared=notes["appeared"]))
+        except PlexError as exc:
+            event("warning", "plex", f"Clean up: {exc}")
+    try:
+        result["backup"] = backup.run()
+    except OSError as exc:
+        event("error", "backup", f"Poster backup failed: {exc}")
+    if settings.get("automation"):
+        try:
+            result["plex_files"] = await keep_plex_posters()
+        except (PlexError, SourceError) as exc:
+            event("warning", "plex", f"Keeping Plex posters as files: {exc}")
+    return result
 
 
 async def apply_image(item_key: str, slot: str, ref: dict, mode: str = "manual") -> dict:
@@ -215,52 +369,6 @@ async def plex_refresh(item_key: str) -> dict:
 async def retry_new_item(item_key: str) -> dict:
     reviews.resolve_for(item_key, ("new_item",))
     return {"outcome": await auto.handle_new_item(item_key)}
-
-
-async def adopt_uploads() -> dict:
-    """Posters uploaded into Plex (e.g. by Posteria or Marquee) become files in the folder."""
-    from ..plex import Plex
-    from .sources.base import parse_slot_id
-
-    database = db.get()
-    plex = Plex.from_settings()
-    rows = database.query(
-        "SELECT s.id, s.item_key, s.kind, s.season FROM slots s JOIN items i ON i.key=s.item_key "
-        "WHERE s.file IS NULL AND i.gone=0 ORDER BY i.sort_title, s.kind, s.season"
-    )
-    by_item: dict[str, list[Assignment]] = {}
-    checked = 0
-    for index, row in enumerate(rows):
-        jobs.progress(index, len(rows), "Checking Plex posters …")
-        kind, item_key, season = parse_slot_id(row["id"])
-        if kind == "season":
-            season_row = database.one("SELECT key FROM seasons WHERE show_key=? AND number=? AND gone=0",
-                                      (item_key, season))
-            if not season_row:
-                continue
-            rating_key = season_row["key"]
-        else:
-            rating_key = item_key
-        checked += 1
-        try:
-            posters = await plex.posters(rating_key)
-        except PlexError:
-            continue
-        chosen = next((p for p in posters if p["selected"]), None)
-        if not chosen or not (chosen["rating_key"] or "").startswith("upload://"):
-            continue
-        ref = ImageRef("plex", chosen["rating_key"], kind, season, url=chosen["key"], thumb_url=chosen["thumb"],
-                       label="Uploaded to Plex")
-        by_item.setdefault(item_key, []).append(Assignment(row["id"], ref))
-    adopted = failed = 0
-    for index, (item_key, assignments) in enumerate(by_item.items()):
-        jobs.progress(index, len(by_item), "Saving as files …")
-        outcomes = await apply.apply(item_key, assignments, "adopt", "manual")
-        adopted += sum(1 for o in outcomes if o.ok)
-        failed += sum(1 for o in outcomes if not o.ok)
-    event("info", "plex", f"Uploaded Plex posters saved as files: {adopted}"
-                          f"{f', {failed} failed' if failed else ''} ({checked} checked)")
-    return {"checked": checked, "adopted": adopted, "failed": failed}
 
 
 def seed_follows_async() -> None:

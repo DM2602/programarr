@@ -33,6 +33,9 @@ ORIGINS = {
     "restore": "restored",
     "detect": "matched",
     "adopt": "adopted from Plex",
+    "plex": "chosen in Plex",
+    "plex_file": "Plex poster kept as file",
+    "backup": "from the backup",
     "system": "Programarr",
 }
 
@@ -284,7 +287,8 @@ def recent_cards(limit: int = 14) -> list[dict]:
     database = db.get()
     rows = database.query(
         "SELECT h.*, i.title, i.type FROM history h JOIN items i ON i.key=h.item_key "
-        "WHERE h.action='write' ORDER BY h.id DESC LIMIT 200")
+        # Plex posters kept as files and copies from the backup are not new posters.
+        "WHERE h.action='write' AND COALESCE(h.origin, '') NOT IN ('plex_file', 'backup') ORDER BY h.id DESC LIMIT 200")
     groups: list[dict] = []
     for row in rows:
         last = groups[-1] if groups else None

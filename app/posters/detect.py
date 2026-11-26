@@ -67,6 +67,39 @@ def _stamp_proposal(item: dict) -> dict | None:
     return {"source": source, "set_key": set_key, "slots": [row["id"] for row in rows]}
 
 
+async def _stamp_match(item: dict) -> tuple[PosterSet, dict[str, ImageRef], int] | None:
+    """The set named in the stamps of the files, with the images that match them."""
+    stamped = _stamp_proposal(item)
+    if not stamped:
+        return None
+    try:
+        poster_set = await catalog.load_set(stamped["source"], stamped["set_key"], item, fresh=False)
+    except SourceError:
+        return None
+    if not poster_set:
+        return None
+    database = db.get()
+    matched = {}
+    for slot in stamped["slots"]:
+        row = database.one("SELECT kind, season FROM slots WHERE id=?", (slot,))
+        image = poster_set.image_for(row["kind"], row["season"])
+        if image:
+            matched[slot] = image
+    return (poster_set, matched, len(stamped["slots"])) if matched else None
+
+
+async def relink(item_key: str) -> bool:
+    """Files that carry a set's stamp (restored from the backup) link the title to that set again."""
+    item = db.get().one("SELECT * FROM items WHERE key=?", (item_key,))
+    if not item or binding.get(item_key):
+        return False
+    match = await _stamp_match(item)
+    if not match:
+        return False
+    binding.bind_existing(item_key, match[0], match[1], origin="backup")
+    return True
+
+
 async def detect_item(item_key: str, store: bool = True) -> dict | None:
     database = db.get()
     item = database.one("SELECT * FROM items WHERE key=?", (item_key,))
@@ -76,22 +109,9 @@ async def detect_item(item_key: str, store: bool = True) -> dict | None:
     if not local:
         return None
     main_slot = slot_id(item["type"], item_key)
-    stamped = _stamp_proposal(item)
-    if stamped:
-        try:
-            poster_set = await catalog.load_set(stamped["source"], stamped["set_key"], item, fresh=False)
-        except SourceError:
-            poster_set = None
-        if poster_set:
-            matched = {}
-            for slot in stamped["slots"]:
-                row = database.one("SELECT kind, season FROM slots WHERE id=?", (slot,))
-                image = poster_set.image_for(row["kind"], row["season"])
-                if image:
-                    matched[slot] = image
-            if matched:
-                return _propose(item, poster_set, matched, len(stamped["slots"]), "high", 1.0, store,
-                                via="origin stamp in the file")
+    match = await _stamp_match(item)
+    if match:
+        return _propose(item, match[0], match[1], match[2], "high", 1.0, store, via="origin stamp in the file")
     found = await catalog.find_sets(item)
     sets = found.all()
     if not sets:

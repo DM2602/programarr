@@ -14,7 +14,7 @@ DISCORD_EVENTS = {
     "review": "Something needs your review",
     "set_changed": "Linked set changed",
     "detect": "Match existing finished",
-    "flow": "Flow added titles or tags to Radarr or Sonarr",
+    "flow": "Flow added titles to Radarr or Sonarr",
     "flow_dry": "Dry run found titles to add",
     "error": "Errors (service unreachable, write or flow failed)",
 }
@@ -34,6 +34,8 @@ DEFAULTS: dict[str, Any] = {
     "unlock_fields": True,
     "verify_plex": True,
     "archive_keep": 10,
+    "backup_posters": True,  # a copy of every poster file in /data/backup, put back when a file goes missing
+    "plex_poster_files": "movies",  # titles without a file: save Plex' poster as file (off, movies, all)
     # MediUX
     "mediux_token": "",
     "mediux_quality": "original",

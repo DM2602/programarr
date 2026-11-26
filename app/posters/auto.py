@@ -1,7 +1,7 @@
 """New titles: take a set automatically when it is safe, otherwise ask under Review."""
 from __future__ import annotations
 
-from . import binding, catalog, reviews
+from . import backup, binding, catalog, detect, reviews
 from .. import db, notify, settings
 from .sources.base import SOURCE_NAMES, SourceError
 from ..util import event, season_label
@@ -58,6 +58,13 @@ async def handle_new_item(item_key: str) -> str:
         return "missing"
     if binding.get(item_key):
         return "bound"
+    # A title Plex added again (deleted and downloaded anew) gets its posters back from the backup.
+    if await backup.restore(item_key):
+        try:
+            await detect.relink(item_key)
+        except SourceError:
+            pass
+        return "restored"
     try:
         ranked, found = await catalog.gather_ranked(item, complete_top=2)
     except SourceError as exc:

@@ -96,12 +96,10 @@ export function Match() {
         </>
       )}
 
-      <Section title="Plex uploads" id="adopt">
-        <p className="max-w-2xl text-sm text-gray-400">
-          Posters uploaded to Plex, for example with Posteria or Marquee, are saved as files in the folder and unlocked in Plex.
-        </p>
-        <Button className="mt-3" onClick={() => run(() => unwrap(api.POST("/api/adopt")), "Saving Plex uploads as files…")} data-action="adopt">
-          Save Plex uploads as files
+      <Section title="Posters from Plex" id="adopt">
+        <p className="max-w-2xl text-sm text-gray-400">Posters picked or uploaded in Plex become files in the folder.</p>
+        <Button className="mt-3" onClick={() => run(() => unwrap(api.POST("/api/adopt")), "Taking posters from Plex…")} data-action="adopt">
+          Take posters from Plex
         </Button>
       </Section>
 

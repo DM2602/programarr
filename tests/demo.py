@@ -65,9 +65,9 @@ async def build(world) -> None:
     lotr_item = tpdb.add_item("The Lord of the Rings: The Fellowship of the Ring", 2001, "movie")
     tpdb.add_movie_set(lotr_item, "DIIIVOY")
 
+    plex.upload(lotr, poster_for("posteria-lotr", "OLD"))  # uploaded with Posteria before Programarr
     await world.enable_libraries()
     await library.sync()  # existing titles
-    plex.upload(lotr, poster_for("posteria-lotr", "OLD"))  # uploaded with Posteria earlier
 
     for key in (severance, bear, dune):
         item = db.get().one("SELECT * FROM items WHERE key=?", (key,))

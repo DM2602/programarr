@@ -816,6 +816,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Backup View */
+        get: operations["backup_view_api_backup_get"];
+        put?: never;
+        /** Backup Run */
+        post: operations["backup_run_api_backup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backup/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Backup Restore */
+        post: operations["backup_restore_api_backup_restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rescan": {
         parameters: {
             query?: never;
@@ -1601,6 +1636,17 @@ export interface components {
             signed_in: boolean;
             /** Version */
             version: string;
+        };
+        /** BackupView */
+        BackupView: {
+            /** Enabled */
+            enabled: boolean;
+            /** Files */
+            files: number;
+            /** Bytes */
+            bytes: number;
+            /** Folder */
+            folder: string;
         };
         /** BindBody */
         BindBody: {
@@ -2570,6 +2616,14 @@ export interface components {
             gave_up: number | null;
             /** Adopted */
             adopted: number | null;
+            /** Kept */
+            kept: number | null;
+            /** Unlocked */
+            unlocked: number | null;
+            /** Restored */
+            restored: number | null;
+            /** Saved */
+            saved: number | null;
             /** Scanned */
             scanned: number | null;
             /** Outcome */
@@ -3363,6 +3417,13 @@ export interface components {
             verify_plex: boolean;
             /** Archive Keep */
             archive_keep: number;
+            /** Backup Posters */
+            backup_posters: boolean;
+            /**
+             * Plex Poster Files
+             * @enum {string}
+             */
+            plex_poster_files: "off" | "movies" | "all";
             /** Mediux Token */
             mediux_token: boolean;
             /**
@@ -5117,6 +5178,66 @@ export interface operations {
         };
     };
     adopt_api_adopt_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+        };
+    };
+    backup_view_api_backup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupView"];
+                };
+            };
+        };
+    };
+    backup_run_api_backup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+        };
+    };
+    backup_restore_api_backup_restore_post: {
         parameters: {
             query?: never;
             header?: never;

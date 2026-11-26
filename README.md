@@ -31,6 +31,18 @@ In Plex, turn on "Use local assets" for each library (Advanced).
 Off by default. While it is off, Programarr syncs the library but writes posters only when you click;
 scheduled set checks are skipped. Turn it on under Settings › Automation.
 
+With automation on, Programarr also keeps the folders and Plex in step:
+
+- A poster picked or uploaded in Plex (Plex locks it) is saved as the file in the folder, then unlocked.
+- A poster file added or replaced in the folder is read by Plex. Every folder is checked every 6 hours.
+- Titles without a file get the poster Plex shows as file, an hour after they appear (Settings › Files:
+  off, movies, or movies and shows). Titles waiting under Review are left alone.
+- Every poster file has a copy in `/data/backup`, kept by TMDB, TVDB or IMDb ID. A deleted poster comes
+  back from it, also when a title is deleted and downloaded again; a linked set is linked again.
+  "Remove file" on a title removes the copy too.
+
+Match existing › Posters from Plex does this for the whole library at once.
+
 ### Access
 
 - `APP_PASSWORD` set: the web app asks for it.
@@ -70,7 +82,7 @@ on an interval (`every:6h`) or by cron (`0 6 * * *`, container time zone). Runs 
 
 ### Data
 
-Database, archive and logs live in `/data` (`./data` in the compose file). Back up that folder.
+Database, archive, poster backup and logs live in `/data` (`./data` in the compose file). Back up that folder.
 
 ## Development
 

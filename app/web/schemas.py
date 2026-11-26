@@ -58,6 +58,10 @@ class JobResult(BaseModel):
     changed: int | None = None
     gave_up: int | None = None
     adopted: int | None = None
+    kept: int | None = None
+    unlocked: int | None = None
+    restored: int | None = None
+    saved: int | None = None
     scanned: int | None = None
     outcome: str | None = None
     run: int | None = None
@@ -479,6 +483,13 @@ class DetectStats(Model):
     job: Job | None = None
 
 
+class BackupView(Model):
+    enabled: bool
+    files: int
+    bytes: int
+    folder: str
+
+
 # -- history and log --------------------------------------------------------------------
 class HistoryPage(Model):
     rows: list[HistoryRow]
@@ -526,6 +537,8 @@ class SettingsValues(Model):
     unlock_fields: bool
     verify_plex: bool
     archive_keep: int
+    backup_posters: bool
+    plex_poster_files: Literal["off", "movies", "all"]
     mediux_token: bool
     mediux_quality: Literal["original", "optimized"]
     mediux_api: str

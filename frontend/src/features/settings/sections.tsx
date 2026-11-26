@@ -3,8 +3,10 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { api, errorText, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
+import { useBackup } from "../../api/queries";
 import { Button } from "../../components/Button";
 import { useToast } from "../../components/Toasts";
+import { fileSize, plural } from "../../lib/format";
 import { CheckRow, NumberField, Row, SaveBar, SecretField, SelectRow, SettingsSection, TestButton, TextField, typed, useSettingsForm, type Form } from "./fields";
 
 type View = Schemas["SettingsView"];
@@ -88,9 +90,40 @@ export function FilesSection({ view }: { view: View }) {
         />
         <CheckRow form={form} name="unlock_fields" label="Unlock posters in Plex" hint="A locked poster ignores the file in the folder." />
         <CheckRow form={form} name="verify_plex" label="Check that Plex shows the file" hint="After writing. Otherwise it shows up under Review." />
+        <SelectRow
+          form={form}
+          name="plex_poster_files"
+          label="Keep the Plex poster as file"
+          hint="For titles without a file"
+          options={[
+            { value: "off", label: "Off" },
+            { value: "movies", label: "Movies" },
+            { value: "all", label: "Movies and shows" },
+          ]}
+        />
         <NumberField form={form} name="archive_keep" label="Older versions per poster in the archive" hint="0 keeps all" min={0} max={100} />
       </SettingsSection>
+      <BackupRows form={form} />
     </SettingsForm>
+  );
+}
+
+function BackupRows({ form }: { form: Form }) {
+  const { data } = useBackup();
+  const run = useRunJob();
+  const hint = data ? `${plural(data.files, "file", "files")}, ${fileSize(data.bytes)} in ${data.folder}` : undefined;
+  return (
+    <SettingsSection title="Backup">
+      <CheckRow form={form} name="backup_posters" label="Copy every poster to the backup" hint={hint} />
+      <div className="flex flex-wrap items-center gap-3 py-4">
+        <Button size="sm" onClick={() => run(() => unwrap(api.POST("/api/backup")), "Backing up posters…")} data-action="backup">
+          Back up now
+        </Button>
+        <Button size="sm" onClick={() => run(() => unwrap(api.POST("/api/backup/restore")), "Restoring missing posters…")} data-action="restore-backup">
+          Restore missing posters
+        </Button>
+      </div>
+    </SettingsSection>
   );
 }
 

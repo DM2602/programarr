@@ -26,6 +26,7 @@ export function jobProgress(job: Pick<Job, "title" | "done" | "total" | "message
 
 const AUTO_OUTCOMES: Record<string, string> = {
   applied: "Set applied",
+  restored: "Posters restored from the backup",
   review: "Added to Review",
   bound: "Already linked",
   missing: "Title not found",
@@ -64,10 +65,15 @@ export function jobMessage(job: Job): string {
       if (!r.found) return "No matching set found";
       return r.confidence === "high" ? "Set found, confirm it under Match existing" : "Possible set found, compare it under Match existing";
     case "adopt": {
-      let text = `${plural(r.adopted ?? 0, "poster", "posters")} saved as files`;
+      const saved = (r.adopted ?? 0) + (r.kept ?? 0) + (r.restored ?? 0);
+      let text = `${plural(saved, "poster", "posters")} saved as files`;
       if (r.failed) text += `, ${r.failed} failed`;
       return `${text} (${r.checked ?? 0} checked)`;
     }
+    case "backup":
+      return r.saved ? `${plural(r.saved, "poster", "posters")} backed up` : "Backup is up to date";
+    case "restore_backup":
+      return r.restored ? `${plural(r.restored, "poster", "posters")} restored` : "Nothing to restore";
     case "accept":
       return r.written ? `${plural(r.written, "poster", "posters")} taken` : "Kept current posters";
     case "auto":

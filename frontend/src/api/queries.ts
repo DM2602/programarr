@@ -107,6 +107,10 @@ export function useWaiting() {
   return useQuery({ queryKey: ["waiting"], queryFn: () => unwrap(api.GET("/api/waiting")) });
 }
 
+export function useBackup() {
+  return useQuery({ queryKey: ["backup"], queryFn: () => unwrap(api.GET("/api/backup")) });
+}
+
 export function useDetectStats() {
   return useQuery({
     queryKey: ["detect-stats"],

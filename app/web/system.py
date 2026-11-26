@@ -112,6 +112,7 @@ CHOICES = {
     "conflicts": ("archive", "keep"),
     "mediux_quality": ("original", "optimized"),
     "set_changes": ("notify", "apply"),
+    "plex_poster_files": ("off", "movies", "all"),
 }
 
 

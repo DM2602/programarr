@@ -15,6 +15,7 @@ SOURCE_NAMES = {
     "upload": "Upload",
     "extern": "Changed in folder",
     "archive": "Archive",
+    "backup": "Backup",
 }
 
 

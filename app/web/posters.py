@@ -8,12 +8,12 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from .. import arr, db, http, imaging, settings
 from ..plex import PlexError
-from ..posters import binding, catalog, detect, library, missing, refsign, reviews, sources, status, tasks, views
+from ..posters import backup, binding, catalog, detect, library, missing, refsign, reviews, sources, status, tasks, views
 from ..posters.sources import tpdb
 from ..posters.sources.base import ImageRef, SourceError
 from ..util import fold
 from .common import item_or_404, job_row, slot_of, start_job
-from .schemas import (ApplyBody, ArrLink, BindBody, ConfirmAll, DetectStats, Follows, HistoryPage, ImageUrlBody,
+from .schemas import (ApplyBody, ArrLink, BackupView, BindBody, ConfirmAll, DetectStats, Follows, HistoryPage, ImageUrlBody,
                       ImageView, Images, ItemDetail, JobStarted, LibraryPage, MissingSeasons, Ok, OnlineResponse,
                       ReviewsPage, SetsResponse, SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, WaitingPage)
 
@@ -401,7 +401,23 @@ async def detect_library(scope: str = "shows"):
 
 @router.post("/adopt", response_model=JobStarted)
 async def adopt():
-    return start_job("adopt", "Save Plex uploads as files", tasks.adopt_uploads, lane="bg", dedupe=True)
+    return start_job("adopt", "Take posters from Plex", tasks.take_from_plex, lane="bg", dedupe=True)
+
+
+@router.get("/backup", response_model=BackupView)
+async def backup_view():
+    return {"enabled": backup.enabled(), **backup.stats(), "folder": str(backup.root())}
+
+
+@router.post("/backup", response_model=JobStarted)
+async def backup_run():
+    return start_job("backup", "Back up poster files", tasks.backup_now, lane="bg", dedupe=True)
+
+
+@router.post("/backup/restore", response_model=JobStarted)
+async def backup_restore():
+    return start_job("restore_backup", "Restore missing posters from the backup", tasks.restore_backup,
+                     lane="bg", dedupe=True)
 
 
 @router.post("/rescan", response_model=JobStarted)

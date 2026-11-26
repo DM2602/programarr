@@ -111,10 +111,34 @@ class FakePlex:
     def upload(self, key: str, data: bytes, lock: bool = True) -> None:
         """A poster uploaded into Plex (as Posteria or Marquee did), selected and locked."""
         obj = self.items.get(key) or self.seasons[key]
+        before = self._shown(obj)
         obj["upload"] = data
         obj["selected"] = "upload"
         if lock:
             obj["locked"].add("thumb")
+        self._changed(obj, before)
+
+    def choose(self, key: str, which: str = "agent") -> None:
+        """Someone picks a poster in Plex (agent, upload or local); Plex locks the field."""
+        obj = self.items.get(key) or self.seasons[key]
+        before = self._shown(obj)
+        obj["selected"] = which
+        obj["locked"].add("thumb")
+        self._changed(obj, before)
+
+    def _shown(self, obj: dict) -> tuple:
+        if obj["selected"] == "local":
+            return "local", (obj["local"] or {}).get("sha")
+        if obj["selected"] == "upload":
+            return "upload", hashlib.sha1(obj.get("upload") or b"").hexdigest()
+        return "agent", obj["agent_poster"]
+
+    def _changed(self, obj: dict, before: tuple) -> None:
+        """Plex gives the poster a new address when it changes, and the item a new updatedAt."""
+        if self._shown(obj) != before:
+            obj["thumb_ts"] = obj.get("thumb_ts", 1) + 1
+            if "updatedAt" in obj:
+                obj["updatedAt"] = max(int(time.time()), obj["updatedAt"] + 1)
 
     def remove_item(self, key: str) -> None:
         self.items.pop(key, None)
@@ -163,16 +187,19 @@ class FakePlex:
 
     def _read(self, key: str) -> None:
         obj = self.items.get(key) or self.seasons[key]
+        before = self._shown(obj)
         path = self.local_asset(key)
         if path is None:
             obj["local"] = None
             if obj["selected"] == "local" and "thumb" not in obj["locked"]:
                 obj["selected"] = "upload" if obj.get("upload") else "agent"
+            self._changed(obj, before)
             return
         digest = hashlib.sha1(path.read_bytes()).hexdigest()
         obj["local"] = {"sha": digest, "path": str(path)}
         if "thumb" not in obj["locked"]:
             obj["selected"] = "local"
+        self._changed(obj, before)
 
     def refresh(self, key: str) -> None:
         self.refreshes.append(key)
@@ -195,7 +222,8 @@ class FakePlex:
         return [{"name": name, "locked": True} for name in sorted(obj["locked"])]
 
     def _thumb(self, key: str) -> str:
-        return f"/library/metadata/{key}/thumb/1"
+        obj = self.items.get(key) or self.seasons.get(key) or {}
+        return f"/library/metadata/{key}/thumb/{obj.get('thumb_ts', 1)}"
 
     def _movie_json(self, item: dict, details: bool = False) -> dict:
         data = {
@@ -348,8 +376,10 @@ class FakePlex:
             obj = plex.items.get(key) or plex.seasons.get(key)
             url = request.query_params.get("url", "")
             plex.selects.append((key, url))
+            before = plex._shown(obj)
             obj["selected"] = "local" if "localmedia" in url else ("upload" if "upload" in url else "agent")
             obj["locked"].add("thumb")
+            plex._changed(obj, before)
             return Response(status_code=200)
 
         @app.get("/library/metadata/{key}/file")

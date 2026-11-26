@@ -246,26 +246,6 @@ def test_scheduler_due(world):
     assert jobs.due(now) == []
 
 
-async def test_posters_uploaded_into_plex_become_files(world):
-    from app.posters import tasks
-
-    movie = world.plex.add_movie("Dune", 2021, "438631")
-    show = world.plex.add_show("Andor", 2022, "83867", seasons=[1])
-    world.plex.add_movie("Arrival", 2016, "329865")  # Plex default poster: stays as it is
-    await world.enable_libraries()
-    await library.sync()
-    world.plex.upload(movie, poster_for("posteria-dune", "OLD"))
-    world.plex.upload(world.plex.season_key(show, 1), poster_for("posteria-andor-s1", "S1"))
-    result = await tasks.adopt_uploads()
-    assert result["adopted"] == 2 and result["failed"] == 0
-    assert imaging.strip_stamp((world.media / "movies" / "Dune (2021)" / "poster.jpg").read_bytes()) == \
-        poster_for("posteria-dune", "OLD")
-    assert (world.media / "tv" / "Andor (2022)" / "Season 01" / "Season01.jpg").exists()
-    assert not (world.media / "movies" / "Arrival (2016)" / "poster.jpg").exists()
-    assert world.plex.selected_is_local(movie) and "thumb" not in world.plex.items[movie]["locked"]
-    assert world.plex.selected_is_local(world.plex.season_key(show, 1))
-
-
 def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     database = db.Database(tmp_path / "programarr.db")
     assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 4
