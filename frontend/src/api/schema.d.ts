@@ -680,6 +680,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reviews/{review_id}/keep-plex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Keep Plex */
+        post: operations["review_keep_plex_api_reviews__review_id__keep_plex_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reviews/{review_id}/accept": {
         parameters: {
             query?: never;
@@ -3040,6 +3057,17 @@ export interface components {
             /** Local */
             local: string;
         };
+        /** PlexPoster */
+        PlexPoster: {
+            /** Slot */
+            slot: string;
+            /** Label */
+            label: string;
+            /** Thumb */
+            thumb: string;
+            /** Large */
+            large: string;
+        };
         /** PortCount */
         PortCount: {
             /** Key */
@@ -3143,6 +3171,11 @@ export interface components {
             via: string | null;
             /** Slot */
             slot: string | null;
+            /**
+             * Plex
+             * @default []
+             */
+            plex: components["schemas"]["PlexPoster"][];
         };
         /** ReviewsPage */
         ReviewsPage: {
@@ -5006,6 +5039,37 @@ export interface operations {
             };
         };
     };
+    review_keep_plex_api_reviews__review_id__keep_plex_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                review_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     review_accept_api_reviews__review_id__accept_post: {
         parameters: {
             query?: {
@@ -6458,7 +6522,9 @@ export interface operations {
     };
     slot_image_img_slot__slot_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                size?: "thumb" | "large";
+            };
             header?: never;
             path: {
                 slot_id: string;

@@ -328,6 +328,11 @@ async def review_dismiss(review_id: int):
     return {"ok": True, "message": "Dismissed"}
 
 
+@router.post("/reviews/{review_id}/keep-plex", response_model=JobStarted)
+async def review_keep_plex(review_id: int):
+    return start_job("keep_plex", "Keep the Plex posters", tasks.keep_plex_for_review, review_id)
+
+
 @router.post("/reviews/{review_id}/accept", response_model=JobStarted)
 async def review_accept(review_id: int, take: bool = True):
     return start_job("accept", "Take set changes" if take else "Keep current posters",

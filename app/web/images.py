@@ -55,10 +55,13 @@ async def _file_thumb(path: Path, sha: str | None) -> Path | None:
 
 
 @router.get("/img/slot/{slot_id}")
-async def slot_image(slot_id: str):
+async def slot_image(slot_id: str, size: Literal["thumb", "large"] = "thumb"):
     database = db.get()
     row = database.one("SELECT * FROM slots WHERE id=?", (slot_id,))
+    large = size == "large"
     if row and row.get("file") and Path(row["file"]).exists():
+        if large:
+            return await _file_preview(Path(row["file"]), row.get("file_sha1"))
         thumb = await _file_thumb(Path(row["file"]), row.get("file_sha1"))
         if thumb:
             return FileResponse(thumb, media_type="image/jpeg", headers=HEADERS)
@@ -75,17 +78,29 @@ async def slot_image(slot_id: str):
         path = database.scalar("SELECT thumb FROM items WHERE key=?", (item_key,))
     if not path:
         return placeholder()
-    key = f"plexthumb:{path}"
+    key = f"plexthumb:{'large:' if large else ''}{path}"
     data = cache.image_get(key)
     if data is None:
         try:
-            data, _ = await Plex.from_settings().thumb(path)
+            data, _ = await Plex.from_settings().thumb(path, *((720, 1080) if large else ()))
         except PlexError:
             return placeholder()
         if not data or _kind(data) == "application/octet-stream":
             return placeholder()
         cache.image_put(key, data)
     return Response(data, media_type=_kind(data), headers={**HEADERS, "X-Programarr-Fallback": "plex"})
+
+
+async def _file_preview(path: Path, sha1: str | None) -> Response:
+    key = f"preview:file:{sha1 or path}"
+    data = cache.image_get(key)
+    if data is None:
+        try:
+            data = await asyncio.to_thread(imaging.thumbnail, path.read_bytes(), sources.PREVIEW_WIDTH)
+        except (OSError, imaging.ImageError):
+            return placeholder()
+        cache.image_put(key, data)
+    return Response(data, media_type="image/jpeg", headers=HEADERS)
 
 
 @router.get("/img/ref/{token}")

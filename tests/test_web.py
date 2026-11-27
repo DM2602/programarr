@@ -234,6 +234,29 @@ def test_review_list_and_actions(world, client):
     assert client.post("/api/reviews/confirm-all").json() == {"ok": True, "message": "Linked 0 titles", "count": 0}
 
 
+def test_review_keeps_the_plex_posters(world, client):
+    from app import imaging
+    from tests.fakes.images import poster_for
+
+    show, movie = setup_library(world, client)
+    movie_review = reviews.add(movie, "new_item", "No set from a preferred designer")
+    show_review = reviews.add(show, "new_item", "No set from a preferred designer")
+    page = {r["id"]: r for r in client.get("/api/reviews").json()["reviews"]}
+    plex = page[movie_review]["plex"]
+    assert [p["slot"] for p in plex] == [f"m:{movie}"] and plex[0]["large"].endswith("&size=large")
+    assert client.get(plex[0]["large"]).status_code == 200
+    assert [p["label"] for p in page[show_review]["plex"]] == ["Show", "S1", "S2"]
+    job = run(client, "POST", f"/api/reviews/{movie_review}/keep-plex")
+    assert job["status"] == "done" and job["result"]["kept"] == 1
+    poster = world.media / "movies" / "Dune (2021)" / "poster.jpg"
+    assert imaging.strip_stamp(poster.read_bytes()) == poster_for(f"agent-{movie}.jpg", "AGENT")
+    job = run(client, "POST", f"/api/reviews/{show_review}/keep-plex")
+    assert job["result"]["kept"] == 3
+    assert not reviews.open_items()
+    assert client.get(f"/img/slot/m:{movie}?size=large").headers["content-type"] == "image/jpeg"
+    assert run(client, "POST", f"/api/reviews/{movie_review}/keep-plex")["status"] == "failed"
+
+
 def test_new_title_review_offers_signed_sets(world, client):
     show, _ = setup_library(world, client)
     run(client, "POST", f"/api/items/{show}/retry")

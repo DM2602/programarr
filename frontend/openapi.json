@@ -1706,6 +1706,48 @@
         }
       }
     },
+    "/api/reviews/{review_id}/keep-plex": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review Keep Plex",
+        "operationId": "review_keep_plex_api_reviews__review_id__keep_plex_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/reviews/{review_id}/accept": {
       "post": {
         "tags": [
@@ -3702,6 +3744,20 @@
             "schema": {
               "type": "string",
               "title": "Slot Id"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "thumb",
+                "large"
+              ],
+              "type": "string",
+              "default": "thumb",
+              "title": "Size"
             }
           }
         ],
@@ -8690,6 +8746,34 @@
         ],
         "title": "PathMap"
       },
+      "PlexPoster": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "large": {
+            "type": "string",
+            "title": "Large"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "label",
+          "thumb",
+          "large"
+        ],
+        "title": "PlexPoster"
+      },
       "PortCount": {
         "properties": {
           "key": {
@@ -9017,6 +9101,14 @@
               }
             ],
             "title": "Slot"
+          },
+          "plex": {
+            "items": {
+              "$ref": "#/components/schemas/PlexPoster"
+            },
+            "type": "array",
+            "title": "Plex",
+            "default": []
           }
         },
         "type": "object",
@@ -9040,7 +9132,8 @@
           "set",
           "confidence",
           "via",
-          "slot"
+          "slot",
+          "plex"
         ],
         "title": "ReviewView"
       },

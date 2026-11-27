@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import binding, catalog, library, refsign, reviews, status
 from .. import db, settings
-from .sources.base import SOURCE_NAMES, ImageRef, PosterSet, parse_slot_id
+from .sources.base import SOURCE_NAMES, ImageRef, PosterSet, parse_slot_id, slot_id
 from ..util import season_label
 
 PLEX_STATES = {
@@ -362,6 +362,29 @@ def _pair_order(slot: str) -> tuple:
     return (slot.startswith("S:"), int(slot.split(":")[2]) if slot.startswith("S:") else 0)
 
 
+def plex_posters(review: dict, seasons: list[int]) -> list[dict]:
+    """The posters Plex shows for the slots under Review that have no file, to keep as files."""
+    item_key, kind = review["item_key"], review["kind"]
+    if review.get("type") == "movie":
+        wanted = [slot_id("movie", item_key)]
+    elif kind == "new_season" and review.get("season") is not None:
+        wanted = [slot_id("season", item_key, review["season"])]
+    else:
+        wanted = [slot_id("show", item_key)] + [slot_id("season", item_key, number) for number in seasons]
+    marks = ",".join("?" for _ in wanted)
+    rows = {row["id"]: row for row in db.get().query(f"SELECT * FROM slots WHERE id IN ({marks})", tuple(wanted))}
+    posters = []
+    for slot in wanted:
+        row = rows.get(slot)
+        if not row or row["file"]:
+            continue
+        thumb = f"/img/slot/{slot}?v=r{review['id']}"
+        label = {"movie": "Poster", "show": "Show"}.get(row["kind"]) or (
+            "Specials" if row["season"] == 0 else f"S{row['season']}")
+        posters.append({"slot": slot, "label": label, "thumb": thumb, "large": f"{thumb}&size=large"})
+    return posters
+
+
 def review_view(review: dict) -> dict:
     """One Review entry with its choices; image and set tokens are signed here."""
     data = review.get("data") or {}
@@ -391,6 +414,7 @@ def review_view(review: dict) -> dict:
     if kind in ("new_item", "new_season"):
         seasons = catalog.present_seasons(review["item_key"]) if review.get("type") == "show" else []
         view["seasons"] = seasons
+        view["plex"] = plex_posters(review, seasons)
         view["errors"] = {source_name(name): message for name, message in (data.get("errors") or {}).items()}
         for candidate in data.get("candidates", [])[:5]:
             poster_set = PosterSet.from_dict(candidate["set"])

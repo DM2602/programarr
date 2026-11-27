@@ -416,6 +416,13 @@ class SetSummary(Model):
     url: str | None = None
 
 
+class PlexPoster(Model):
+    slot: str
+    label: str
+    thumb: str
+    large: str
+
+
 class ReviewView(Model):
     id: int
     kind: str
@@ -437,6 +444,7 @@ class ReviewView(Model):
     confidence: Literal["high", "medium"] | None = None
     via: str | None = None
     slot: str | None = None
+    plex: list[PlexPoster] = []  # what Plex shows for slots without a file (new titles and seasons)
 
 
 class KindCount(Model):

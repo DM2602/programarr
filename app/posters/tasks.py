@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import time
 
-from . import apply, auto, backup, binding, catalog, detect, library, paths, reviews, status
+from . import apply, auto, backup, binding, catalog, detect, library, paths, reviews, status, views
 from .. import cache, config, db, jobs, notify, settings
 from .apply import Assignment
 from ..plex import Plex, PlexError
@@ -250,6 +250,30 @@ async def take_from_plex() -> dict:
                           f"{f', {failed} failed' if failed else ''} ({len(rows)} checked)")
     return {"checked": len(rows), "adopted": adopted, "kept": files["kept"], "restored": files["restored"],
             "unlocked": unlocked, "refreshed": refreshed, "failed": failed}
+
+
+async def keep_plex_for_review(review_id: int) -> dict:
+    """The posters Plex shows for a title or season under Review become its files."""
+    database = db.get()
+    review = database.one("SELECT * FROM reviews WHERE id=? AND status='open'", (review_id,))
+    if not review:
+        raise SourceError("This review is already done")
+    item = database.one("SELECT * FROM items WHERE key=?", (review["item_key"],))
+    if not item:
+        raise SourceError("Title not found")
+    seasons = catalog.present_seasons(item["key"]) if item["type"] == "show" else []
+    slots = [poster["slot"] for poster in views.plex_posters({**review, "type": item["type"]}, seasons)]
+    plex = Plex.from_settings()
+    kept = 0
+    for slot in slots:
+        kept += await apply.keep_plex_poster(item["key"], slot, plex)
+    if slots and not kept:
+        raise SourceError("Plex shows no poster to keep")
+    reviews.resolve(review_id)
+    if review["kind"] == "new_season" and review["season"] is not None:
+        database.update("slots", "id", f"S:{item['key']}:{review['season']}", {"waiting": 0})
+    event("info", "plex", f"Plex posters kept as files: {kept}", item["key"])
+    return {"kept": kept}
 
 
 async def backup_now() -> dict:

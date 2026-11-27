@@ -29,15 +29,17 @@ export function ZoomImage({ src, large, className, alt = "" }: { src: string; la
   const [at, setAt] = useState<Place | null>(null);
   const [loaded, setLoaded] = useState<string | null>(null);
 
+  // Started by moving the pointer, so a drawer or list that opens under a resting pointer shows nothing.
   const show = () => {
-    if (!canHover()) return;
-    window.clearTimeout(timer.current);
+    if (at || timer.current !== undefined || !canHover()) return;
     timer.current = window.setTimeout(() => {
+      timer.current = undefined;
       if (ref.current) setAt(place(ref.current.getBoundingClientRect()));
     }, 250);
   };
   const hide = () => {
     window.clearTimeout(timer.current);
+    timer.current = undefined;
     setAt(null);
   };
 
@@ -66,7 +68,7 @@ export function ZoomImage({ src, large, className, alt = "" }: { src: string; la
 
   return (
     <>
-      <img ref={ref} src={src} alt={alt} loading="lazy" className={className} onMouseEnter={show} onMouseLeave={hide} />
+      <img ref={ref} src={src} alt={alt} loading="lazy" className={className} onMouseMove={show} onMouseLeave={hide} />
       {at &&
         createPortal(
           <div

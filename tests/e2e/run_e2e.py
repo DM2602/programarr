@@ -240,6 +240,12 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         tiles = page.locator(".review-card .candidate")
         tiles.first.wait_for()
         assert tiles.count() >= 4, "movie posters side by side"
+        assert tiles.first.locator("[data-action=review-keep-plex]").count() == 1, "Plex poster first"
+        page.click(".review-card [data-action=review-pick]")
+        page.wait_for_selector(".picker[data-open] .set-tile")
+        page.keyboard.press("Escape")
+        page.wait_for_selector(".picker", state="detached")
+        assert page.url.endswith("/review?kind=new_item"), "the picker opens over Review"
         tiles.nth(1).locator("img").hover()
         page.wait_for_selector(".zoom-preview")
         page.mouse.move(0, 0)
@@ -247,7 +253,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         designer = tiles.nth(1).locator(".font-semibold").inner_text()
         tiles.nth(1).locator("[data-action=review-bind]").click()
         wait_for(lambda: (binding_of(oppenheimer) or {}).get("designer") == designer, what="Oppenheimer linked")
-        steps.ok("Movie in Review: posters side by side, enlarged on hover, one applied", page)
+        steps.ok("Movie in Review: Plex poster, sets side by side, more in the picker, enlarged on hover, one applied", page)
 
         # 9
         goto(page, "/settings/automation")

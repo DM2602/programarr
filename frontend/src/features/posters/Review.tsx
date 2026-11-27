@@ -1,9 +1,10 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
+import { ArrowTopRightOnSquareIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 import { api, errorText, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useReviews } from "../../api/queries";
+import { useItem, useReviews } from "../../api/queries";
 import { Button, ButtonLink, ExternalButton } from "../../components/Button";
 import { Tabs } from "../../components/Controls";
 import { useToast } from "../../components/Toasts";
@@ -12,6 +13,7 @@ import { imageCaption, seasonLabel, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
 import { ZoomImage } from "../../components/ZoomImage";
 import { Coverage } from "./Coverage";
+import { Picker } from "./Picker";
 
 type ReviewView = Schemas["ReviewView"];
 
@@ -74,15 +76,47 @@ function useReviewActions(review: ReviewView) {
         take ? "Taking the new posters…" : "Keeping the current posters…",
       ),
     retry: () => run(() => unwrap(api.POST("/api/items/{key}/retry", { params: { path: { key: review.item_key } } })), "Searching sets…"),
+    keepPlex: () =>
+      run(() => unwrap(api.POST("/api/reviews/{review_id}/keep-plex", { params: { path: { review_id: review.id } } })), "Keeping the Plex posters…"),
     force: (slot: string) =>
       run(() => unwrap(api.POST("/api/items/{key}/force", { params: { path: { key: review.item_key } }, body: { slot } })), "Switching Plex to the file…"),
   };
 }
 
-// Movies: one poster per designer, side by side.
-function MovieCandidates({ review, onBind }: { review: ReviewView; onBind: (token: string) => void }) {
+// The picker from the title page, opened over Review.
+function ReviewPicker({ itemKey, slotId, onClose }: { itemKey: string; slotId: string; onClose: () => void }) {
+  const { data } = useItem(itemKey);
+  return data ? <Picker detail={data} slotId={slotId} onClose={onClose} /> : null;
+}
+
+function pickerSlot(review: ReviewView): string {
+  if (review.type === "movie") return `m:${review.item_key}`;
+  if (review.kind === "new_season" && review.season !== null) return `S:${review.item_key}:${review.season}`;
+  return `s:${review.item_key}`;
+}
+
+// Movies: one poster per designer, side by side; first what Plex shows, last the way to all sources.
+function MovieCandidates({ review, onBind, onKeepPlex, onPick }: {
+  review: ReviewView;
+  onBind: (token: string) => void;
+  onKeepPlex: () => void;
+  onPick: () => void;
+}) {
+  const plex = review.plex[0];
   return (
     <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-x-3 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] sm:gap-x-4">
+      {plex && (
+        <div className="candidate plex-candidate flex min-w-0 flex-col">
+          <ZoomImage src={plex.thumb} large={plex.large} className="aspect-[2/3] w-full rounded-md object-cover ring-1 ring-gray-700" />
+          <p className="mt-2 truncate text-sm font-semibold text-gray-100">Plex</p>
+          <p className="truncate text-xs text-gray-400">Shown now</p>
+          <div className="mt-auto pt-2">
+            <Button size="sm" className="w-full" onClick={onKeepPlex} data-action="review-keep-plex">
+              Keep
+            </Button>
+          </div>
+        </div>
+      )}
       {review.candidates.map((set) => {
         const image = set.images.find((candidate) => candidate.kind === "movie") ?? set.images[0];
         const setTitle = set.title && !set.title.startsWith(review.title) ? set.title : null;
@@ -108,28 +142,62 @@ function MovieCandidates({ review, onBind }: { review: ReviewView; onBind: (toke
                 <Badge tone="green">Preferred</Badge>
               </span>
             )}
-            <Button size="sm" variant="primary" className="mt-2" onClick={() => onBind(set.token)} data-action="review-bind">
-              Apply
-            </Button>
+            <div className="mt-auto pt-2">
+              <Button size="sm" variant="primary" className="w-full" onClick={() => onBind(set.token)} data-action="review-bind">
+                Apply
+              </Button>
+            </div>
           </div>
         );
       })}
+      <button
+        type="button"
+        onClick={onPick}
+        className="flex aspect-[2/3] w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-gray-600 text-sm font-medium text-gray-300 hover:border-indigo-400 hover:text-white focus-visible:border-indigo-400"
+        data-action="review-pick"
+      >
+        <PlusIcon className="h-7 w-7" aria-hidden="true" />
+        More posters
+      </button>
     </div>
   );
 }
 
-function Candidates({ review, onBind }: { review: ReviewView; onBind: (token: string) => void }) {
-  if (!review.candidates.length) {
+function Candidates(props: { review: ReviewView; onBind: (token: string) => void; onKeepPlex: () => void; onPick: () => void }) {
+  const { review, onBind, onKeepPlex } = props;
+  const none = !review.candidates.length && (
+    <p className="mt-3 text-sm text-gray-400">
+      No sets found.
+      {Object.entries(review.errors).map(([source, message]) => ` ${source}: ${message}.`)}
+    </p>
+  );
+  if (review.type === "movie") {
     return (
-      <p className="mt-3 text-sm text-gray-400">
-        No sets found.
-        {Object.entries(review.errors).map(([source, message]) => ` ${source}: ${message}.`)}
-      </p>
+      <>
+        {none}
+        <MovieCandidates {...props} />
+      </>
     );
   }
-  if (review.type === "movie") return <MovieCandidates review={review} onBind={onBind} />;
   return (
     <div className="mt-3 space-y-3">
+      {none}
+      {review.plex.length > 0 && (
+        <div className="candidate plex-candidate rounded-md border border-gray-700 bg-gray-900/40 p-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="font-semibold text-gray-100">Plex</span>
+            <span className="text-sm text-gray-400">Shown now</span>
+          </div>
+          <div className="mt-2">
+            <Thumbs images={review.plex.map((poster) => ({ src: poster.thumb, large: poster.large, caption: poster.label }))} />
+          </div>
+          <div className="mt-2">
+            <Button size="sm" onClick={onKeepPlex} data-action="review-keep-plex">
+              Keep
+            </Button>
+          </div>
+        </div>
+      )}
       {review.candidates.map((set) => {
         let images = set.images;
         if (review.kind === "new_season" && review.season !== null) {
@@ -173,6 +241,7 @@ function Candidates({ review, onBind }: { review: ReviewView; onBind: (token: st
 
 export function ReviewCard({ review }: { review: ReviewView }) {
   const actions = useReviewActions(review);
+  const [picking, setPicking] = useState(false);
   const heading = (
     <Link to={`/item/${review.item_key}`} className="hover:underline">
       {review.title}
@@ -196,11 +265,14 @@ export function ReviewCard({ review }: { review: ReviewView }) {
 
         {(review.kind === "new_item" || review.kind === "new_season") && (
           <>
-            <Candidates review={review} onBind={(token) => void actions.bind(token)} />
+            <Candidates review={review} onBind={(token) => void actions.bind(token)} onKeepPlex={() => void actions.keepPlex()} onPick={() => setPicking(true)} />
+            {picking && <ReviewPicker itemKey={review.item_key} slotId={pickerSlot(review)} onClose={() => setPicking(false)} />}
             <div className="mt-3 flex flex-wrap gap-2">
-              <ButtonLink to={`/item/${review.item_key}`} size="sm">
-                Pick myself
-              </ButtonLink>
+              {review.type !== "movie" && (
+                <Button size="sm" onClick={() => setPicking(true)} data-action="review-pick">
+                  Pick myself
+                </Button>
+              )}
               {review.kind === "new_item" && (
                 <Button size="sm" variant="ghost" onClick={() => void actions.retry()}>
                   Search again
