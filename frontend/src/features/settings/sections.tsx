@@ -1,11 +1,12 @@
 import { ArrowDownIcon, ArrowUpIcon, ClipboardDocumentIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { api, errorText, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
 import { useBackup } from "../../api/queries";
 import { Button } from "../../components/Button";
 import { useToast } from "../../components/Toasts";
+import { copyText } from "../../lib/clipboard";
 import { fileSize, plural } from "../../lib/format";
 import { CheckRow, NumberField, Row, SaveBar, SecretField, SelectRow, SettingsSection, TestButton, TextField, typed, useSettingsForm, type Form } from "./fields";
 
@@ -395,17 +396,18 @@ export function NotificationsSection({ view }: { view: View }) {
 // -- Webhooks -----------------------------------------------------------------------------------
 function CopyLine({ value, label }: { value: string; label: string }) {
   const toast = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
+    if (await copyText(value, inputRef.current)) {
       toast.show("Copied", { kind: "success", timeout: 2000 });
-    } catch {
-      toast.show("Copy failed, select the text instead", { kind: "error" });
+    } else {
+      inputRef.current?.select();
+      toast.show("Selected, press Ctrl+C to copy", { kind: "info" });
     }
   };
   return (
     <div className="flex gap-2">
-      <input readOnly className="field-input font-mono text-xs" value={value} aria-label={label} onFocus={(event) => event.target.select()} />
+      <input ref={inputRef} readOnly className="field-input font-mono text-xs" value={value} aria-label={label} onFocus={(event) => event.target.select()} />
       <Button size="sm" onClick={copy} icon={<ClipboardDocumentIcon className="h-4 w-4" />}>
         Copy
       </Button>

@@ -1313,6 +1313,58 @@
         }
       }
     },
+    "/api/items/{key}/keep": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Keep",
+        "operationId": "item_keep_api_items__key__keep_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/items/{key}/remove": {
       "post": {
         "tags": [
@@ -4735,6 +4787,39 @@
           "match_open"
         ],
         "title": "Counts"
+      },
+      "CurrentPoster": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "large": {
+            "type": "string",
+            "title": "Large"
+          },
+          "file": {
+            "type": "boolean",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "label",
+          "thumb",
+          "large",
+          "file"
+        ],
+        "title": "CurrentPoster"
       },
       "Designer": {
         "properties": {
@@ -8746,34 +8831,6 @@
         ],
         "title": "PathMap"
       },
-      "PlexPoster": {
-        "properties": {
-          "slot": {
-            "type": "string",
-            "title": "Slot"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "thumb": {
-            "type": "string",
-            "title": "Thumb"
-          },
-          "large": {
-            "type": "string",
-            "title": "Large"
-          }
-        },
-        "type": "object",
-        "required": [
-          "slot",
-          "label",
-          "thumb",
-          "large"
-        ],
-        "title": "PlexPoster"
-      },
       "PortCount": {
         "properties": {
           "key": {
@@ -9102,12 +9159,12 @@
             ],
             "title": "Slot"
           },
-          "plex": {
+          "current": {
             "items": {
-              "$ref": "#/components/schemas/PlexPoster"
+              "$ref": "#/components/schemas/CurrentPoster"
             },
             "type": "array",
-            "title": "Plex",
+            "title": "Current",
             "default": []
           }
         },
@@ -9133,7 +9190,7 @@
           "confidence",
           "via",
           "slot",
-          "plex"
+          "current"
         ],
         "title": "ReviewView"
       },

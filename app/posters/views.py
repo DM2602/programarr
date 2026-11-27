@@ -362,8 +362,8 @@ def _pair_order(slot: str) -> tuple:
     return (slot.startswith("S:"), int(slot.split(":")[2]) if slot.startswith("S:") else 0)
 
 
-def plex_posters(review: dict, seasons: list[int]) -> list[dict]:
-    """The posters Plex shows for the slots under Review that have no file, to keep as files."""
+def current_posters(review: dict, seasons: list[int]) -> list[dict]:
+    """What the slots under Review show now (the file in the folder, else Plex' poster), to keep."""
     item_key, kind = review["item_key"], review["kind"]
     if review.get("type") == "movie":
         wanted = [slot_id("movie", item_key)]
@@ -376,12 +376,12 @@ def plex_posters(review: dict, seasons: list[int]) -> list[dict]:
     posters = []
     for slot in wanted:
         row = rows.get(slot)
-        if not row or row["file"]:
+        if not row:
             continue
-        thumb = f"/img/slot/{slot}?v=r{review['id']}"
+        thumb = f"/img/slot/{slot}?v=r{review['id']}{(row['file_sha1'] or '')[:8]}"
         label = {"movie": "Poster", "show": "Show"}.get(row["kind"]) or (
             "Specials" if row["season"] == 0 else f"S{row['season']}")
-        posters.append({"slot": slot, "label": label, "thumb": thumb, "large": f"{thumb}&size=large"})
+        posters.append({"slot": slot, "label": label, "thumb": thumb, "large": f"{thumb}&size=large", "file": bool(row["file"])})
     return posters
 
 
@@ -414,7 +414,7 @@ def review_view(review: dict) -> dict:
     if kind in ("new_item", "new_season"):
         seasons = catalog.present_seasons(review["item_key"]) if review.get("type") == "show" else []
         view["seasons"] = seasons
-        view["plex"] = plex_posters(review, seasons)
+        view["current"] = current_posters(review, seasons)
         view["errors"] = {source_name(name): message for name, message in (data.get("errors") or {}).items()}
         for candidate in data.get("candidates", [])[:5]:
             poster_set = PosterSet.from_dict(candidate["set"])

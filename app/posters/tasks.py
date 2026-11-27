@@ -253,7 +253,8 @@ async def take_from_plex() -> dict:
 
 
 async def keep_plex_for_review(review_id: int) -> dict:
-    """The posters Plex shows for a title or season under Review become its files."""
+    """Keep what a title or season under Review shows now: files in the folder stay, the posters
+    Plex shows become files."""
     database = db.get()
     review = database.one("SELECT * FROM reviews WHERE id=? AND status='open'", (review_id,))
     if not review:
@@ -262,17 +263,17 @@ async def keep_plex_for_review(review_id: int) -> dict:
     if not item:
         raise SourceError("Title not found")
     seasons = catalog.present_seasons(item["key"]) if item["type"] == "show" else []
-    slots = [poster["slot"] for poster in views.plex_posters({**review, "type": item["type"]}, seasons)]
+    slots = [poster["slot"] for poster in views.current_posters({**review, "type": item["type"]}, seasons)]
     plex = Plex.from_settings()
     kept = 0
     for slot in slots:
-        kept += await apply.keep_plex_poster(item["key"], slot, plex)
+        kept += await _keep(item, slot, plex)
     if slots and not kept:
         raise SourceError("Plex shows no poster to keep")
     reviews.resolve(review_id)
     if review["kind"] == "new_season" and review["season"] is not None:
         database.update("slots", "id", f"S:{item['key']}:{review['season']}", {"waiting": 0})
-    event("info", "plex", f"Plex posters kept as files: {kept}", item["key"])
+    event("info", "plex", f"Current posters kept: {kept}", item["key"])
     return {"kept": kept}
 
 
@@ -356,15 +357,43 @@ async def maintenance() -> dict:
     return result
 
 
+def _slot_decided(item_key: str, slot: str) -> None:
+    """A poster was chosen for the slot: the reviews asking for one are done."""
+    reviews.resolve_for(item_key, ("new_item", "plex"))
+    if slot.split(":")[0] == "S":
+        reviews.resolve_for(item_key, ("new_season",), season=int(slot.split(":")[2]), any_season=False)
+        db.get().update("slots", "id", slot, {"waiting": 0})
+
+
 async def apply_image(item_key: str, slot: str, ref: dict, mode: str = "manual") -> dict:
     outcomes = await apply.apply(item_key, [Assignment(slot, ImageRef.from_dict(ref))], "manual", mode)
     if outcomes and outcomes[0].ok:
-        reviews.resolve_for(item_key, ("new_item", "plex"))
-        kind = slot.split(":")[0]
-        if kind == "S":
-            reviews.resolve_for(item_key, ("new_season",), season=int(slot.split(":")[2]), any_season=False)
-            db.get().update("slots", "id", slot, {"waiting": 0})
+        _slot_decided(item_key, slot)
     return {"outcomes": [o.public() for o in outcomes]}
+
+
+async def _keep(item: dict, slot: str, plex: Plex) -> bool:
+    """Keep what the slot shows now: the file in the folder (Plex reads it again if it shows another
+    poster), or the poster Plex shows, saved as file."""
+    row = db.get().one("SELECT * FROM slots WHERE id=?", (slot,))
+    if not row:
+        return False
+    if row["file"]:
+        if row["plex_state"] not in ("ok", None):
+            await apply.refresh_in_plex(item, [slot], plex)
+        return True
+    return await apply.keep_plex_poster(item["key"], slot, plex)
+
+
+async def keep_current(item_key: str, slot: str) -> dict:
+    item = db.get().one("SELECT * FROM items WHERE key=?", (item_key,))
+    if not item:
+        raise SourceError("Title not found")
+    had_file = bool(db.get().scalar("SELECT file FROM slots WHERE id=?", (slot,)))
+    if not await _keep(item, slot, Plex.from_settings()):
+        raise SourceError("Plex shows no poster to keep")
+    _slot_decided(item_key, slot)
+    return {"kept": 1, "message": "File kept" if had_file else "Plex poster kept as file"}
 
 
 async def bind_set(item_key: str, poster_set: dict, replace_all: bool = True, review_id: int | None = None) -> dict:

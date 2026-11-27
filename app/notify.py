@@ -2,12 +2,19 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import json
+import re
+from pathlib import Path
 
 import httpx
 
 from . import http, imaging, settings
 from .config import APP_NAME
+
+AVATAR = Path(__file__).parent / "assets" / "avatar.png"
+WEBHOOK_PATH = re.compile(r"^/api(/v\d+)?/webhooks/\d+/[\w-]+$")
 
 COLORS = {
     "auto": 0x3FA36B,
@@ -23,6 +30,27 @@ COLORS = {
 }
 
 
+async def set_avatar(url: str) -> bool:
+    """Gives the webhook Programarr's mark as picture. A message can only name a picture by a public
+    address, which Programarr does not have, so the webhook itself gets it (once per webhook URL)."""
+    parsed = httpx.URL(url)
+    if not WEBHOOK_PATH.match(parsed.path):
+        return False
+    data = "data:image/png;base64," + base64.b64encode(AVATAR.read_bytes()).decode()
+    try:
+        async with http.client(timeout=15.0) as client:
+            response = await client.patch(str(parsed.copy_with(query=None)), json={"avatar": data})
+    except httpx.HTTPError:
+        return False
+    return response.status_code < 300
+
+
+async def _ensure_avatar(url: str) -> None:
+    mark = hashlib.sha1(url.encode()).hexdigest()[:16]
+    if settings.get("discord_avatar_for") != mark and await set_avatar(url):
+        settings.set("discord_avatar_for", mark)
+
+
 async def send(kind: str, title: str, description: str = "", image: bytes | None = None,
                item_key: str | None = None, fields: list[tuple[str, str]] | None = None,
                webhook: str | None = None, path: str | None = None) -> bool:
@@ -31,6 +59,7 @@ async def send(kind: str, title: str, description: str = "", image: bytes | None
         return False
     if kind != "test" and not settings.get("discord_events").get(kind, True):
         return False
+    await _ensure_avatar(url)
     embed: dict = {
         "title": title[:250],
         "description": description[:3500],

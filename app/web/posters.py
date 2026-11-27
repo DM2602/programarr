@@ -240,6 +240,13 @@ async def item_force(key: str, body: SlotBody):
     return start_job("force", f"Select file in Plex: {item['title']}", tasks.force_local, key, body.slot)
 
 
+@router.post("/items/{key}/keep", response_model=JobStarted)
+async def item_keep(key: str, body: SlotBody):
+    item = item_or_404(key)
+    slot_of(item, body.slot)
+    return start_job("keep", f"Keep the current poster: {item['title']}", tasks.keep_current, key, body.slot)
+
+
 @router.post("/items/{key}/remove", response_model=JobStarted)
 async def item_remove(key: str, body: SlotBody):
     item = item_or_404(key)
@@ -330,7 +337,7 @@ async def review_dismiss(review_id: int):
 
 @router.post("/reviews/{review_id}/keep-plex", response_model=JobStarted)
 async def review_keep_plex(review_id: int):
-    return start_job("keep_plex", "Keep the Plex posters", tasks.keep_plex_for_review, review_id)
+    return start_job("keep_plex", "Keep the current posters", tasks.keep_plex_for_review, review_id)
 
 
 @router.post("/reviews/{review_id}/accept", response_model=JobStarted)

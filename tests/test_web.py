@@ -169,6 +169,10 @@ def test_connection_tests(world, client):
     assert client.post("/api/test/tmdb", json={}).json()["ok"]
     assert client.post("/api/test/discord", json={}).json()["ok"]
     assert world.discord.titles()[-1] == "Programarr is connected"
+    assert len(world.discord.avatars) == 1 and world.discord.avatars[0].startswith("data:image/png;base64,")
+    assert world.discord.messages[-1]["username"] == "Programarr"
+    assert client.post("/api/test/discord", json={}).json()["ok"]
+    assert len(world.discord.avatars) == 1  # once per webhook
     bad = client.post("/api/test/plex", json={"value": "wrong"}).json()
     assert not bad["ok"] and "token" in bad["message"].lower()
     assert client.post("/api/test/nothing", json={}).status_code == 404
@@ -242,10 +246,11 @@ def test_review_keeps_the_plex_posters(world, client):
     movie_review = reviews.add(movie, "new_item", "No set from a preferred designer")
     show_review = reviews.add(show, "new_item", "No set from a preferred designer")
     page = {r["id"]: r for r in client.get("/api/reviews").json()["reviews"]}
-    plex = page[movie_review]["plex"]
+    plex = page[movie_review]["current"]
     assert [p["slot"] for p in plex] == [f"m:{movie}"] and plex[0]["large"].endswith("&size=large")
+    assert plex[0]["file"] is False
     assert client.get(plex[0]["large"]).status_code == 200
-    assert [p["label"] for p in page[show_review]["plex"]] == ["Show", "S1", "S2"]
+    assert [p["label"] for p in page[show_review]["current"]] == ["Show", "S1", "S2"]
     job = run(client, "POST", f"/api/reviews/{movie_review}/keep-plex")
     assert job["status"] == "done" and job["result"]["kept"] == 1
     poster = world.media / "movies" / "Dune (2021)" / "poster.jpg"
@@ -255,6 +260,29 @@ def test_review_keeps_the_plex_posters(world, client):
     assert not reviews.open_items()
     assert client.get(f"/img/slot/m:{movie}?size=large").headers["content-type"] == "image/jpeg"
     assert run(client, "POST", f"/api/reviews/{movie_review}/keep-plex")["status"] == "failed"
+
+
+def test_keep_the_current_poster(world, client):
+    from tests.fakes.images import poster_for
+
+    show, movie = setup_library(world, client)
+    review = reviews.add(movie, "new_item", "No set from a preferred designer")
+    job = run(client, "POST", f"/api/items/{movie}/keep", json={"slot": f"m:{movie}"})
+    assert job["result"]["kept"] == 1 and job["result"]["message"] == "Plex poster kept as file"
+    assert (world.media / "movies" / "Dune (2021)" / "poster.jpg").exists()
+    assert not reviews.open_items()
+    # A file someone put in the folder: kept as it is, the review closes
+    season_file = world.media / "tv" / "Severance (2022)" / "Season 01" / "Season01.jpg"
+    season_file.write_bytes(poster_for("by-hand"))
+    run(client, "POST", f"/api/items/{show}/rescan")
+    review = reviews.add(show, "new_season", "No set", season=1)
+    current = {p["slot"]: p for p in client.get("/api/reviews").json()["reviews"][0]["current"]}
+    assert current[f"S:{show}:1"]["file"] is True
+    job = run(client, "POST", f"/api/reviews/{review}/keep-plex")
+    assert job["result"]["kept"] == 1 and not reviews.open_items()
+    assert season_file.read_bytes() == poster_for("by-hand")
+    job = run(client, "POST", f"/api/items/{show}/keep", json={"slot": f"S:{show}:1"})
+    assert job["result"]["message"] == "File kept"
 
 
 def test_new_title_review_offers_signed_sets(world, client):

@@ -1,9 +1,11 @@
 import { ArrowPathIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
+import { siRadarr, siSonarr } from "simple-icons";
 import { api, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
 import { useExclusions } from "../../api/queries";
+import { BrandIcon, MonoBrandIcon } from "../../components/BrandIcon";
 import { Button } from "../../components/Button";
 import { Segmented } from "../../components/Controls";
 import { useDialogs } from "../../components/Dialogs";
@@ -154,7 +156,8 @@ export function Exclusions() {
 
 function ExclusionRow({ row, onRemove }: { row: Row; onRemove: () => void }) {
   const service = row.service ? SERVICE_LABELS[row.service] : null;
-  const origin = row.id === null && service ? `From ${service}` : row.reason;
+  const fromService = row.id === null && row.service ? row.service : null;
+  const serviceIcon = row.service === "sonarr" ? siSonarr : siRadarr;
   return (
     <div
       className="exclusion flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center"
@@ -175,9 +178,17 @@ function ExclusionRow({ row, onRemove }: { row: Row; onRemove: () => void }) {
               </Link>
             )}
           </p>
-          <p className="text-sm text-gray-400">
-            {origin ? `${origin}, ` : ""}
-            {dateOnly(row.created_at)}
+          <p className="flex items-center gap-1.5 text-sm text-gray-400">
+            {fromService && (
+              <span title={`From ${SERVICE_LABELS[fromService]}`} className="inline-flex">
+                <BrandIcon icon={serviceIcon} />
+                <span className="sr-only">From {SERVICE_LABELS[fromService]}</span>
+              </span>
+            )}
+            <span>
+              {!fromService && row.reason ? `${row.reason}, ` : ""}
+              {dateOnly(row.created_at)}
+            </span>
           </p>
           {row.media && <Ratings media={row.media} />}
         </div>
@@ -185,11 +196,11 @@ function ExclusionRow({ row, onRemove }: { row: Row; onRemove: () => void }) {
       <div className="flex items-center gap-3 self-end sm:self-auto">
         {service &&
           (row.pending ? (
-            <Badge tone="yellow" title={`Goes to ${service} at the next sync`}>
+            <Badge tone="yellow" title={`Goes to ${service} at the next sync`} icon={<MonoBrandIcon icon={serviceIcon} />}>
               {service} pending
             </Badge>
           ) : (
-            <Badge tone="gray" title={`On the ${service} exclusion list`}>
+            <Badge tone="gray" title={`On the ${service} exclusion list`} icon={<BrandIcon icon={serviceIcon} className="h-3.5 w-3.5" />}>
               {service}
             </Badge>
           ))}

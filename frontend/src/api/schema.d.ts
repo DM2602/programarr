@@ -544,6 +544,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/items/{key}/keep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Item Keep */
+        post: operations["item_keep_api_items__key__keep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/items/{key}/remove": {
         parameters: {
             query?: never;
@@ -1844,6 +1861,19 @@ export interface components {
              */
             match_open: number;
         };
+        /** CurrentPoster */
+        CurrentPoster: {
+            /** Slot */
+            slot: string;
+            /** Label */
+            label: string;
+            /** Thumb */
+            thumb: string;
+            /** Large */
+            large: string;
+            /** File */
+            file: boolean;
+        };
         /** Designer */
         Designer: {
             /**
@@ -3057,17 +3087,6 @@ export interface components {
             /** Local */
             local: string;
         };
-        /** PlexPoster */
-        PlexPoster: {
-            /** Slot */
-            slot: string;
-            /** Label */
-            label: string;
-            /** Thumb */
-            thumb: string;
-            /** Large */
-            large: string;
-        };
         /** PortCount */
         PortCount: {
             /** Key */
@@ -3172,10 +3191,10 @@ export interface components {
             /** Slot */
             slot: string | null;
             /**
-             * Plex
+             * Current
              * @default []
              */
-            plex: components["schemas"]["PlexPoster"][];
+            current: components["schemas"]["CurrentPoster"][];
         };
         /** ReviewsPage */
         ReviewsPage: {
@@ -4738,6 +4757,41 @@ export interface operations {
         };
     };
     item_force_api_items__key__force_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlotBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    item_keep_api_items__key__keep_post: {
         parameters: {
             query?: never;
             header?: never;

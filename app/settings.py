@@ -102,6 +102,7 @@ DEFAULTS: dict[str, Any] = {
     "last_sync": 0,
     "last_set_check": 0,
     "last_folder_check": 0,
+    "discord_avatar_for": "",
 }
 
 SECRETS = {
@@ -118,7 +119,8 @@ SECRETS = {
     "sonarr_key",
 }
 
-INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "last_folder_check", "tpdb_cookies"}
+INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "last_folder_check", "tpdb_cookies",
+            "discord_avatar_for"}
 
 _cache: dict[str, Any] | None = None
 

@@ -53,7 +53,6 @@ function ImageChoice({ image, caption, context, chosen, onChoose, match = false,
       className={`image-choice group ${width} shrink-0 text-left disabled:cursor-default`}
       aria-pressed={selected}
       data-match={match || undefined}
-      disabled={current}
       title={current ? `${context} (current file)` : context}
       onClick={() => onChoose({ image, context })}
     >
@@ -292,7 +291,15 @@ function PlexTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slo
   return (
     <div className="flex flex-wrap gap-3">
       {data.images.map((image) => (
-        <ImageChoice key={image.token} image={image} caption={image.label} context={`Plex: ${image.label}`} chosen={chosen} onChoose={onChoose} current={image.local} />
+        <ImageChoice
+          key={image.token}
+          image={image}
+          caption={image.selected && !image.local ? "Shown in Plex" : image.label}
+          context={image.local ? "File in folder" : `Plex: ${image.label}`}
+          chosen={chosen}
+          onChoose={onChoose}
+          current={image.local}
+        />
       ))}
     </div>
   );
@@ -438,10 +445,15 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
   const heading = slot.kind === "season" ? `${detail.item.title}, ${slot.label}` : detail.item.title;
   const target = slot.kind === "season" ? slot.label : isShow ? "the show" : "the movie";
 
+  const keepFile = chosen?.image.local === true;
   const apply = () => {
     if (!chosen) return;
     const token = chosen.image.token;
     close();
+    if (keepFile) {
+      void run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping the file…");
+      return;
+    }
     void run(() => unwrap(api.POST("/api/items/{key}/apply", { params: { path: { key } }, body: { slot: slot.id, token } })), "Setting poster…");
   };
   const applySet = (set: SetView) => {
@@ -497,7 +509,7 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
             )}
           </div>
           <Button variant="primary" disabled={!chosen} onClick={apply} data-action="apply-image">
-            Apply to {target}
+            {keepFile ? "Keep the file" : `Apply to ${target}`}
           </Button>
         </div>
       </div>

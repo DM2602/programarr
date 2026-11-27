@@ -73,6 +73,17 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
             Remove
           </Button>
         )}
+        {!slot.file && !slot.gone && (
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Save the poster Plex shows as file"
+            onClick={() => run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping the Plex poster…")}
+            data-action="keep"
+          >
+            Keep
+          </Button>
+        )}
         {slot.waiting && (
           <Button
             size="sm"

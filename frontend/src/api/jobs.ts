@@ -76,7 +76,7 @@ export function jobMessage(job: Job): string {
       return `${text} (${r.checked ?? 0} checked)`;
     }
     case "keep_plex":
-      return r.kept ? `${plural(r.kept, "Plex poster", "Plex posters")} kept as files` : "Review closed";
+      return r.kept ? `${plural(r.kept, "poster", "posters")} kept` : "Review closed";
     case "backup":
       return r.saved ? `${plural(r.saved, "poster", "posters")} backed up` : "Backup is up to date";
     case "restore_backup":

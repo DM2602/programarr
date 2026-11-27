@@ -83,6 +83,11 @@ function useReviewActions(review: ReviewView) {
   };
 }
 
+function currentSource(posters: ReviewView["current"]): string {
+  const files = posters.filter((poster) => poster.file).length;
+  return files === posters.length ? "In the folder" : files ? "In the folder and from Plex" : "From Plex";
+}
+
 // The picker from the title page, opened over Review.
 function ReviewPicker({ itemKey, slotId, onClose }: { itemKey: string; slotId: string; onClose: () => void }) {
   const { data } = useItem(itemKey);
@@ -102,14 +107,14 @@ function MovieCandidates({ review, onBind, onKeepPlex, onPick }: {
   onKeepPlex: () => void;
   onPick: () => void;
 }) {
-  const plex = review.plex[0];
+  const current = review.current[0];
   return (
     <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-x-3 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] sm:gap-x-4">
-      {plex && (
-        <div className="candidate plex-candidate flex min-w-0 flex-col">
-          <ZoomImage src={plex.thumb} large={plex.large} className="aspect-[2/3] w-full rounded-md object-cover ring-1 ring-gray-700" />
-          <p className="mt-2 truncate text-sm font-semibold text-gray-100">Plex</p>
-          <p className="truncate text-xs text-gray-400">Shown now</p>
+      {current && (
+        <div className="candidate current-candidate flex min-w-0 flex-col">
+          <ZoomImage src={current.thumb} large={current.large} className="aspect-[2/3] w-full rounded-md object-cover ring-1 ring-gray-700" />
+          <p className="mt-2 truncate text-sm font-semibold text-gray-100">{current.file ? "File in folder" : "Plex"}</p>
+          <p className="truncate text-xs text-gray-400">Current poster</p>
           <div className="mt-auto pt-2">
             <Button size="sm" className="w-full" onClick={onKeepPlex} data-action="review-keep-plex">
               Keep
@@ -182,14 +187,14 @@ function Candidates(props: { review: ReviewView; onBind: (token: string) => void
   return (
     <div className="mt-3 space-y-3">
       {none}
-      {review.plex.length > 0 && (
-        <div className="candidate plex-candidate rounded-md border border-gray-700 bg-gray-900/40 p-3">
+      {review.current.length > 0 && (
+        <div className="candidate current-candidate rounded-md border border-gray-700 bg-gray-900/40 p-3">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-semibold text-gray-100">Plex</span>
-            <span className="text-sm text-gray-400">Shown now</span>
+            <span className="font-semibold text-gray-100">Current posters</span>
+            <span className="text-sm text-gray-400">{currentSource(review.current)}</span>
           </div>
           <div className="mt-2">
-            <Thumbs images={review.plex.map((poster) => ({ src: poster.thumb, large: poster.large, caption: poster.label }))} />
+            <Thumbs images={review.current.map((poster) => ({ src: poster.thumb, large: poster.large, caption: poster.label }))} />
           </div>
           <div className="mt-2">
             <Button size="sm" onClick={onKeepPlex} data-action="review-keep-plex">

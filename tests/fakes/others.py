@@ -277,6 +277,7 @@ class FakeTvmaze:
 class FakeDiscord:
     def __init__(self):
         self.messages: list[dict] = []
+        self.avatars: list[str] = []
         self.app = self._make_app()
 
     def _make_app(self) -> FastAPI:
@@ -296,6 +297,11 @@ class FakeDiscord:
                 payload["_files"] = []
             fake.messages.append(payload)
             return Response(status_code=204)
+
+        @app.patch("/api/webhooks/{hook_id}/{token}")
+        async def modify(request: Request):
+            fake.avatars.append((await request.json())["avatar"])
+            return {"id": request.path_params["hook_id"], "name": "Captain Hook"}
 
         return app
 

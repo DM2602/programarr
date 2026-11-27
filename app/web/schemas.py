@@ -416,11 +416,12 @@ class SetSummary(Model):
     url: str | None = None
 
 
-class PlexPoster(Model):
+class CurrentPoster(Model):
     slot: str
     label: str
     thumb: str
     large: str
+    file: bool  # the file in the folder; else what Plex shows
 
 
 class ReviewView(Model):
@@ -444,7 +445,7 @@ class ReviewView(Model):
     confidence: Literal["high", "medium"] | None = None
     via: str | None = None
     slot: str | None = None
-    plex: list[PlexPoster] = []  # what Plex shows for slots without a file (new titles and seasons)
+    current: list[CurrentPoster] = []  # what the slots show now (new titles and seasons), to keep
 
 
 class KindCount(Model):
