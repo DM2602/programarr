@@ -56,7 +56,7 @@ export function Logs() {
           ))}
         </Card>
       ) : (
-        <Empty title="Nothing logged" />
+        <Empty title="No entries" />
       )}
     </>
   );

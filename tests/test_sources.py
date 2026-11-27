@@ -115,7 +115,7 @@ async def test_online_sources(world):
     fan_season = await fanart.images(show, "season", 2)
     assert len(fan_season) == 1
     maze = await tvmaze.images(show, "show", None)
-    assert maze and maze[0].label == "Hauptposter"
+    assert maze and maze[0].label == "Main poster"
     maze_season = await tvmaze.images(show, "season", 2)
     assert maze_season[0].url.endswith("-s2.jpg")
     data, _ = await sources.fetch(maze_season[0])

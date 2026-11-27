@@ -66,7 +66,7 @@ async def images(item: dict, kind: str, season: int | None) -> list[ImageRef]:
                 refs.append(ImageRef("tvmaze", str(entry.get("id")), "show", None, original, medium,
                                      width=(res.get("original") or {}).get("width"),
                                      height=(res.get("original") or {}).get("height"),
-                                     label="Hauptposter" if entry.get("main") else "Poster"))
+                                     label="Main poster" if entry.get("main") else "Poster"))
     else:
         data = cache.get(f"tvmaze:seasons:{ident}")
         if data is None:

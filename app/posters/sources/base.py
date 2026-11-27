@@ -13,8 +13,9 @@ SOURCE_NAMES = {
     "tvmaze": "TVmaze",
     "url": "Link",
     "upload": "Upload",
-    "extern": "Changed in folder",
+    "extern": "File in folder",
     "archive": "Archive",
+    "backup": "Backup",
 }
 
 

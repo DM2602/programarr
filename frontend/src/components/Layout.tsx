@@ -2,6 +2,7 @@ import {
   ArchiveBoxIcon,
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
+  ClipboardDocumentListIcon,
   ClockIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
@@ -11,6 +12,7 @@ import {
   MagnifyingGlassIcon,
   NoSymbolIcon,
   QueueListIcon,
+  ShareIcon,
   Squares2X2Icon,
   TableCellsIcon,
   XMarkIcon,
@@ -58,7 +60,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const posters: NavItem[] = [
     { to: "/library", label: "Library", icon: Squares2X2Icon },
     { to: "/review", label: "Review", icon: InboxStackIcon, count: counts?.review },
-    { to: "/waiting", label: "Waiting", icon: ClockIcon, count: counts?.waiting },
+    { to: "/pending", label: "Pending", icon: ClockIcon, count: counts?.pending },
     { to: "/match", label: "Match existing", icon: LinkIcon },
     { to: "/history", label: "History", icon: ArchiveBoxIcon },
   ];
@@ -66,6 +68,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     { to: "/lists", label: "Lists", icon: QueueListIcon, end: true },
     { to: "/lists/matches", label: "Match log", icon: TableCellsIcon, count: counts?.match_open },
     { to: "/lists/exclusions", label: "Exclusions", icon: NoSymbolIcon },
+  ];
+  const flows: NavItem[] = [
+    { to: "/flows", label: "Flows", icon: ShareIcon, end: true },
+    { to: "/flows/history", label: "Flow history", icon: ClipboardDocumentListIcon },
   ];
   const system: NavItem[] = [
     { to: "/logs", label: "Logs", icon: DocumentTextIcon },
@@ -87,6 +93,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
         <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Lists</p>
         {lists.map((item) => (
+          <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
+        ))}
+        <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Flows</p>
+        {flows.map((item) => (
           <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
         ))}
         <div className="mt-auto pt-6">

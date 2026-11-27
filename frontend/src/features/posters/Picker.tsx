@@ -5,12 +5,13 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type DragEvent, ty
 import { createPortal } from "react-dom";
 import { api, errorText, unwrap, uploadImage, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useOnlineImages, usePlexImages, useSets } from "../../api/queries";
+import { useItem, useOnlineImages, usePlexImages, useSets } from "../../api/queries";
 import { Button, ExternalButton } from "../../components/Button";
 import { Tabs } from "../../components/Controls";
 import { useToast } from "../../components/Toasts";
 import { Badge, Empty, Loading, Notice } from "../../components/ui";
 import { useFocusTrap } from "../../components/useFocusTrap";
+import { ZoomImage } from "../../components/ZoomImage";
 import { hostOf, imageCaption } from "../../lib/format";
 import { Coverage } from "./Coverage";
 
@@ -34,7 +35,7 @@ function matchesSlot(slot: Slot, image: Image): boolean {
   return image.kind === slot.kind;
 }
 
-function ImageChoice({ image, caption, context, chosen, onChoose, match = false, current = false }: {
+function ImageChoice({ image, caption, context, chosen, onChoose, match = false, current = false, width = "w-28", showCaption = true }: {
   image: Image;
   caption?: string;
   context: string;
@@ -42,15 +43,16 @@ function ImageChoice({ image, caption, context, chosen, onChoose, match = false,
   onChoose: (choice: Chosen) => void;
   match?: boolean;
   current?: boolean;
+  width?: string;
+  showCaption?: boolean;
 }) {
   const selected = chosen?.image.token === image.token;
   return (
     <button
       type="button"
-      className="image-choice group w-28 shrink-0 text-left disabled:cursor-default"
+      className={`image-choice group ${width} shrink-0 text-left disabled:cursor-default`}
       aria-pressed={selected}
       data-match={match || undefined}
-      disabled={current}
       title={current ? `${context} (current file)` : context}
       onClick={() => onChoose({ image, context })}
     >
@@ -59,17 +61,60 @@ function ImageChoice({ image, caption, context, chosen, onChoose, match = false,
           selected ? "ring-2 ring-white" : match ? "ring-2 ring-indigo-500" : "ring-1 ring-gray-700 group-hover:ring-gray-400"
         }`}
       >
-        <img src={image.thumb} alt="" loading="lazy" className="h-full w-full object-cover" />
+        <ZoomImage src={image.thumb} large={image.large} className="h-full w-full object-cover" />
         {selected && (
           <span className="absolute top-1 right-1 rounded-full bg-white p-0.5 text-gray-900">
             <CheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         )}
       </span>
-      <span className={`mt-1 block truncate text-xs ${match ? "font-semibold text-indigo-300" : "text-gray-400"}`}>
-        {current ? "File in folder" : caption || image.label || " "}
-      </span>
+      {showCaption && (
+        <span className={`mt-1 block truncate text-xs ${match ? "font-semibold text-indigo-300" : "text-gray-400"}`}>
+          {current ? "File in folder" : caption || image.label || " "}
+        </span>
+      )}
     </button>
+  );
+}
+
+function movieImage(set: SetView): Image | undefined {
+  return set.images.find((image) => image.kind === "movie");
+}
+
+// Movies: one poster per designer, side by side.
+function MovieSetTile({ set, title, chosen, onChoose, onApplySet }: {
+  set: SetView;
+  title: string;
+  chosen: Chosen | null;
+  onChoose: (choice: Chosen) => void;
+  onApplySet: (set: SetView) => void;
+}) {
+  const image = movieImage(set)!;
+  const setTitle = set.title && !set.title.startsWith(title) ? set.title : null;
+  return (
+    <div className="set-tile flex min-w-0 flex-col" data-set={set.set_key}>
+      <ImageChoice image={image} context={`Poster from ${set.title} by ${set.designer}`} chosen={chosen} onChoose={onChoose} width="w-full" showCaption={false} />
+      <div className="mt-2 flex items-center gap-1">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-100" title={set.designer}>
+          {set.designer || "Unknown designer"}
+        </span>
+        {set.url && <ExternalButton href={set.url} icon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />} label={`View at ${set.source_label}`} />}
+      </div>
+      <p className="truncate text-xs text-gray-400" title={setTitle ?? undefined}>
+        {set.source_label}
+        {setTitle ? `, ${setTitle}` : ""}
+      </p>
+      {(set.bound || set.rank !== null || set.hidden) && (
+        <p className="mt-1 flex flex-wrap gap-1">
+          {set.bound && <Badge tone="indigo">Linked</Badge>}
+          {set.rank !== null && <Badge tone="green">Preferred</Badge>}
+          {set.hidden && <Badge tone="red">Hidden at MediUX</Badge>}
+        </p>
+      )}
+      <Button size="sm" variant="primary" className="mt-2" onClick={() => onApplySet(set)} data-action="apply-set">
+        Apply and link
+      </Button>
+    </div>
   );
 }
 
@@ -139,7 +184,7 @@ function SetBlock({ itemKey, set, data, slot, itemType, chosen, onChoose, onAppl
           )}
           {set.source === "tpdb" && !set.loaded && (
             <Button size="sm" onClick={loadWhole} disabled={loading}>
-              {loading ? "Loading…" : "Load whole set"}
+              {loading ? "Loading…" : "Load full set"}
             </Button>
           )}
           {set.url && (
@@ -205,7 +250,15 @@ function SetsTab({ detail, slot, chosen, onChoose, onApplySet }: {
       {data.sets.length === 0 ? (
         <Empty title="No sets found">Set the ThePosterDB page under Details, or use another tab.</Empty>
       ) : (
-        data.sets.map((set, index) => (
+        <>
+          {detail.item.type === "movie" && data.sets.some(movieImage) && (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-x-4 gap-y-6 pt-1 pb-5">
+              {data.sets.filter(movieImage).map((set) => (
+                <MovieSetTile key={`${set.source}-${set.set_key}`} set={set} title={detail.item.title} chosen={chosen} onChoose={onChoose} onApplySet={onApplySet} />
+              ))}
+            </div>
+          )}
+          {data.sets.map((set, index) => detail.item.type === "movie" && movieImage(set) ? null : (
           <SetBlock
             key={`${set.source}-${set.set_key}`}
             itemKey={key}
@@ -218,7 +271,8 @@ function SetsTab({ detail, slot, chosen, onChoose, onApplySet }: {
             onApplySet={onApplySet}
             onLoaded={(full) => replace(index, full)}
           />
-        ))
+          ))}
+        </>
       )}
       <div className="mt-4">
         <Button size="sm" variant="ghost" onClick={searchAgain} disabled={searching || isFetching}>
@@ -233,11 +287,19 @@ function PlexTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slo
   const { data, isPending, error } = usePlexImages(detail.item.key, slot.id, true);
   if (isPending) return <Loading text="Loading posters from Plex…" />;
   if (error || !data) return <Notice tone="red">{error?.message ?? "Cannot load posters from Plex"}</Notice>;
-  if (!data.images.length) return <Empty title="Plex has no posters for this" />;
+  if (!data.images.length) return <Empty title="No posters in Plex" />;
   return (
     <div className="flex flex-wrap gap-3">
       {data.images.map((image) => (
-        <ImageChoice key={image.token} image={image} caption={image.label} context={`Plex: ${image.label}`} chosen={chosen} onChoose={onChoose} current={image.local} />
+        <ImageChoice
+          key={image.token}
+          image={image}
+          caption={image.selected && !image.local ? "Shown in Plex" : image.label}
+          context={image.local ? "File in folder" : `Plex: ${image.label}`}
+          chosen={chosen}
+          onChoose={onChoose}
+          current={image.local}
+        />
       ))}
     </div>
   );
@@ -245,7 +307,7 @@ function PlexTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slo
 
 function OnlineTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slot; chosen: Chosen | null; onChoose: (choice: Chosen) => void }) {
   const { data, isPending, error } = useOnlineImages(detail.item.key, slot.id, true);
-  if (isPending) return <Loading text="Asking TMDB, fanart.tv and TVmaze…" />;
+  if (isPending) return <Loading text="Searching TMDB, fanart.tv and TVmaze…" />;
   if (error || !data) return <Notice tone="red">{error?.message ?? "Cannot reach the online sources"}</Notice>;
   return (
     <div className="space-y-6">
@@ -257,7 +319,7 @@ function OnlineTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: S
           ) : source.error ? (
             <Notice>{source.error}</Notice>
           ) : !source.images.length ? (
-            <p className="text-sm text-gray-400">{source.key === "tvmaze" && detail.item.type === "movie" ? "Shows only." : "Nothing found."}</p>
+            <p className="text-sm text-gray-400">{source.key === "tvmaze" && detail.item.type === "movie" ? "Shows only" : "No posters"}</p>
           ) : (
             <div className="flex flex-wrap gap-3">
               {source.images.map((image) => (
@@ -344,7 +406,7 @@ function FileTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null
         }`}
       >
         <PhotoIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
-        <span className="font-semibold text-gray-200">Drop an image or choose a file</span>
+        <span className="font-semibold text-gray-200">Upload file</span>
         <span className="text-xs text-gray-400">JPEG, PNG or WebP</span>
       </label>
       <div className="mt-4">
@@ -354,6 +416,12 @@ function FileTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null
       </div>
     </div>
   );
+}
+
+/** The picker for a title that is not open: loads the title, then slides in over the page. */
+export function PickerDrawer({ itemKey, slotId, onClose }: { itemKey: string; slotId: string; onClose: () => void }) {
+  const { data } = useItem(itemKey);
+  return data ? <Picker detail={data} slotId={slotId} onClose={onClose} /> : null;
 }
 
 export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: string; onClose: () => void }) {
@@ -383,10 +451,15 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
   const heading = slot.kind === "season" ? `${detail.item.title}, ${slot.label}` : detail.item.title;
   const target = slot.kind === "season" ? slot.label : isShow ? "the show" : "the movie";
 
+  const keepFile = chosen?.image.local === true;
   const apply = () => {
     if (!chosen) return;
     const token = chosen.image.token;
     close();
+    if (keepFile) {
+      void run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping file…");
+      return;
+    }
     void run(() => unwrap(api.POST("/api/items/{key}/apply", { params: { path: { key } }, body: { slot: slot.id, token } })), "Setting poster…");
   };
   const applySet = (set: SetView) => {
@@ -438,11 +511,11 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
                 <span className="truncate text-sm text-gray-300">{chosen.context}</span>
               </>
             ) : (
-              <span className="text-sm text-gray-500">Nothing picked yet</span>
+              <span className="text-sm text-gray-500">Nothing selected</span>
             )}
           </div>
           <Button variant="primary" disabled={!chosen} onClick={apply} data-action="apply-image">
-            Apply to {target}
+            {keepFile ? "Keep the file" : `Apply to ${target}`}
           </Button>
         </div>
       </div>

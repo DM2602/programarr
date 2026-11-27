@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import cache, config, db, settings
-from app.lists import flixpatrol, runs, scrape
+from app.lists import exclusions, flixpatrol, runs, scrape
 from app.lists.base import RawEntry, SourceError
 from app.media import mdblist, normalize, store
 from tests.fakes.lists import EXPECTED
@@ -113,7 +113,7 @@ async def test_flixpatrol_netflix_switzerland_like_script(lists):
     grinch_extra = db.loads(by_title["The Grinch"]["extra"])
     assert (grinch_extra["days"], grinch_extra["change"], grinch_extra["original"]) == (51, -1, False)
     assert (run["matched"], run["uncertain"], run["failed"], run["excluded"], run["raw_count"]) == (17, 2, 1, 0, 20)
-    assert result["message"] == "Netflix Switzerland – Movies, TV Shows: 17 of 20 matched, 3 to check"
+    assert result["message"] == "Netflix Switzerland – Movies, TV Shows: 17 of 20 matched, 3 unresolved"
     # Ratings come from MDBList in one batch per kind.
     grinch = store.find("movie", 360920)
     assert (grinch["imdb_rating"], grinch["imdb_votes"], grinch["rt_critics"], grinch["rt_audience"]) == (6.3, 140000, 60, 61)
@@ -193,12 +193,17 @@ async def test_mdblist_list_trusts_imdb_over_wrong_tmdb(lists):
     result = await runs.preview("mdblist", runs.prepare("mdblist", {"list": "https://mdblist.com/lists/dominik/netflix-ch",
                                                                      "limit": 10}))
     rows = entries_of(result["run"])
-    assert [(row["raw_title"], row["status"], row["method"], row["tmdb_id"]) for row in rows] == [
-        ("The Grinch", "matched", "id", 360920),
-        ("Lupin", "matched", "id", 96677),
-        ("Guarding Stars", "matched", "id", 1001),
+    # The list's order counts, not MDBList's popularity rank; the place counts among movies or shows.
+    assert [(row["raw_title"], row["status"], row["method"], row["tmdb_id"], db.loads(row["extra"])["rank"])
+            for row in rows] == [
+        ("The Grinch", "matched", "id", 360920, 1),
+        ("Guarding Stars", "matched", "id", 1001, 2),
+        ("Lupin", "matched", "id", 96677, 1),
     ]
     assert lists.tmdb.searches == []  # IDs, no title search
+    # The run carries the list's title from MDBList, and so does every later description.
+    assert db.get().scalar("SELECT label FROM parser_runs WHERE id=?", (result["run"],)) == "Netflix CH"
+    assert runs.adapter("mdblist").describe({"list": "dominik/netflix-ch"}) == "Netflix CH"
 
 
 async def test_trakt_and_tmdb_sources(lists):
@@ -273,15 +278,17 @@ async def test_fix_ignore_exclude_and_undo(lists):
     assert (run["matched"], run["uncertain"], run["failed"], run["excluded"]) == (18, 1, 0, 1)
     # Exclude a matched title: excluded now and in the next run.
     grinch = store.find("movie", 360920)
-    await runs.exclude(None, None, grinch["id"], "Seen it")
+    await exclusions.exclude(None, None, grinch["id"], "Seen it")
+    assert lists.radarr.excluded == [360920]  # on Radarr's import list exclusions too
     second = (await runs.preview("flixpatrol", params))["run"]
     outcome = {row["raw_title"]: (row["status"], row["method"], row["tmdb_id"]) for row in entries_of(second)}
     assert outcome["How to Make a Killing"] == ("matched", "fixed", 1010)
     assert outcome["The Altruists"] == ("excluded", "ignored", None)
     assert outcome["The Grinch"] == ("excluded", "exact", 360920)
-    assert [row["media"]["title"] for row in runs.exclusions()] == ["The Grinch"]
-    # Undo: the exclusion, then the corrections.
-    runs.unexclude(runs.exclusions()[0]["id"])
+    assert [(row["title"], row["service"]) for row in exclusions.exclusions()] == [("The Grinch", "radarr")]
+    # Undo: the exclusion (off Radarr's list too), then the corrections.
+    await exclusions.unexclude(exclusions.exclusions()[0]["id"])
+    assert lists.radarr.excluded == []
     assert db.get().scalar("SELECT COUNT(*) FROM parser_entries WHERE status='excluded' AND method='exact'") == 0
     overrides = {row["title"]: row for row in runs.overrides()}
     assert overrides["How to Make a Killing"]["media"]["tmdb_id"] == 1010 and overrides["The Altruists"]["ignore"]

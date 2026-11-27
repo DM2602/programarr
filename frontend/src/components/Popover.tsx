@@ -5,13 +5,16 @@ const WIDTH = 352;
 const GAP = 8;
 
 /** A button that opens a small panel next to it. Closes on Escape, outside clicks and scrolling away. */
-export function Popover({ button, label, buttonClass, title, children, data }: {
+export function Popover({ button, label, buttonClass, title, children, data, width = WIDTH, align = "end", padding = "p-4" }: {
   button: ReactNode;
   label: string;
   buttonClass: string;
   title?: string;
   children: (close: () => void) => ReactNode;
   data?: Record<string, string>;
+  width?: number;
+  align?: "start" | "end";
+  padding?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [place, setPlace] = useState<{ top: number; left: number; above: boolean } | null>(null);
@@ -29,9 +32,10 @@ export function Popover({ button, label, buttonClass, title, children, data }: {
     if (!rect) return;
     const height = panel.current?.offsetHeight ?? 320;
     const above = rect.bottom + GAP + height > window.innerHeight && rect.top - GAP - height > 0;
-    const left = Math.min(Math.max(GAP, rect.right - WIDTH), window.innerWidth - WIDTH - GAP);
+    const start = align === "start" ? rect.left : rect.right - width;
+    const left = Math.min(Math.max(GAP, start), window.innerWidth - width - GAP);
     setPlace({ top: above ? rect.top - GAP - height : rect.bottom + GAP, left: Math.max(GAP, left), above });
-  }, []);
+  }, [align, width]);
 
   useLayoutEffect(() => {
     if (open) measure();
@@ -81,8 +85,8 @@ export function Popover({ button, label, buttonClass, title, children, data }: {
             id={id}
             role="dialog"
             aria-label={label}
-            className="fixed z-40 rounded-lg border border-gray-600 bg-gray-800 p-4 text-sm shadow-2xl ring-1 ring-black/40"
-            style={{ top: place?.top ?? -9999, left: place?.left ?? -9999, width: `min(${WIDTH}px, calc(100vw - ${GAP * 2}px))` }}
+            className={`fixed z-40 rounded-lg border border-gray-600 bg-gray-800 text-sm shadow-2xl ring-1 ring-black/40 ${padding}`}
+            style={{ top: place?.top ?? -9999, left: place?.left ?? -9999, width: `min(${width}px, calc(100vw - ${GAP * 2}px))` }}
           >
             {children(close)}
           </div>,

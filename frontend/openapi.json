@@ -1313,6 +1313,58 @@
         }
       }
     },
+    "/api/items/{key}/keep": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Item Keep",
+        "operationId": "item_keep_api_items__key__keep_post",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/items/{key}/remove": {
       "post": {
         "tags": [
@@ -1459,13 +1511,14 @@
         }
       }
     },
-    "/api/items/{key}/slots/stopwait": {
+    "/api/items/{key}/slots/dismiss": {
       "post": {
         "tags": [
           "posters"
         ],
-        "summary": "Stop Waiting",
-        "operationId": "stop_waiting_api_items__key__slots_stopwait_post",
+        "summary": "Dismiss Pending",
+        "description": "A pending season stops waiting for its set.",
+        "operationId": "dismiss_pending_api_items__key__slots_dismiss_post",
         "parameters": [
           {
             "name": "key",
@@ -1706,6 +1759,48 @@
         }
       }
     },
+    "/api/reviews/{review_id}/keep-plex": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Review Keep Plex",
+        "operationId": "review_keep_plex_api_reviews__review_id__keep_plex_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/reviews/{review_id}/accept": {
       "post": {
         "tags": [
@@ -1821,20 +1916,21 @@
         }
       }
     },
-    "/api/waiting": {
+    "/api/pending": {
       "get": {
         "tags": [
           "posters"
         ],
-        "summary": "Waiting List",
-        "operationId": "waiting_list_api_waiting_get",
+        "summary": "Pending List",
+        "description": "Seasons waiting for their set to get a poster, and those dismissed.",
+        "operationId": "pending_list_api_pending_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WaitingPage"
+                  "$ref": "#/components/schemas/PendingPage"
                 }
               }
             }
@@ -1934,6 +2030,67 @@
         ],
         "summary": "Adopt",
         "operationId": "adopt_api_adopt_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backup": {
+      "get": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Backup View",
+        "operationId": "backup_view_api_backup_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Backup Run",
+        "operationId": "backup_run_api_backup_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backup/restore": {
+      "post": {
+        "tags": [
+          "posters"
+        ],
+        "summary": "Backup Restore",
+        "operationId": "backup_restore_api_backup_restore_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2163,6 +2320,16 @@
               "type": "integer",
               "default": 100,
               "title": "Limit"
+            }
+          },
+          {
+            "name": "previews",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Previews"
             }
           }
         ],
@@ -2638,6 +2805,27 @@
         }
       }
     },
+    "/api/exclusions/sync": {
+      "post": {
+        "tags": [
+          "lists"
+        ],
+        "summary": "Sync Exclusions",
+        "operationId": "sync_exclusions_api_exclusions_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/exclusions/media/{media_id}": {
       "delete": {
         "tags": [
@@ -2653,6 +2841,61 @@
             "schema": {
               "type": "integer",
               "title": "Media Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/exclusions/arr/{service}/{external_id}": {
+      "delete": {
+        "tags": [
+          "lists"
+        ],
+        "summary": "Unexclude Arr",
+        "operationId": "unexclude_arr_api_exclusions_arr__service___external_id__delete",
+        "parameters": [
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "radarr",
+                "sonarr"
+              ],
+              "type": "string",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "external_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "External Id"
             }
           }
         ],
@@ -2832,6 +3075,585 @@
         }
       }
     },
+    "/api/flows": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Flows",
+        "operationId": "flows_api_flows_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowsPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_flows_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/nodes": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Node Types",
+        "operationId": "node_types_api_flows_nodes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeTypes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/check": {
+      "post": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Check",
+        "operationId": "check_api_flows_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowCheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/schedule": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Check Schedule",
+        "operationId": "check_schedule_api_flows_schedule_get",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Value"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleCheck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/runs": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Runs",
+        "operationId": "runs_api_flows_runs_get",
+        "parameters": [
+          {
+            "name": "flow",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Flow"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowRunsPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Run Detail",
+        "operationId": "run_detail_api_flows_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowRunDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/runs/{run_id}/titles": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Run Titles",
+        "operationId": "run_titles_api_flows_runs__run_id__titles_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "show",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "title": "Show"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowTitlesPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/{flow_id}": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Flow",
+        "operationId": "flow_api_flows__flow_id__get",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Update",
+        "operationId": "update_api_flows__flow_id__put",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Delete",
+        "operationId": "delete_api_flows__flow_id__delete",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/flows/{flow_id}/run": {
+      "post": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Run",
+        "operationId": "run_api_flows__flow_id__run_post",
+        "parameters": [
+          {
+            "name": "flow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Flow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FlowRunBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/arr/{service}/options": {
+      "get": {
+        "tags": [
+          "flows"
+        ],
+        "summary": "Arr Options",
+        "operationId": "arr_options_api_arr__service__options_get",
+        "parameters": [
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "radarr",
+                "sonarr"
+              ],
+              "type": "string",
+              "title": "Service"
+            }
+          },
+          {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Fresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArrOptions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/hooks/sonarr": {
       "post": {
         "summary": "Sonarr",
@@ -2977,6 +3799,20 @@
               "type": "string",
               "title": "Slot Id"
             }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "thumb",
+                "large"
+              ],
+              "type": "string",
+              "default": "thumb",
+              "title": "Size"
+            }
           }
         ],
         "responses": {
@@ -3013,6 +3849,20 @@
             "schema": {
               "type": "string",
               "title": "Token"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "thumb",
+                "large"
+              ],
+              "type": "string",
+              "default": "thumb",
+              "title": "Size"
             }
           }
         ],
@@ -3225,6 +4075,125 @@
         "title": "ArrLink",
         "description": "Where a title stands in Radarr or Sonarr; service is None when that one is not set up."
       },
+      "ArrOptions": {
+        "properties": {
+          "service": {
+            "type": "string",
+            "enum": [
+              "radarr",
+              "sonarr"
+            ],
+            "title": "Service"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ArrProfile"
+            },
+            "type": "array",
+            "title": "Profiles"
+          },
+          "root_folders": {
+            "items": {
+              "$ref": "#/components/schemas/ArrRootFolder"
+            },
+            "type": "array",
+            "title": "Root Folders"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/ArrTag"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service",
+          "configured",
+          "profiles",
+          "root_folders",
+          "tags",
+          "error"
+        ],
+        "title": "ArrOptions"
+      },
+      "ArrProfile": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ArrProfile"
+      },
+      "ArrRootFolder": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "free_space": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Space"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "free_space"
+        ],
+        "title": "ArrRootFolder"
+      },
+      "ArrTag": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "ArrTag"
+      },
       "AuthState": {
         "properties": {
           "password_required": {
@@ -3247,6 +4216,34 @@
           "version"
         ],
         "title": "AuthState"
+      },
+      "BackupView": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          },
+          "bytes": {
+            "type": "integer",
+            "title": "Bytes"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "files",
+          "bytes",
+          "folder"
+        ],
+        "title": "BackupView"
       },
       "BindBody": {
         "properties": {
@@ -3513,7 +4510,7 @@
                 "enum": [
                   "problem",
                   "review",
-                  "waiting",
+                  "pending",
                   "new"
                 ]
               },
@@ -3603,6 +4600,55 @@
         ],
         "title": "Changed"
       },
+      "CompareList": {
+        "properties": {
+          "ref": {
+            "type": "string",
+            "title": "Ref"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ref",
+          "name",
+          "run",
+          "error"
+        ],
+        "title": "CompareList"
+      },
       "ComparePair": {
         "properties": {
           "slot": {
@@ -3630,6 +4676,75 @@
           "other"
         ],
         "title": "ComparePair"
+      },
+      "CompareSummary": {
+        "properties": {
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/CompareList"
+            },
+            "type": "array",
+            "title": "Lists"
+          },
+          "both": {
+            "type": "integer",
+            "title": "Both"
+          },
+          "flow_only": {
+            "type": "integer",
+            "title": "Flow Only"
+          },
+          "list_only": {
+            "type": "integer",
+            "title": "List Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lists",
+          "both",
+          "flow_only",
+          "list_only"
+        ],
+        "title": "CompareSummary",
+        "description": "A run's MDBList comparisons, added up over its outputs."
+      },
+      "CompareView": {
+        "properties": {
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/CompareList"
+            },
+            "type": "array",
+            "title": "Lists"
+          },
+          "both": {
+            "type": "integer",
+            "title": "Both"
+          },
+          "flow_only": {
+            "items": {
+              "$ref": "#/components/schemas/MediaView"
+            },
+            "type": "array",
+            "title": "Flow Only"
+          },
+          "list_only": {
+            "items": {
+              "$ref": "#/components/schemas/MediaView"
+            },
+            "type": "array",
+            "title": "List Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lists",
+          "both",
+          "flow_only",
+          "list_only"
+        ],
+        "title": "CompareView"
       },
       "ConfirmAll": {
         "properties": {
@@ -3668,9 +4783,9 @@
             "type": "object",
             "title": "Review Kinds"
           },
-          "waiting": {
+          "pending": {
             "type": "integer",
-            "title": "Waiting"
+            "title": "Pending"
           },
           "movies": {
             "type": "integer",
@@ -3698,7 +4813,7 @@
         "required": [
           "review",
           "review_kinds",
-          "waiting",
+          "pending",
           "movies",
           "shows",
           "linked",
@@ -3706,6 +4821,39 @@
           "match_open"
         ],
         "title": "Counts"
+      },
+      "CurrentPoster": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "large": {
+            "type": "string",
+            "title": "Large"
+          },
+          "file": {
+            "type": "boolean",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "label",
+          "thumb",
+          "large",
+          "file"
+        ],
+        "title": "CurrentPoster"
       },
       "Designer": {
         "properties": {
@@ -4095,7 +5243,14 @@
       "ExclusionView": {
         "properties": {
           "id": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "scope": {
@@ -4125,7 +5280,14 @@
             "title": "Created At"
           },
           "media": {
-            "$ref": "#/components/schemas/MediaView"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MediaView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "plex_key": {
             "anyOf": [
@@ -4137,6 +5299,60 @@
               }
             ],
             "title": "Plex Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Kind"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "radarr",
+                  "sonarr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
+          },
+          "external_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending",
+            "default": false
           }
         },
         "type": "object",
@@ -4146,7 +5362,13 @@
           "reason",
           "created_at",
           "media",
-          "plex_key"
+          "plex_key",
+          "title",
+          "year",
+          "kind",
+          "service",
+          "external_id",
+          "pending"
         ],
         "title": "ExclusionView"
       },
@@ -4158,11 +5380,45 @@
             },
             "type": "array",
             "title": "Rows"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "services": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "radarr",
+                "sonarr"
+              ]
+            },
+            "type": "array",
+            "title": "Services",
+            "default": []
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
           }
         },
         "type": "object",
         "required": [
-          "rows"
+          "rows",
+          "synced_at",
+          "services",
+          "errors"
         ],
         "title": "ExclusionsPage"
       },
@@ -4223,6 +5479,1170 @@
           "tmdb_id"
         ],
         "title": "FixBody"
+      },
+      "FlowAdd": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaView"
+          },
+          "service": {
+            "type": "string",
+            "enum": [
+              "radarr",
+              "sonarr"
+            ],
+            "title": "Service"
+          },
+          "flow_id": {
+            "type": "integer",
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "type": "string",
+            "title": "Flow Name"
+          },
+          "run_id": {
+            "type": "integer",
+            "title": "Run Id"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "plex_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plex Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "service",
+          "flow_id",
+          "flow_name",
+          "run_id",
+          "at",
+          "plex_key"
+        ],
+        "title": "FlowAdd",
+        "description": "A title a live run added to Radarr or Sonarr."
+      },
+      "FlowCard": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "schedule_text": {
+            "type": "string",
+            "title": "Schedule Text"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FlowProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "summaries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Summaries"
+          },
+          "facts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeFact"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facts",
+            "default": {}
+          },
+          "ports": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeTypePort"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Ports"
+          },
+          "outputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowRunBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompareSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version",
+          "schedule",
+          "schedule_text",
+          "enabled",
+          "dry_run",
+          "next_run_at",
+          "created_at",
+          "updated_at",
+          "problems",
+          "summaries",
+          "facts",
+          "ports",
+          "outputs",
+          "nodes",
+          "last_run",
+          "graph",
+          "compare"
+        ],
+        "title": "FlowCard"
+      },
+      "FlowCheck": {
+        "properties": {
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FlowProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "summaries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Summaries"
+          },
+          "facts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeFact"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facts",
+            "default": {}
+          },
+          "ports": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeTypePort"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Ports"
+          }
+        },
+        "type": "object",
+        "required": [
+          "problems",
+          "summaries",
+          "facts",
+          "ports"
+        ],
+        "title": "FlowCheck"
+      },
+      "FlowCheckBody": {
+        "properties": {
+          "graph": {
+            "$ref": "#/components/schemas/FlowGraph-Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "graph"
+        ],
+        "title": "FlowCheckBody"
+      },
+      "FlowCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FlowCreate"
+      },
+      "FlowEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "port": {
+            "type": "string",
+            "title": "Port"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "port",
+          "target"
+        ],
+        "title": "FlowEdge"
+      },
+      "FlowGraph-Input": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/FlowNode-Input"
+            },
+            "type": "array",
+            "title": "Nodes",
+            "default": []
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/FlowEdge"
+            },
+            "type": "array",
+            "title": "Edges",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "FlowGraph"
+      },
+      "FlowGraph-Output": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/FlowNode-Output"
+            },
+            "type": "array",
+            "title": "Nodes",
+            "default": []
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/FlowEdge"
+            },
+            "type": "array",
+            "title": "Edges",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "FlowGraph"
+      },
+      "FlowNode-Input": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "default": {}
+          },
+          "position": {
+            "$ref": "#/components/schemas/FlowPosition-Input",
+            "default": {
+              "x": 0.0,
+              "y": 0.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "FlowNode"
+      },
+      "FlowNode-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "default": {}
+          },
+          "position": {
+            "$ref": "#/components/schemas/FlowPosition-Output",
+            "default": {
+              "x": 0.0,
+              "y": 0.0
+            }
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "config",
+          "position"
+        ],
+        "title": "FlowNode"
+      },
+      "FlowPosition-Input": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X",
+            "default": 0
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "FlowPosition"
+      },
+      "FlowPosition-Output": {
+        "properties": {
+          "x": {
+            "type": "number",
+            "title": "X",
+            "default": 0
+          },
+          "y": {
+            "type": "number",
+            "title": "Y",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "title": "FlowPosition"
+      },
+      "FlowProblem": {
+        "properties": {
+          "node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node",
+          "message"
+        ],
+        "title": "FlowProblem"
+      },
+      "FlowRunBody": {
+        "properties": {
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "title": "FlowRunBody"
+      },
+      "FlowRunBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "flow_id": {
+            "type": "integer",
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "type": "string",
+            "title": "Flow Name"
+          },
+          "flow_version": {
+            "type": "integer",
+            "title": "Flow Version"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "schedule"
+            ],
+            "title": "Trigger"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "ok",
+              "partial",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "titles": {
+            "type": "integer",
+            "title": "Titles"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "tagged": {
+            "type": "integer",
+            "title": "Tagged"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "flow_id",
+          "flow_name",
+          "flow_version",
+          "trigger",
+          "dry_run",
+          "started_at",
+          "finished_at",
+          "status",
+          "error",
+          "titles",
+          "added",
+          "tagged",
+          "present",
+          "skipped",
+          "failed"
+        ],
+        "title": "FlowRunBrief"
+      },
+      "FlowRunDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "flow_id": {
+            "type": "integer",
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "type": "string",
+            "title": "Flow Name"
+          },
+          "flow_version": {
+            "type": "integer",
+            "title": "Flow Version"
+          },
+          "trigger": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "schedule"
+            ],
+            "title": "Trigger"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "ok",
+              "partial",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "titles": {
+            "type": "integer",
+            "title": "Titles"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "tagged": {
+            "type": "integer",
+            "title": "Tagged"
+          },
+          "present": {
+            "type": "integer",
+            "title": "Present"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/RunNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/RunBrief"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "flow_id",
+          "flow_name",
+          "flow_version",
+          "trigger",
+          "dry_run",
+          "started_at",
+          "finished_at",
+          "status",
+          "error",
+          "titles",
+          "added",
+          "tagged",
+          "present",
+          "skipped",
+          "failed",
+          "notes",
+          "current",
+          "nodes",
+          "sources",
+          "previous",
+          "next"
+        ],
+        "title": "FlowRunDetail"
+      },
+      "FlowRunsPage": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/FlowRunBrief"
+            },
+            "type": "array",
+            "title": "Runs"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runs",
+          "total",
+          "page",
+          "pages"
+        ],
+        "title": "FlowRunsPage"
+      },
+      "FlowTitle": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaView"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "type": "array",
+            "title": "Outcomes"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "outcomes",
+          "steps"
+        ],
+        "title": "FlowTitle"
+      },
+      "FlowTitlesPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowTitle"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "counts",
+          "total",
+          "page",
+          "pages"
+        ],
+        "title": "FlowTitlesPage"
+      },
+      "FlowUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          }
+        },
+        "type": "object",
+        "title": "FlowUpdate",
+        "description": "Only the fields sent change. schedule null (or empty) means manual."
+      },
+      "FlowView": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "schedule_text": {
+            "type": "string",
+            "title": "Schedule Text"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FlowProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "summaries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Summaries"
+          },
+          "facts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeFact"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facts",
+            "default": {}
+          },
+          "ports": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeTypePort"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Ports"
+          },
+          "outputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowRunBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version",
+          "schedule",
+          "schedule_text",
+          "enabled",
+          "dry_run",
+          "next_run_at",
+          "created_at",
+          "updated_at",
+          "problems",
+          "summaries",
+          "facts",
+          "ports",
+          "outputs",
+          "nodes",
+          "last_run",
+          "graph"
+        ],
+        "title": "FlowView"
+      },
+      "FlowsPage": {
+        "properties": {
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowView"
+            },
+            "type": "array",
+            "title": "Flows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flows"
+        ],
+        "title": "FlowsPage"
       },
       "Follows": {
         "properties": {
@@ -4476,6 +6896,17 @@
             "type": "string",
             "title": "Thumb"
           },
+          "large": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Large"
+          },
           "kind": {
             "anyOf": [
               {
@@ -4577,6 +7008,7 @@
         "required": [
           "token",
           "thumb",
+          "large",
           "kind",
           "season",
           "label",
@@ -5208,6 +7640,50 @@
             ],
             "title": "Adopted"
           },
+          "kept": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept"
+          },
+          "unlocked": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unlocked"
+          },
+          "restored": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restored"
+          },
+          "saved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved"
+          },
           "scanned": {
             "anyOf": [
               {
@@ -5240,6 +7716,50 @@
               }
             ],
             "title": "Run"
+          },
+          "dry_run": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dry Run"
+          },
+          "added": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added"
+          },
+          "tagged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tagged"
+          },
+          "present": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Present"
           }
         },
         "additionalProperties": true,
@@ -5263,9 +7783,17 @@
           "changed",
           "gave_up",
           "adopted",
+          "kept",
+          "unlocked",
+          "restored",
+          "saved",
           "scanned",
           "outcome",
-          "run"
+          "run",
+          "dry_run",
+          "added",
+          "tagged",
+          "present"
         ],
         "title": "JobResult",
         "description": "Result fields of the different job kinds; each kind fills a few of them."
@@ -5339,6 +7867,36 @@
           "complete": {
             "type": "integer",
             "title": "Complete"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          },
+          "backup_files": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Files"
+          },
+          "backup_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Bytes"
+          },
+          "exclusions": {
+            "type": "integer",
+            "title": "Exclusions"
           }
         },
         "type": "object",
@@ -5346,7 +7904,11 @@
           "movies",
           "shows",
           "linked",
-          "complete"
+          "complete",
+          "files",
+          "backup_files",
+          "backup_bytes",
+          "exclusions"
         ],
         "title": "LibraryFacts"
       },
@@ -6083,6 +8645,138 @@
         ],
         "title": "NamingDetected"
       },
+      "NodeFact": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "NodeFact",
+        "description": "One labelled setting of an output, e.g. Profile: HD-1080p."
+      },
+      "NodeTypePort": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "NodeTypePort"
+      },
+      "NodeTypeView": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "source",
+              "filter",
+              "output"
+            ],
+            "title": "Category"
+          },
+          "inputs": {
+            "type": "boolean",
+            "title": "Inputs"
+          },
+          "ports": {
+            "items": {
+              "$ref": "#/components/schemas/NodeTypePort"
+            },
+            "type": "array",
+            "title": "Ports"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/SourceField"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "missing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing"
+          },
+          "rules": {
+            "type": "boolean",
+            "title": "Rules",
+            "default": false
+          },
+          "each_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Each Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "label",
+          "category",
+          "inputs",
+          "ports",
+          "fields",
+          "missing",
+          "rules",
+          "each_default"
+        ],
+        "title": "NodeTypeView"
+      },
+      "NodeTypes": {
+        "properties": {
+          "types": {
+            "items": {
+              "$ref": "#/components/schemas/NodeTypeView"
+            },
+            "type": "array",
+            "title": "Types"
+          }
+        },
+        "type": "object",
+        "required": [
+          "types"
+        ],
+        "title": "NodeTypes"
+      },
       "Ok": {
         "properties": {
           "ok": {
@@ -6343,6 +9037,27 @@
             },
             "type": "array",
             "title": "Jobs"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowCard"
+            },
+            "type": "array",
+            "title": "Flows"
+          },
+          "flow_adds": {
+            "items": {
+              "$ref": "#/components/schemas/FlowAdd"
+            },
+            "type": "array",
+            "title": "Flow Adds"
+          },
+          "schedule": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRow"
+            },
+            "type": "array",
+            "title": "Schedule"
           }
         },
         "type": "object",
@@ -6355,7 +9070,10 @@
           "todo",
           "recent",
           "facts",
-          "jobs"
+          "jobs",
+          "flows",
+          "flow_adds",
+          "schedule"
         ],
         "title": "Overview"
       },
@@ -6436,6 +9154,167 @@
           "local"
         ],
         "title": "PathMap"
+      },
+      "PendingPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PendingRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "max_days": {
+            "type": "integer",
+            "title": "Max Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "max_days"
+        ],
+        "title": "PendingPage"
+      },
+      "PendingRow": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "item_key": {
+            "type": "string",
+            "title": "Item Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending"
+          },
+          "pending_since": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Since"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "set_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Title"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "item_key",
+          "title",
+          "year",
+          "season",
+          "thumb",
+          "pending",
+          "pending_since",
+          "checked_at",
+          "set_title",
+          "designer",
+          "source_label"
+        ],
+        "title": "PendingRow"
+      },
+      "PortCount": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "count"
+        ],
+        "title": "PortCount"
       },
       "PreviewBody": {
         "properties": {
@@ -6741,6 +9620,14 @@
               }
             ],
             "title": "Slot"
+          },
+          "current": {
+            "items": {
+              "$ref": "#/components/schemas/CurrentPoster"
+            },
+            "type": "array",
+            "title": "Current",
+            "default": []
           }
         },
         "type": "object",
@@ -6764,7 +9651,8 @@
           "set",
           "confidence",
           "via",
-          "slot"
+          "slot",
+          "current"
         ],
         "title": "ReviewView"
       },
@@ -7031,6 +9919,111 @@
         ],
         "title": "RunDetail"
       },
+      "RunNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/NodeFact"
+            },
+            "type": "array",
+            "title": "Facts",
+            "default": []
+          },
+          "count_in": {
+            "type": "integer",
+            "title": "Count In"
+          },
+          "ports": {
+            "items": {
+              "$ref": "#/components/schemas/PortCount"
+            },
+            "type": "array",
+            "title": "Ports"
+          },
+          "entries": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entries"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompareView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label",
+          "category",
+          "summary",
+          "facts",
+          "count_in",
+          "ports",
+          "entries",
+          "run",
+          "error",
+          "compare"
+        ],
+        "title": "RunNode"
+      },
       "RunsPage": {
         "properties": {
           "runs": {
@@ -7068,6 +10061,124 @@
           "saved"
         ],
         "title": "Saved"
+      },
+      "ScheduleCheck": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "schedule",
+          "text",
+          "next_run_at",
+          "message"
+        ],
+        "title": "ScheduleCheck"
+      },
+      "ScheduleRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off",
+              "paused"
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "interval",
+          "last",
+          "next",
+          "state"
+        ],
+        "title": "ScheduleRow"
       },
       "SetSummary": {
         "properties": {
@@ -7367,6 +10478,19 @@
             "type": "integer",
             "title": "Archive Keep"
           },
+          "backup_posters": {
+            "type": "boolean",
+            "title": "Backup Posters"
+          },
+          "plex_poster_files": {
+            "type": "string",
+            "enum": [
+              "off",
+              "movies",
+              "all"
+            ],
+            "title": "Plex Poster Files"
+          },
           "mediux_token": {
             "type": "boolean",
             "title": "Mediux Token"
@@ -7549,6 +10673,10 @@
             "type": "integer",
             "title": "Poll Minutes"
           },
+          "folder_check_hours": {
+            "type": "integer",
+            "title": "Folder Check Hours"
+          },
           "set_check_hours": {
             "type": "integer",
             "title": "Set Check Hours"
@@ -7603,6 +10731,8 @@
           "unlock_fields",
           "verify_plex",
           "archive_keep",
+          "backup_posters",
+          "plex_poster_files",
           "mediux_token",
           "mediux_quality",
           "mediux_api",
@@ -7646,6 +10776,7 @@
           "auto_count_specials",
           "auto_collection_consistency",
           "poll_minutes",
+          "folder_check_hours",
           "set_check_hours",
           "wait_max_days",
           "set_changes",
@@ -7904,11 +11035,11 @@
             ],
             "title": "Applied At"
           },
-          "waiting": {
+          "pending": {
             "type": "boolean",
-            "title": "Waiting"
+            "title": "Pending"
           },
-          "waiting_since": {
+          "pending_since": {
             "anyOf": [
               {
                 "type": "integer"
@@ -7917,11 +11048,11 @@
                 "type": "null"
               }
             ],
-            "title": "Waiting Since"
+            "title": "Pending Since"
           },
-          "wait_given_up": {
+          "dismissed": {
             "type": "boolean",
-            "title": "Wait Given Up"
+            "title": "Dismissed"
           },
           "gone": {
             "type": "boolean",
@@ -7948,9 +11079,9 @@
           "state_text",
           "needs_force",
           "applied_at",
-          "waiting",
-          "waiting_since",
-          "wait_given_up",
+          "pending",
+          "pending_since",
+          "dismissed",
           "gone"
         ],
         "title": "SlotView"
@@ -7970,8 +11101,11 @@
             "enum": [
               "text",
               "number",
+              "decimal",
               "select",
-              "multi"
+              "multi",
+              "bool",
+              "tokens"
             ],
             "title": "Type"
           },
@@ -8010,7 +11144,7 @@
           "min": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8021,7 +11155,7 @@
           "max": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "null"
@@ -8045,6 +11179,28 @@
               }
             ],
             "title": "When"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
+          "dynamic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dynamic"
           }
         },
         "type": "object",
@@ -8059,7 +11215,9 @@
           "suggestions",
           "min",
           "max",
-          "when"
+          "when",
+          "step",
+          "dynamic"
         ],
         "title": "SourceField"
       },
@@ -8155,9 +11313,9 @@
             "type": "integer",
             "title": "Review"
           },
-          "waiting": {
+          "pending": {
             "type": "integer",
-            "title": "Waiting"
+            "title": "Pending"
           },
           "problems": {
             "type": "integer",
@@ -8175,16 +11333,22 @@
             "type": "integer",
             "title": "Match Open",
             "default": 0
+          },
+          "flows_failed": {
+            "type": "integer",
+            "title": "Flows Failed",
+            "default": 0
           }
         },
         "type": "object",
         "required": [
           "review",
-          "waiting",
+          "pending",
           "problems",
           "unlinked_with_files",
           "detect_open",
-          "match_open"
+          "match_open",
+          "flows_failed"
         ],
         "title": "Todo"
       },
@@ -8218,6 +11382,51 @@
           "url"
         ],
         "title": "TpdbSaved"
+      },
+      "TraceStep": {
+        "properties": {
+          "node": {
+            "type": "string",
+            "title": "Node"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port"
+          },
+          "port_label": {
+            "type": "string",
+            "title": "Port Label"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node",
+          "label",
+          "category",
+          "port",
+          "port_label",
+          "detail"
+        ],
+        "title": "TraceStep"
       },
       "UrlBody": {
         "properties": {
@@ -8271,144 +11480,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "WaitingPage": {
-        "properties": {
-          "rows": {
-            "items": {
-              "$ref": "#/components/schemas/WaitingRow"
-            },
-            "type": "array",
-            "title": "Rows"
-          },
-          "max_days": {
-            "type": "integer",
-            "title": "Max Days"
-          }
-        },
-        "type": "object",
-        "required": [
-          "rows",
-          "max_days"
-        ],
-        "title": "WaitingPage"
-      },
-      "WaitingRow": {
-        "properties": {
-          "slot": {
-            "type": "string",
-            "title": "Slot"
-          },
-          "item_key": {
-            "type": "string",
-            "title": "Item Key"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "year": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Year"
-          },
-          "season": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Season"
-          },
-          "thumb": {
-            "type": "string",
-            "title": "Thumb"
-          },
-          "waiting": {
-            "type": "boolean",
-            "title": "Waiting"
-          },
-          "waiting_since": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Waiting Since"
-          },
-          "checked_at": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Checked At"
-          },
-          "set_title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Set Title"
-          },
-          "designer": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Designer"
-          },
-          "source_label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Label"
-          }
-        },
-        "type": "object",
-        "required": [
-          "slot",
-          "item_key",
-          "title",
-          "year",
-          "season",
-          "thumb",
-          "waiting",
-          "waiting_since",
-          "checked_at",
-          "set_title",
-          "designer",
-          "source_label"
-        ],
-        "title": "WaitingRow"
       }
     }
   }

@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 
 SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -153,6 +153,59 @@ CREATE TABLE IF NOT EXISTS exclusions (
 """
 
 
+# Phase 3: flows (a JSON graph of nodes) and their history, title by title.
+SCHEMA_V3 = """
+CREATE TABLE IF NOT EXISTS flows (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  graph TEXT NOT NULL,  -- JSON: nodes [{id, type, config, position}], edges [{source, port, target}]
+  version INTEGER NOT NULL DEFAULT 1,
+  schedule TEXT,  -- cron (5 fields) or 'every:6h'; NULL = manual only
+  enabled INTEGER NOT NULL DEFAULT 1,
+  dry_run INTEGER NOT NULL DEFAULT 1,
+  next_run_at INTEGER, created_at INTEGER, updated_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS flow_runs (
+  id INTEGER PRIMARY KEY,
+  flow_id INTEGER NOT NULL REFERENCES flows(id) ON DELETE CASCADE,
+  flow_version INTEGER NOT NULL,
+  trigger TEXT,  -- manual | schedule
+  dry_run INTEGER NOT NULL,
+  started_at INTEGER, finished_at INTEGER,
+  status TEXT CHECK (status IN ('running','ok','partial','error')),
+  error TEXT, notes TEXT,
+  stats TEXT  -- JSON: titles per node and port, outcomes, comparisons
+);
+CREATE INDEX IF NOT EXISTS flow_runs_flow ON flow_runs (flow_id, id);
+
+CREATE TABLE IF NOT EXISTS flow_trace (
+  run_id INTEGER NOT NULL REFERENCES flow_runs(id) ON DELETE CASCADE,
+  media_id INTEGER NOT NULL REFERENCES media_cache(id),
+  node_id TEXT NOT NULL,
+  port TEXT,  -- sources: out; filters: rule ids, match, no_match or a switch port; outputs: added, present, skipped, failed (tagged in older runs)
+  detail TEXT,  -- e.g. 'IMDb 7.1 < 7.5' or what Radarr answered
+  PRIMARY KEY (run_id, media_id, node_id)
+);
+CREATE INDEX IF NOT EXISTS flow_trace_node ON flow_trace (run_id, node_id, port);
+CREATE INDEX IF NOT EXISTS parser_runs_flow ON parser_runs (flow_run_id);
+"""
+
+
+# Phase 3: the import list exclusions of Radarr and Sonarr, kept in step with Programarr's both ways.
+SCHEMA_V4 = """
+CREATE TABLE IF NOT EXISTS arr_exclusions (
+  service TEXT NOT NULL CHECK (service IN ('radarr','sonarr')),
+  external_id INTEGER NOT NULL,  -- TMDB id (Radarr) or TVDB id (Sonarr)
+  arr_id INTEGER,  -- the entry's id there, NULL until written there
+  title TEXT, year INTEGER,
+  state TEXT NOT NULL DEFAULT 'synced' CHECK (state IN ('synced','add','remove')),  -- add/remove: to write there
+  added_at INTEGER,  -- first seen on that list, or excluded in Programarr
+  PRIMARY KEY (service, external_id)
+);
+"""
+
+
 class Database:
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -186,6 +239,10 @@ class Database:
                 script += SCHEMA_V1
             if current < 2:
                 script += SCHEMA_V2
+            if current < 3:
+                script += SCHEMA_V3
+            if current < 4:
+                script += SCHEMA_V4
             # executescript commits on its own, so the whole migration is one script.
             self.conn.executescript(f"BEGIN;\n{script}\nPRAGMA user_version={SCHEMA_VERSION};\nCOMMIT;")
 
@@ -240,6 +297,14 @@ class Database:
             return
         sets = ",".join(f"{c}=?" for c in values)
         self.execute(f"UPDATE {table} SET {sets} WHERE {key_col}=?", [*values.values(), key])
+
+    def update_where(self, table: str, where: dict, values: dict) -> None:
+        """UPDATE for a row with a key of several columns."""
+        if not values:
+            return
+        sets = ",".join(f"{c}=?" for c in values)
+        conditions = " AND ".join(f"{c}=?" for c in where)
+        self.execute(f"UPDATE {table} SET {sets} WHERE {conditions}", [*values.values(), *where.values()])
 
     def close(self) -> None:
         with self.lock:

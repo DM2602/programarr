@@ -207,7 +207,7 @@ export function SaveBar({ form }: { form: Form }) {
     <div className="mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-gray-700 pt-5">
       <ResultText result={form.result} name="save" />
       <Button type="submit" variant="primary" disabled={form.saving} data-action="save">
-        Save Changes
+        Save changes
       </Button>
     </div>
   );

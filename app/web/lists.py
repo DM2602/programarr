@@ -1,9 +1,12 @@
 """List sources: previews, the match log with corrections, exclusions and title search."""
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 
-from .. import db
+from .. import arr, db
+from ..lists import exclusions as exclusion_sync
 from ..lists import runs
 from ..lists.base import SourceError
 from ..media import mdblist, store, tmdb
@@ -50,8 +53,8 @@ async def preview(body: PreviewBody):
 
 
 @router.get("/lists/runs", response_model=RunsPage)
-async def list_runs(source_ref: str = "", limit: int = 100):
-    return {"runs": runs.runs(source_ref or None, limit)}
+async def list_runs(source_ref: str = "", limit: int = 100, previews: bool = False):
+    return {"runs": runs.runs(source_ref or None, limit, previews_only=previews)}
 
 
 @router.get("/lists/runs/{run_id}", response_model=RunDetail)
@@ -100,7 +103,7 @@ async def ignore(entry_id: int):
         changed = runs.ignore(entry_id)
     except SourceError as exc:
         raise _bad(exc) from exc
-    return {"ok": True, "changed": changed, "message": "Ignored"}
+    return {"ok": True, "changed": changed, "message": "Skipped"}
 
 
 @router.post("/lists/entries/{entry_id}/reset", response_model=Changed)
@@ -109,7 +112,7 @@ async def reset(entry_id: int):
         changed = await runs.reset(entry_id)
     except (SourceError, tmdb.TmdbError) as exc:
         raise _bad(exc) from exc
-    return {"ok": True, "changed": changed, "message": "Back to automatic"}
+    return {"ok": True, "changed": changed, "message": "Match reset"}
 
 
 @router.get("/lists/overrides", response_model=OverridesPage)
@@ -136,13 +139,40 @@ async def mdblist_mine():
 
 @router.get("/exclusions", response_model=ExclusionsPage)
 async def exclusions():
-    return {"rows": runs.exclusions()}
+    last = exclusion_sync.last_sync() or {}
+    results = last.get("results") or {}
+    return {
+        "rows": exclusion_sync.exclusions(),
+        "synced_at": last.get("at"),
+        "services": [service for service in exclusion_sync.SERVICES if arr.configured(service)],
+        "errors": [result["error"] for result in results.values() if result.get("error")],
+    }
+
+
+@router.post("/exclusions/sync", response_model=JobStarted)
+async def sync_exclusions():
+    return start_job("exclusions", "Sync exclusions with Radarr and Sonarr", _sync_job)
+
+
+async def _sync_job() -> dict:
+    results = await exclusion_sync.sync()
+    errors = [result["error"] for result in results.values() if result.get("error")]
+    if errors:
+        return {"outcome": "error", "message": "; ".join(errors)}
+    if not results:
+        return {"outcome": "error", "message": "Radarr and Sonarr are not set up"}
+    parts = []
+    for service, result in results.items():
+        labels = (("new", "new"), ("written", "sent"), ("removed", "removed"))
+        changes = [f"{result[key]} {label}" for key, label in labels if result.get(key)]
+        parts.append(f"{service.capitalize()}: {', '.join(changes) or 'no changes'}")
+    return {"outcome": "ok", "message": "; ".join(parts)}
 
 
 @router.post("/exclusions", response_model=Ok)
 async def exclude(body: ExclusionBody):
     try:
-        await runs.exclude(body.kind, body.tmdb_id, body.media_id, body.reason)
+        await exclusion_sync.exclude(body.kind, body.tmdb_id, body.media_id, body.reason)
     except (SourceError, tmdb.TmdbError) as exc:
         raise _bad(exc) from exc
     return {"ok": True, "message": "Excluded"}
@@ -151,7 +181,16 @@ async def exclude(body: ExclusionBody):
 @router.delete("/exclusions/media/{media_id}", response_model=Ok)
 async def unexclude_media(media_id: int):
     try:
-        runs.unexclude_media(media_id)
+        await exclusion_sync.unexclude_media(media_id)
+    except SourceError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return {"ok": True, "message": "Exclusion removed"}
+
+
+@router.delete("/exclusions/arr/{service}/{external_id}", response_model=Ok)
+async def unexclude_arr(service: Literal["radarr", "sonarr"], external_id: int):
+    try:
+        await exclusion_sync.unexclude_arr(service, external_id)
     except SourceError as exc:
         raise HTTPException(404, str(exc)) from exc
     return {"ok": True, "message": "Exclusion removed"}
@@ -160,7 +199,7 @@ async def unexclude_media(media_id: int):
 @router.delete("/exclusions/{exclusion_id}", response_model=Ok)
 async def unexclude(exclusion_id: int):
     try:
-        runs.unexclude(exclusion_id)
+        await exclusion_sync.unexclude(exclusion_id)
     except SourceError as exc:
         raise HTTPException(404, str(exc)) from exc
     return {"ok": True, "message": "Exclusion removed"}

@@ -1,10 +1,15 @@
-"""The media cache: one row per movie or show, filled from TMDB, ratings from MDBList."""
+"""The media cache: one row per movie or show, filled from TMDB, ratings from MDBList.
+
+A show's TVDB ID comes from TMDB. Where TMDB has no link to TVDB (often with new or less known
+shows), it is taken from the list itself, from MDBList or, at a Sonarr output, from Sonarr.
+"""
 from __future__ import annotations
 
-from .. import db
+from .. import cache, db
 from . import tmdb
 
 META_DAYS = 14
+TVDB_MISS_SECONDS = 86400  # Sonarr knew no TVDB ID: ask again after a day
 
 
 def get(media_id: int) -> dict | None:
@@ -47,6 +52,8 @@ def _row_from_details(kind: str, data: dict) -> dict:
 
 def save_details(kind: str, data: dict) -> int:
     row = _row_from_details(kind, data)
+    if kind == "show" and not row["tvdb_id"]:
+        del row["tvdb_id"]  # keeps a TVDB ID found elsewhere until TMDB has its own
     database = db.get()
     with database.lock:
         database.upsert("media_cache", ("kind", "tmdb_id"), row)
@@ -62,6 +69,41 @@ async def ensure(kind: str, tmdb_id: int, max_age_days: int = META_DAYS) -> int 
     if data is None:
         return row["id"] if row else None
     return save_details(kind, data)
+
+
+def note_tvdb(media_id: int, tvdb_id) -> bool:
+    """A TVDB ID from elsewhere for a show that has none yet; True if it was taken."""
+    try:
+        value = int(tvdb_id)
+    except (TypeError, ValueError):
+        return False
+    if value <= 0:
+        return False
+    cursor = db.get().execute("UPDATE media_cache SET tvdb_id=? WHERE id=? AND kind='show' AND tvdb_id IS NULL",
+                              (value, media_id))
+    return bool(cursor.rowcount)
+
+
+async def fill_tvdb(media_id: int) -> int | None:
+    """The TVDB ID of a show, asking Sonarr when nobody else had one; Sonarr at most once a day per show."""
+    row = get(media_id)
+    if not row or row["kind"] != "show":
+        return None
+    if row.get("tvdb_id"):
+        return int(row["tvdb_id"])
+    from .. import arr  # only here does the media cache need Sonarr
+    from ..arr import library
+    if not arr.configured("sonarr") or cache.get(f"tvdb:miss:{media_id}"):
+        return None
+    try:
+        found = await library.tvdb_id(row)
+    except arr.ArrError:
+        return None
+    if not found:
+        cache.put(f"tvdb:miss:{media_id}", True, TVDB_MISS_SECONDS)
+        return None
+    note_tvdb(media_id, found)
+    return found
 
 
 async def by_external(source: str, value: str | int, kind: str | None) -> int | None:

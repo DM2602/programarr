@@ -10,11 +10,13 @@ from . import db
 DISCORD_EVENTS = {
     "auto": "Poster set automatically (new title)",
     "season": "New season: poster set from the linked set",
-    "waiting": "New season is waiting for its set",
-    "review": "Something needs your review",
+    "waiting": "New season pending (no poster in the set yet)",
+    "review": "New item in Review",
     "set_changed": "Linked set changed",
     "detect": "Match existing finished",
-    "error": "Errors (Plex unreachable, write failed)",
+    "flow": "Flow added titles to Radarr or Sonarr",
+    "flow_dry": "Dry run found titles to add",
+    "error": "Errors (service unreachable, write or flow failed)",
 }
 
 DEFAULTS: dict[str, Any] = {
@@ -32,6 +34,8 @@ DEFAULTS: dict[str, Any] = {
     "unlock_fields": True,
     "verify_plex": True,
     "archive_keep": 10,
+    "backup_posters": True,  # a copy of every poster file in /data/backup, put back when a file goes missing
+    "plex_poster_files": "movies",  # titles without a file: save Plex' poster as file (off, movies, all)
     # MediUX
     "mediux_token": "",
     "mediux_quality": "original",
@@ -82,13 +86,14 @@ DEFAULTS: dict[str, Any] = {
     "auto_count_specials": False,
     "auto_collection_consistency": True,
     "poll_minutes": 15,
+    "folder_check_hours": 24,
     "set_check_hours": 24,
     "wait_max_days": 180,
     "set_changes": "notify",
     "detect_movies": True,
     # Notifications and interfaces
     "discord_webhook": "",
-    "discord_events": {key: True for key in DISCORD_EVENTS},
+    "discord_events": {key: key != "flow_dry" for key in DISCORD_EVENTS},
     "base_url": "",
     "hook_token": "",
     # Internal state
@@ -96,6 +101,8 @@ DEFAULTS: dict[str, Any] = {
     "mediux_follows": {"follow": [], "hide": [], "at": 0},
     "last_sync": 0,
     "last_set_check": 0,
+    "last_folder_check": 0,
+    "discord_avatar_for": "",
 }
 
 SECRETS = {
@@ -112,7 +119,8 @@ SECRETS = {
     "sonarr_key",
 }
 
-INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "tpdb_cookies"}
+INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "last_folder_check", "tpdb_cookies",
+            "discord_avatar_for"}
 
 _cache: dict[str, Any] | None = None
 
@@ -128,7 +136,7 @@ def _load() -> dict[str, Any]:
             values["hook_token"] = secrets.token_urlsafe(24)
             db.get().upsert("settings", ("key",), {"key": "hook_token", "value": db.dumps(values["hook_token"])})
         if isinstance(values.get("discord_events"), dict):
-            merged = {key: True for key in DISCORD_EVENTS}
+            merged = dict(DEFAULTS["discord_events"])
             merged.update({k: bool(v) for k, v in values["discord_events"].items() if k in DISCORD_EVENTS})
             values["discord_events"] = merged
         _cache = values

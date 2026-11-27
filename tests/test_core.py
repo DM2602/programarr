@@ -233,7 +233,8 @@ def test_scheduler_due(world):
     from app import jobs
 
     now = time.time()
-    settings.update({"last_sync": now - 60, "last_set_check": now - 3600, "poll_minutes": 15, "set_check_hours": 24})
+    settings.update({"last_sync": now - 60, "last_set_check": now - 3600, "last_folder_check": now - 3600,
+                     "poll_minutes": 15, "set_check_hours": 24})
     assert jobs.due(now) == []
     settings.set("last_sync", now - 16 * 60)
     assert jobs.due(now) == ["sync"]
@@ -246,31 +247,11 @@ def test_scheduler_due(world):
     assert jobs.due(now) == []
 
 
-async def test_posters_uploaded_into_plex_become_files(world):
-    from app.posters import tasks
-
-    movie = world.plex.add_movie("Dune", 2021, "438631")
-    show = world.plex.add_show("Andor", 2022, "83867", seasons=[1])
-    world.plex.add_movie("Arrival", 2016, "329865")  # Plex default poster: stays as it is
-    await world.enable_libraries()
-    await library.sync()
-    world.plex.upload(movie, poster_for("posteria-dune", "OLD"))
-    world.plex.upload(world.plex.season_key(show, 1), poster_for("posteria-andor-s1", "S1"))
-    result = await tasks.adopt_uploads()
-    assert result["adopted"] == 2 and result["failed"] == 0
-    assert imaging.strip_stamp((world.media / "movies" / "Dune (2021)" / "poster.jpg").read_bytes()) == \
-        poster_for("posteria-dune", "OLD")
-    assert (world.media / "tv" / "Andor (2022)" / "Season 01" / "Season01.jpg").exists()
-    assert not (world.media / "movies" / "Arrival (2016)" / "poster.jpg").exists()
-    assert world.plex.selected_is_local(movie) and "thumb" not in world.plex.items[movie]["locked"]
-    assert world.plex.selected_is_local(world.plex.season_key(show, 1))
-
-
 def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     database = db.Database(tmp_path / "programarr.db")
-    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 2
+    assert database.scalar("PRAGMA user_version") == db.SCHEMA_VERSION == 4
     database.close()
-    # A file from version 1: copied before the migration, data kept, the list tables added.
+    # A file from version 1: copied before the migration, data kept, the list and flow tables added.
     path = tmp_path / "old.db"
     conn = sqlite3.connect(path)
     conn.executescript(db.SCHEMA_V1 + "\nPRAGMA user_version=1;")
@@ -278,11 +259,24 @@ def test_fresh_database_and_backup_before_upgrade(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
     database = db.Database(path)
-    assert database.scalar("PRAGMA user_version") == 2
+    assert database.scalar("PRAGMA user_version") == 4
     assert database.one("SELECT title, show_status FROM items WHERE key='1'") == {"title": "Old", "show_status": "ended"}
     assert (tmp_path / "programarr-pre-v1.db").exists()
     tables = {row["name"] for row in database.query("SELECT name FROM sqlite_master WHERE type='table'")}
-    assert {"media_cache", "parser_runs", "parser_entries", "parser_overrides", "exclusions"} <= tables
+    assert {"media_cache", "parser_runs", "parser_entries", "parser_overrides", "exclusions",
+            "flows", "flow_runs", "flow_trace", "arr_exclusions"} <= tables
+    database.close()
+    # A file from version 2 (match log in use): only the flow tables come in, the runs stay.
+    path = tmp_path / "v2.db"
+    conn = sqlite3.connect(path)
+    conn.executescript(db.SCHEMA_V1 + db.SCHEMA_V2 + "\nPRAGMA user_version=2;")
+    conn.execute("INSERT INTO parser_runs (source, source_ref, status) VALUES ('mdblist', 'mdblist:x', 'ok')")
+    conn.commit()
+    conn.close()
+    database = db.Database(path)
+    assert database.scalar("PRAGMA user_version") == 4
+    assert database.scalar("SELECT COUNT(*) FROM parser_runs") == 1
+    assert (tmp_path / "programarr-pre-v2.db").exists()
     database.close()
     monkeypatch.setattr(db, "SCHEMA_VERSION", 1)
     with pytest.raises(RuntimeError, match="newer Programarr"):

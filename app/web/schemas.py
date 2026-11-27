@@ -58,9 +58,17 @@ class JobResult(BaseModel):
     changed: int | None = None
     gave_up: int | None = None
     adopted: int | None = None
+    kept: int | None = None
+    unlocked: int | None = None
+    restored: int | None = None
+    saved: int | None = None
     scanned: int | None = None
     outcome: str | None = None
     run: int | None = None
+    dry_run: bool | None = None
+    added: int | None = None
+    tagged: int | None = None
+    present: int | None = None
 
 
 class JobBrief(Model):
@@ -83,7 +91,7 @@ class Job(JobBrief):
 class Counts(Model):
     review: int
     review_kinds: dict[str, int]
-    waiting: int
+    pending: int
     movies: int
     shows: int
     linked: int
@@ -121,11 +129,12 @@ class SetupSteps(Model):
 
 class Todo(Model):
     review: int
-    waiting: int
+    pending: int
     problems: int
     unlinked_with_files: int
     detect_open: int
     match_open: int = 0
+    flows_failed: int = 0
 
 
 class RecentCard(Model):
@@ -145,6 +154,10 @@ class LibraryFacts(Model):
     shows: int
     linked: int
     complete: int
+    files: int  # poster files in the folders
+    backup_files: int | None = None  # None: backup off
+    backup_bytes: int | None = None
+    exclusions: int
 
 
 class Overview(Model):
@@ -157,6 +170,9 @@ class Overview(Model):
     recent: list[RecentCard]
     facts: LibraryFacts
     jobs: list[Job]
+    flows: list[FlowCard]
+    flow_adds: list[FlowAdd]
+    schedule: list[ScheduleRow]
 
 
 # -- library ---------------------------------------------------------------------------
@@ -168,7 +184,7 @@ class Card(Model):
     library_key: str | None = None
     thumb: str
     has_file: bool
-    flag: Literal["problem", "review", "waiting", "new"] | None = None
+    flag: Literal["problem", "review", "pending", "new"] | None = None
     complete: bool
     designer: str | None = None
     source_label: str | None = None
@@ -233,9 +249,9 @@ class SlotView(Model):
     state_text: str
     needs_force: bool
     applied_at: int | None = None
-    waiting: bool
-    waiting_since: int | None = None
-    wait_given_up: bool
+    pending: bool
+    pending_since: int | None = None
+    dismissed: bool
     gone: bool
 
 
@@ -299,6 +315,7 @@ class ItemDetail(Model):
 class ImageView(Model):
     token: str
     thumb: str
+    large: str | None = None  # 720 px wide, for the enlarged view on hover
     kind: str | None = None
     season: int | None = None
     label: str = ""
@@ -391,7 +408,7 @@ class TpdbSaved(Model):
     url: str
 
 
-# -- review, waiting, match -------------------------------------------------------------
+# -- review, pending, match -------------------------------------------------------------
 class ComparePair(Model):
     slot: str
     label: str
@@ -404,6 +421,14 @@ class SetSummary(Model):
     designer: str | None = None
     source_label: str
     url: str | None = None
+
+
+class CurrentPoster(Model):
+    slot: str
+    label: str
+    thumb: str
+    large: str
+    file: bool  # the file in the folder; else what Plex shows
 
 
 class ReviewView(Model):
@@ -427,6 +452,7 @@ class ReviewView(Model):
     confidence: Literal["high", "medium"] | None = None
     via: str | None = None
     slot: str | None = None
+    current: list[CurrentPoster] = []  # what the slots show now (new titles and seasons), to keep
 
 
 class KindCount(Model):
@@ -447,23 +473,23 @@ class ConfirmAll(Model):
     count: int
 
 
-class WaitingRow(Model):
+class PendingRow(Model):
     slot: str
     item_key: str
     title: str
     year: int | None = None
     season: int | None = None
     thumb: str
-    waiting: bool
-    waiting_since: int | None = None
+    pending: bool
+    pending_since: int | None = None
     checked_at: int | None = None
     set_title: str | None = None
     designer: str | None = None
     source_label: str | None = None
 
 
-class WaitingPage(Model):
-    rows: list[WaitingRow]
+class PendingPage(Model):
+    rows: list[PendingRow]
     max_days: int
 
 
@@ -472,6 +498,13 @@ class DetectStats(Model):
     movies: int
     complete: int
     job: Job | None = None
+
+
+class BackupView(Model):
+    enabled: bool
+    files: int
+    bytes: int
+    folder: str
 
 
 # -- history and log --------------------------------------------------------------------
@@ -521,6 +554,8 @@ class SettingsValues(Model):
     unlock_fields: bool
     verify_plex: bool
     archive_keep: int
+    backup_posters: bool
+    plex_poster_files: Literal["off", "movies", "all"]
     mediux_token: bool
     mediux_quality: Literal["original", "optimized"]
     mediux_api: str
@@ -564,6 +599,7 @@ class SettingsValues(Model):
     auto_count_specials: bool
     auto_collection_consistency: bool
     poll_minutes: int
+    folder_check_hours: int
     set_check_hours: int
     wait_max_days: int
     set_changes: Literal["notify", "apply"]
@@ -671,15 +707,17 @@ class FieldOption(Model):
 class SourceField(Model):
     key: str
     label: str
-    type: Literal["text", "number", "select", "multi"]
+    type: Literal["text", "number", "decimal", "select", "multi", "bool", "tokens"]
     options: list[FieldOption]
     default: Any = None
     required: bool
     placeholder: str | None = None
     suggestions: list[str]
-    min: int | None = None
-    max: int | None = None
+    min: float | None = None
+    max: float | None = None
     when: dict[str, list[str]] | None = None
+    step: float | None = None
+    dynamic: str | None = None
 
 
 class ListSource(Model):
@@ -823,16 +861,25 @@ class OverridesPage(Model):
 
 
 class ExclusionView(Model):
-    id: int
+    id: int | None = None  # Programarr's own exclusion; None: only on Radarr's or Sonarr's list
     scope: str
     reason: str | None = None
     created_at: int | None = None
-    media: MediaView
+    media: MediaView | None = None  # None when the title was never read from a list
     plex_key: str | None = None
+    title: str
+    year: int | None = None
+    kind: MediaKind
+    service: Literal["radarr", "sonarr"] | None = None  # also on that service's exclusion list
+    external_id: int | None = None  # TMDB id (Radarr) or TVDB id (Sonarr)
+    pending: bool = False  # waits to be written to Radarr or Sonarr
 
 
 class ExclusionsPage(Model):
     rows: list[ExclusionView]
+    synced_at: int | None = None
+    services: list[Literal["radarr", "sonarr"]] = []
+    errors: list[str] = []
 
 
 class ExclusionBody(Body):
@@ -886,3 +933,279 @@ class MissingSeasons(Model):
 
     seasons: list[MissingSeason]
     sonarr_url: str | None = None
+
+
+# -- flows -----------------------------------------------------------------------------
+FlowRunStatus = Literal["running", "ok", "partial", "error"]
+NodeCategory = Literal["source", "filter", "output"]
+
+
+class NodeFact(Model):
+    """One labelled setting of an output, e.g. Profile: HD-1080p."""
+    label: str
+    value: str
+
+
+class NodeTypePort(Model):
+    key: str
+    label: str
+
+
+class FlowPosition(Model):
+    x: float = 0
+    y: float = 0
+
+
+class FlowNode(Model):
+    id: str
+    type: str
+    config: dict[str, Any] = {}
+    position: FlowPosition = FlowPosition()
+
+
+class FlowEdge(Model):
+    source: str
+    port: str
+    target: str
+
+
+class FlowGraph(Model):
+    nodes: list[FlowNode] = []
+    edges: list[FlowEdge] = []
+
+
+class FlowProblem(Model):
+    node: str | None = None
+    message: str
+
+
+class FlowRunBrief(Model):
+    id: int
+    flow_id: int
+    flow_name: str
+    flow_version: int
+    trigger: Literal["manual", "schedule"]
+    dry_run: bool
+    started_at: int | None = None
+    finished_at: int | None = None
+    status: FlowRunStatus
+    error: str | None = None
+    titles: int
+    added: int
+    tagged: int
+    present: int
+    skipped: int
+    failed: int
+
+
+class FlowView(Model):
+    id: int
+    name: str
+    version: int
+    schedule: str | None = None
+    schedule_text: str
+    enabled: bool
+    dry_run: bool
+    next_run_at: int | None = None
+    created_at: int | None = None
+    updated_at: int | None = None
+    problems: list[FlowProblem]
+    summaries: dict[str, str]
+    facts: dict[str, list[NodeFact]] = {}  # outputs: profile, folder, tags
+    ports: dict[str, list[NodeTypePort]]  # outputs per node; a filter's depend on its rules
+    outputs: list[str]
+    nodes: int
+    last_run: FlowRunBrief | None = None
+    graph: FlowGraph | None = None
+
+
+class FlowsPage(Model):
+    flows: list[FlowView]
+
+
+class FlowCreate(Body):
+    name: str
+    graph: FlowGraph | None = None
+    schedule: str | None = None
+
+
+class FlowUpdate(Body):
+    """Only the fields sent change. schedule null (or empty) means manual."""
+    name: str | None = None
+    graph: FlowGraph | None = None
+    schedule: str | None = None
+    enabled: bool | None = None
+    dry_run: bool | None = None
+
+
+class FlowRunBody(Body):
+    dry_run: bool | None = None
+
+
+class FlowCheckBody(Body):
+    graph: FlowGraph
+
+
+class FlowCheck(Model):
+    problems: list[FlowProblem]
+    summaries: dict[str, str]  # one line per node, for the editor
+    facts: dict[str, list[NodeFact]] = {}  # outputs: profile, folder, tags
+    ports: dict[str, list[NodeTypePort]]
+
+
+class ScheduleCheck(Model):
+    ok: bool
+    schedule: str | None = None
+    text: str
+    next_run_at: int | None = None
+    message: str | None = None
+
+
+class PortCount(Model):
+    key: str
+    label: str
+    count: int
+
+
+class CompareList(Model):
+    ref: str
+    name: str | None = None  # the list's title on MDBList
+    run: int | None = None
+    error: str | None = None
+
+
+class CompareView(Model):
+    lists: list[CompareList]
+    both: int
+    flow_only: list[MediaView]
+    list_only: list[MediaView]
+
+
+class RunNode(Model):
+    id: str
+    type: str
+    label: str
+    category: str
+    summary: str
+    facts: list[NodeFact] = []  # outputs: profile, folder, tags
+    count_in: int
+    ports: list[PortCount]
+    entries: dict[str, int] | None = None
+    run: int | None = None
+    error: str | None = None
+    compare: CompareView | None = None
+
+
+class FlowRunDetail(FlowRunBrief):
+    notes: list[str]
+    current: bool
+    nodes: list[RunNode]
+    sources: list[RunBrief]
+    previous: int | None = None
+    next: int | None = None
+
+
+class FlowRunsPage(Model):
+    runs: list[FlowRunBrief]
+    total: int
+    page: int
+    pages: int
+
+
+class TraceStep(Model):
+    node: str
+    label: str
+    category: str
+    port: str | None = None
+    port_label: str
+    detail: str
+
+
+class FlowTitle(Model):
+    media: MediaView
+    outcomes: list[TraceStep]
+    steps: list[TraceStep]
+
+
+class FlowTitlesPage(Model):
+    rows: list[FlowTitle]
+    counts: dict[str, int]
+    total: int
+    page: int
+    pages: int
+
+
+class NodeTypeView(Model):
+    type: str
+    label: str
+    category: NodeCategory
+    inputs: bool
+    ports: list[NodeTypePort]
+    fields: list[SourceField]  # for a filter with rules: the fields of one rule
+    missing: str | None = None
+    rules: bool = False  # one output per rule, plus No match
+    each_default: bool | None = None  # a title fitting several rules goes to each of them
+
+
+class NodeTypes(Model):
+    types: list[NodeTypeView]
+
+
+class ArrProfile(Model):
+    id: int
+    name: str
+
+
+class ArrRootFolder(Model):
+    path: str
+    free_space: int | None = None
+
+
+class ArrTag(Model):
+    id: int
+    label: str
+
+
+class ArrOptions(Model):
+    service: Literal["radarr", "sonarr"]
+    configured: bool
+    profiles: list[ArrProfile]
+    root_folders: list[ArrRootFolder]
+    tags: list[ArrTag]
+    error: str | None = None
+
+
+# -- dashboard ----------------------------------------------------------------------------------
+class ScheduleRow(Model):
+    key: str
+    label: str
+    interval: int | None = None  # seconds; None when off
+    last: int | None = None
+    next: int | None = None  # None: off, paused or unknown
+    state: Literal["on", "off", "paused"]
+
+
+class CompareSummary(Model):
+    """A run's MDBList comparisons, added up over its outputs."""
+    lists: list[CompareList]
+    both: int
+    flow_only: int
+    list_only: int
+
+
+class FlowCard(FlowView):
+    compare: CompareSummary | None = None
+
+
+class FlowAdd(Model):
+    """A title a live run added to Radarr or Sonarr."""
+    media: MediaView
+    service: Literal["radarr", "sonarr"]
+    flow_id: int
+    flow_name: str
+    run_id: int
+    at: int | None = None
+    plex_key: str | None = None
+
+
+Overview.model_rebuild()

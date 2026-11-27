@@ -16,3 +16,8 @@ def world(tmp_path):
     yield w
     http.set_transport(None)
     settings.reset_cache()
+    from app.posters import backup, tasks
+
+    tasks._named.clear()  # titles named by webhooks belong to this test's library
+    tasks._named_keys.clear()
+    backup.forget_stats()  # the counted backup folder belonged to another test

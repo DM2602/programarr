@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .. import db, imaging, settings
-from . import library, paths, sources
+from . import backup, library, paths, sources
 from ..jobs import runner
 from ..plex import TYPE_MOVIE, TYPE_SEASON, TYPE_SHOW, Plex, PlexError, locked_fields
 from .sources.base import ImageRef, SourceError, parse_slot_id, slot_id
@@ -88,10 +88,11 @@ async def _write_one(item: dict, assignment: Assignment, origin: str, mode: str,
         if not any(paths.inside(target, root) for root in allowed):
             raise paths.PathError(f"Target is outside the folder: {target}")
         paths.check_folder(folder)
+        local_copy = ref.source in ("archive", "backup")  # a kept file: its stamp says where it came from
         info = {
-            "src": ref.source if ref.source not in ("archive",) else ref.extra.get("src", "archive"),
+            "src": ref.extra.get("src", ref.source) if local_copy else ref.source,
             "set": ref.set_key,
-            "img": ref.image_id if ref.source not in ("upload", "archive") else None,
+            "img": ref.extra.get("img") if local_copy else (ref.image_id if ref.source != "upload" else None),
             "by": ref.designer,
             "mode": mode,
             "t": db.now(),
@@ -118,10 +119,10 @@ async def _write_one(item: dict, assignment: Assignment, origin: str, mode: str,
                 "file_mtime": stat.st_mtime,
                 "source": source,
                 "set_key": ref.set_key,
-                "image_id": ref.image_id,
+                "image_id": info["img"] if local_copy else ref.image_id,
                 "image_modified": ref.modified,
                 "designer": ref.designer,
-                "source_url": ref.url if ref.source not in ("upload", "archive") else None,
+                "source_url": ref.url if ref.source not in ("upload", "archive", "backup") else None,
                 "mode": mode,
                 "applied_at": db.now(),
                 "written_sha1": sha1,
@@ -134,9 +135,10 @@ async def _write_one(item: dict, assignment: Assignment, origin: str, mode: str,
             "INSERT INTO history (at, item_key, slot_id, action, path, archived, source, set_key, image_id, designer,"
             " origin, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             (db.now(), item["key"], slot, "write", str(target), archived[0] if archived else None, source,
-             ref.set_key, ref.image_id, ref.designer, origin,
+             ref.set_key, info["img"] if local_copy else ref.image_id, ref.designer, origin,
              note or (f"{len(archived) - 1} more file(s) archived" if len(archived) > 1 else None)),
         )
+        backup.save_bytes(item, kind, season, stamped, target.suffix.lower())
         try:
             hashes = await asyncio.to_thread(imaging.hashes, prepared.data)
             database.upsert("hashes", ("key",), {"key": f"file:{sha1}", **hashes, "at": db.now()})
@@ -283,6 +285,82 @@ async def force_local(item_key: str, slot: str, plex: Plex | None = None) -> str
     return "Plex now shows the file from the folder"
 
 
+def _is_upload(poster: dict) -> bool:
+    return (poster.get("rating_key") or "").startswith("upload://")
+
+
+async def take_plex_choice(item_key: str, slot: str, plex: Plex | None = None, uploads: bool = False) -> str | None:
+    """A poster picked or uploaded in Plex becomes the file in the folder; the lock goes.
+
+    Plex locks the poster field when you pick or upload one; that lock is what counts. With
+    uploads=True an unlocked upload counts too, for slots without a file. Without a lock the file
+    in the folder wins: Plex reads it again. Returns "saved", "unlocked" (Plex showed the file),
+    "refreshed" or None.
+    """
+    plex = plex or Plex.from_settings()
+    database = db.get()
+    item = database.one("SELECT * FROM items WHERE key=?", (item_key,))
+    row = database.one("SELECT * FROM slots WHERE id=?", (slot,))
+    if not item or not row or item.get("gone"):
+        return None
+    rating_key, plex_type = _plex_target(item, slot)
+    if not rating_key:
+        return None
+    meta = await plex.metadata(rating_key)
+    locked = bool(meta) and "thumb" in locked_fields(meta)
+    if not locked and not row["file"] and not uploads:
+        return None
+    chosen = next((p for p in await plex.posters(rating_key) if p["selected"]), None)
+    if chosen is None:
+        return None
+    if _is_local(chosen):
+        if not locked:
+            return None
+        await plex.unlock(item["library_key"], plex_type, rating_key)
+        database.update("slots", "id", slot, {"plex_state": "ok", "plex_checked_at": db.now()})
+        return "unlocked"
+    if not locked and row["file"]:
+        await refresh_in_plex(item, [slot], plex)  # Plex shows another poster although the folder has one
+        return "refreshed"
+    if not locked and not _is_upload(chosen):
+        return None
+    kind, _, season = parse_slot_id(slot)
+    upload = _is_upload(chosen)
+    ref = ImageRef("plex", chosen["rating_key"] or chosen["key"], kind, season, url=chosen["key"],
+                   thumb_url=chosen["thumb"], label="Uploaded to Plex" if upload else "Chosen in Plex")
+    outcomes = await apply(item_key, [Assignment(slot, ref)], "adopt" if upload else "plex", "manual")
+    if not (outcomes and outcomes[0].ok):
+        return None
+    if locked and not settings.get("unlock_fields"):
+        # The file holds the chosen poster now; with the lock Plex would never show the file.
+        await plex.unlock(item["library_key"], plex_type, rating_key)
+        await plex.refresh(item["key"])
+    event("info", "plex", f"{'Uploaded to' if upload else 'Selected in'} Plex, saved as file: "
+                          f"{slot_label(item, slot)}", item_key)
+    return "saved"
+
+
+async def keep_plex_poster(item_key: str, slot: str, plex: Plex | None = None) -> bool:
+    """A slot without a file gets the poster Plex shows, as file (setting plex_poster_files)."""
+    plex = plex or Plex.from_settings()
+    database = db.get()
+    item = database.one("SELECT * FROM items WHERE key=?", (item_key,))
+    row = database.one("SELECT * FROM slots WHERE id=?", (slot,))
+    if not item or not row or row["file"] or item.get("gone"):
+        return False
+    rating_key, _ = _plex_target(item, slot)
+    if not rating_key:
+        return False
+    chosen = next((p for p in await plex.posters(rating_key) if p["selected"]), None)
+    if chosen is None or _is_local(chosen):
+        return False
+    kind, _, season = parse_slot_id(slot)
+    ref = ImageRef("plex", chosen["rating_key"] or chosen["key"], kind, season, url=chosen["key"],
+                   thumb_url=chosen["thumb"], label="Plex poster")
+    outcomes = await apply(item_key, [Assignment(slot, ref)], "plex_file", "manual")
+    return bool(outcomes and outcomes[0].ok)
+
+
 async def remove_file(item_key: str, slot: str) -> str:
     """Move the poster file to the archive; Plex falls back to its own poster."""
     database = db.get()
@@ -297,6 +375,7 @@ async def remove_file(item_key: str, slot: str) -> str:
         if not files:
             return "No file"
         archived = [str(paths.archive(path, slot, move=True)) for path in files]
+        backup.drop(item, kind, season)  # removed on purpose: the backup must not bring it back
         database.update("slots", "id", slot, {
             "file": None, "file_sha1": None, "file_size": None, "file_mtime": None, "source": None,
             "set_key": None, "image_id": None, "designer": None, "mode": "manual", "written_sha1": None,

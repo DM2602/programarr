@@ -28,11 +28,12 @@ class FakeTmdb:
 
     def add_title(self, kind: str, tmdb: int, title: str, date: str, *, original: str | None = None,
                   popularity: float = 10.0, imdb: str | None = None, tvdb: int | None = None,
-                  alt: tuple[str, ...] = (), poster: bool = True, seasons: list[tuple] = ()) -> None:
-        """kind is TMDB's: movie or tv."""
+                  alt: tuple[str, ...] = (), poster: bool = True, seasons: list[tuple] = (),
+                  genres: tuple[int, ...] = (18,)) -> None:
+        """kind is TMDB's: movie or tv. Genres are TMDB genre ids (18: Drama)."""
         self.catalog[f"{kind}:{tmdb}"] = {
             "kind": kind, "id": tmdb, "title": title, "original": original or title, "date": date,
-            "popularity": popularity, "imdb": imdb, "tvdb": tvdb, "alt": list(alt),
+            "popularity": popularity, "imdb": imdb, "tvdb": tvdb, "alt": list(alt), "genres": list(genres),
             "poster": f"/p{kind}{tmdb}.jpg" if poster else None,
             "seasons": [{"season_number": n, "episode_count": count, "air_date": date, "poster_path": f"/p{tmdb}s{n}.jpg"}
                         for n, count, date in seasons],
@@ -152,7 +153,7 @@ class FakeTmdb:
             if full:
                 row = fake._result(full)
                 row["external_ids"] = {"imdb_id": full["imdb"], "tvdb_id": full["tvdb"]}
-                row["genres"] = [{"id": 18, "name": "Drama"}]
+                row["genres"] = [{"id": genre, "name": f"Genre {genre}"} for genre in full["genres"]]
                 row["original_language"] = "en"
                 if kind == "movie":
                     row["production_countries"] = [{"iso_3166_1": "US"}]
@@ -276,6 +277,7 @@ class FakeTvmaze:
 class FakeDiscord:
     def __init__(self):
         self.messages: list[dict] = []
+        self.avatars: list[str] = []
         self.app = self._make_app()
 
     def _make_app(self) -> FastAPI:
@@ -295,6 +297,11 @@ class FakeDiscord:
                 payload["_files"] = []
             fake.messages.append(payload)
             return Response(status_code=204)
+
+        @app.patch("/api/webhooks/{hook_id}/{token}")
+        async def modify(request: Request):
+            fake.avatars.append((await request.json())["avatar"])
+            return {"id": request.path_params["hook_id"], "name": "Captain Hook"}
 
         return app
 

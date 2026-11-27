@@ -1,4 +1,4 @@
-"""Background jobs in three lanes (interactive, background, lists) plus the scheduler."""
+"""Background jobs in three lanes (interactive, background, lists and flows) plus the scheduler."""
 from __future__ import annotations
 
 import asyncio
@@ -15,6 +15,9 @@ log = logging.getLogger("programarr.jobs")
 
 _current_job: contextvars.ContextVar[int | None] = contextvars.ContextVar("programarr_job", default=None)
 
+# Housekeeping (clean-up, exclusion sync with Radarr and Sonarr) runs this often.
+MAINTENANCE_SECONDS = 6 * 3600
+
 
 class Cancelled(Exception):
     pass
@@ -28,6 +31,7 @@ class Runner:
         self.tasks: set[asyncio.Task] = set()
         self.scheduler_task: asyncio.Task | None = None
         self.started = False
+        self.last_maintenance = 0.0
 
     # -- lifecycle -------------------------------------------------------
     def start(self, scheduler: bool = True) -> None:
@@ -144,11 +148,15 @@ class Runner:
 
     # -- scheduler -------------------------------------------------------------
     async def _scheduler(self) -> None:
-        from .posters import tasks  # late import: tasks depends on most modules
+        from .flows import engine as flows  # late imports: tasks and flows depend on most modules
+        from .posters import tasks
 
         await asyncio.sleep(5)
-        last_maintenance = 0.0
         while True:
+            try:
+                flows.start_due(int(time.time()))
+            except Exception as exc:  # noqa: BLE001
+                log.warning("Scheduler (flows): %s", exc)
             try:
                 now = time.time()
                 for kind in due(now):
@@ -156,9 +164,11 @@ class Runner:
                         self.submit("sync", "Sync with Plex", tasks.sync_and_process, dedupe=True)
                     elif kind == "setcheck":
                         self.submit("setcheck", "Check linked sets", tasks.check_sets, dedupe=True)
-                if now - last_maintenance >= 6 * 3600:
-                    last_maintenance = now
-                    self.submit("maintenance", "Clean up", tasks.maintenance, dedupe=True)
+                    elif kind == "folders":
+                        self.submit("folders", "Check folders", tasks.check_folders, dedupe=True)
+                if now - self.last_maintenance >= MAINTENANCE_SECONDS:
+                    self.last_maintenance = now
+                    self.submit("maintenance", "Housekeeping", tasks.maintenance, dedupe=True)
             except Exception as exc:  # noqa: BLE001
                 log.warning("Scheduler: %s", exc)
             await asyncio.sleep(30)
@@ -167,19 +177,55 @@ class Runner:
 runner = Runner()
 
 
+REGULAR = (("sync", "Plex sync", "last_sync"), ("setcheck", "Set check", "last_set_check"),
+           ("folders", "Folder check", "last_folder_check"))
+
+
+def intervals() -> dict[str, int]:
+    """Seconds between the regular jobs, 0 = off."""
+    return {
+        "sync": max(5, int(settings.get("poll_minutes") or 15)) * 60,
+        "setcheck": max(1, int(settings.get("set_check_hours") or 24)) * 3600,
+        # Every folder on the disks: rarely, a sync reads only the folders of titles that changed.
+        "folders": max(0, int(settings.get("folder_check_hours") or 0)) * 3600,
+    }
+
+
+def _state(kind: str, every: int) -> str:
+    if not every:
+        return "off"
+    # Set checks write posters for pending seasons: only with automation on.
+    if kind == "setcheck" and not settings.get("automation"):
+        return "paused"
+    return "on"
+
+
 def due(now: float) -> list[str]:
-    """Which regular jobs are due (Plex sync, set check)."""
+    """Which regular jobs are due (Plex sync, set check, folder check)."""
     if not (settings.get("setup_done") and settings.get("plex_url")):
         return []
-    result = []
-    poll = max(5, int(settings.get("poll_minutes") or 15)) * 60
-    if now - (settings.get("last_sync") or 0) >= poll:
-        result.append("sync")
-    check = max(1, int(settings.get("set_check_hours") or 24)) * 3600
-    # Set checks write posters for waiting seasons: only with automation on.
-    if settings.get("automation") and now - (settings.get("last_set_check") or 0) >= check:
-        result.append("setcheck")
-    return result
+    every = intervals()
+    return [kind for kind, _, last in REGULAR
+            if _state(kind, every[kind]) == "on" and now - (settings.get(last) or 0) >= every[kind]]
+
+
+def schedule(now: float) -> list[dict]:
+    """The regular jobs with their interval, last and next run (dashboard)."""
+    ready = bool(settings.get("setup_done") and settings.get("plex_url"))
+    every = intervals()
+    rows = []
+    for kind, label, last_key in REGULAR:
+        last = int(settings.get(last_key) or 0)
+        state = _state(kind, every[kind])
+        rows.append({
+            "key": kind,
+            "label": label,
+            "interval": every[kind] or None,
+            "last": last or None,
+            "next": max(int(now), last + every[kind]) if ready and state == "on" else None,
+            "state": state,
+        })
+    return rows
 
 
 def progress(done: int | None = None, total: int | None = None, message: str | None = None) -> None:

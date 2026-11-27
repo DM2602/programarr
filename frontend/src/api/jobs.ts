@@ -14,7 +14,7 @@ export function jobRunning(job: { status: string } | null | undefined): boolean 
 }
 
 export function jobOk(job: Job): boolean {
-  if (job.kind === "preview" && job.result?.outcome === "error") return false;
+  if ((job.kind === "preview" || job.kind === "flow") && job.result?.outcome === "error") return false;
   return job.status === "done" && !(job.result?.outcomes ?? []).some((outcome) => !outcome.ok);
 }
 
@@ -26,6 +26,7 @@ export function jobProgress(job: Pick<Job, "title" | "done" | "total" | "message
 
 const AUTO_OUTCOMES: Record<string, string> = {
   applied: "Set applied",
+  restored: "Restored from backup",
   review: "Added to Review",
   bound: "Already linked",
   missing: "Title not found",
@@ -46,7 +47,7 @@ export function jobMessage(job: Job): string {
       const waiting = Array.isArray(r.waiting) ? r.waiting.length : 0;
       let text = `${plural(r.written ?? 0, "poster", "posters")} set`;
       if (r.failed) text += `, ${r.failed} failed`;
-      if (waiting) text += `, ${plural(waiting, "season waits", "seasons wait")} for the set`;
+      if (waiting) text += `, ${plural(waiting, "season", "seasons")} pending`;
       const bad = r.outcomes?.find((outcome) => !outcome.ok);
       return bad ? `${text}: ${bad.message}` : text;
     }
@@ -55,25 +56,39 @@ export function jobMessage(job: Job): string {
       const text = `Sync done: ${plural(r.new_items ?? 0, "new title", "new titles")}, ${plural(r.new_seasons ?? 0, "new season", "new seasons")}`;
       return r.skipped ? `${text} (automation off)` : text;
     }
+    case "folders": {
+      let text = `${plural(r.checked ?? 0, "title", "titles")} checked`;
+      if (r.restored) text += `, ${plural(r.restored, "poster", "posters")} restored`;
+      return text;
+    }
     case "setcheck":
     case "setcheck_one":
-      return `${plural(r.checked ?? 1, "set", "sets")} checked, ${r.applied ?? 0} filled in, ${r.changed ?? 0} changed`;
+      return `${plural(r.checked ?? 1, "set", "sets")} checked, ${r.applied ?? 0} applied, ${r.changed ?? 0} changed`;
     case "detect":
       return `${r.checked ?? 0} checked, ${r.found ?? 0} found, ${r.high ?? 0} certain`;
     case "detect_one":
       if (!r.found) return "No matching set found";
       return r.confidence === "high" ? "Set found, confirm it under Match existing" : "Possible set found, compare it under Match existing";
     case "adopt": {
-      let text = `${plural(r.adopted ?? 0, "poster", "posters")} saved as files`;
+      const saved = (r.adopted ?? 0) + (r.kept ?? 0) + (r.restored ?? 0);
+      let text = `${plural(saved, "poster", "posters")} saved as files`;
       if (r.failed) text += `, ${r.failed} failed`;
       return `${text} (${r.checked ?? 0} checked)`;
     }
+    case "keep_plex":
+      return r.kept ? `${plural(r.kept, "poster", "posters")} kept` : "Review closed";
+    case "backup":
+      return r.saved ? `${plural(r.saved, "poster", "posters")} backed up` : "Backup is up to date";
+    case "restore_backup":
+      return r.restored ? `${plural(r.restored, "poster", "posters")} restored` : "Nothing to restore";
     case "accept":
-      return r.written ? `${plural(r.written, "poster", "posters")} taken` : "Kept current posters";
+      return r.written ? `${plural(r.written, "poster", "posters")} applied` : "Current posters kept";
     case "auto":
       return AUTO_OUTCOMES[r.outcome ?? ""] ?? "Done";
     case "preview":
       return r.message || "Preview done";
+    case "flow":
+      return r.message || "Flow done";
     case "rescan":
     case "rescan_one":
       return `${plural(r.scanned ?? 0, "folder", "folders")} checked`;

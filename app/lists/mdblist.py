@@ -42,7 +42,8 @@ class Mdblist(Adapter):
         return clean
 
     def describe(self, params: dict) -> str:
-        return f"MDBList {params['list']}"
+        """The list's title on MDBList once it was read, else its address."""
+        return mdblist.cached_list_name(params["list"]) or f"MDBList {params['list']}"
 
     async def fetch(self, params: dict) -> Fetched:
         path = f"/lists/{params['list']}/items"
@@ -59,10 +60,12 @@ class Mdblist(Adapter):
         elif isinstance(data, list):
             rows = [{**row, "_kind": "show" if row.get("mediatype") == "show" else "movie"}
                     for row in data if isinstance(row, dict)]
-        rows.sort(key=lambda row: (int_or_none(row.get("rank")) or 10**6))
+        # The list's own order counts. MDBList's "rank" is its own popularity rank, not the place in the list.
         entries = []
+        places = {"movie": 0, "show": 0}
         for row in rows[: params["limit"]]:
             kind = "show" if (row.get("mediatype") or row["_kind"]) == "show" else "movie"
+            places[kind] += 1
             ids = {"tmdb": int_or_none(row.get("tmdb_id") or row.get("id")), "imdb": row.get("imdb_id"),
                    "tvdb": int_or_none(row.get("tvdb_id"))}
             entries.append(RawEntry(
@@ -71,6 +74,7 @@ class Mdblist(Adapter):
                 year=int_or_none(row.get("release_year") or row.get("year")),
                 kind=kind,
                 ids={name: value for name, value in ids.items() if value},
-                extra={"rank": row.get("rank")},
+                extra={"rank": places[kind]},  # place among the list's movies or shows
             ))
+        await mdblist.list_name(params["list"])
         return Fetched(entries)

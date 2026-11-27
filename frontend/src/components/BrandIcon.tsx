@@ -1,6 +1,15 @@
 import { siImdb } from "simple-icons";
 
 /** A brand mark from simple-icons (CC0), in its brand colour. */
+/** A brand mark in the text colour, for marks inside coloured badges. */
+export function MonoBrandIcon({ icon, className = "h-3.5 w-3.5" }: { icon: { path: string }; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={`shrink-0 ${className}`} fill="currentColor" aria-hidden="true">
+      <path d={icon.path} />
+    </svg>
+  );
+}
+
 export function BrandIcon({ icon, className = "h-4 w-4" }: { icon: { path: string; hex: string }; className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={`shrink-0 ${className}`} fill={`#${icon.hex}`} aria-hidden="true">

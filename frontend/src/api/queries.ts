@@ -103,8 +103,12 @@ export function useReviews(kind: string) {
   });
 }
 
-export function useWaiting() {
-  return useQuery({ queryKey: ["waiting"], queryFn: () => unwrap(api.GET("/api/waiting")) });
+export function usePending() {
+  return useQuery({ queryKey: ["pending"], queryFn: () => unwrap(api.GET("/api/pending")) });
+}
+
+export function useBackup() {
+  return useQuery({ queryKey: ["backup"], queryFn: () => unwrap(api.GET("/api/backup")) });
 }
 
 export function useDetectStats() {
@@ -145,7 +149,7 @@ export function useListSources() {
 export function useRuns() {
   return useQuery({
     queryKey: ["runs"],
-    queryFn: () => unwrap(api.GET("/api/lists/runs", { params: { query: { limit: 60 } } })),
+    queryFn: () => unwrap(api.GET("/api/lists/runs", { params: { query: { limit: 60, previews: true } } })),
     refetchInterval: (query) => (query.state.data?.runs.some((run) => run.status === "running") ? 2500 : false),
   });
 }
@@ -184,5 +188,83 @@ export function useMediaSearch(params: { q: string; kind: string; year?: number 
     queryFn: () => unwrap(api.GET("/api/media/search", { params: { query: params } })),
     enabled: enabled && params.q.trim().length > 0,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useMdblistLists(enabled: boolean) {
+  return useQuery({
+    queryKey: ["mdblist-mine"],
+    queryFn: () => unwrap(api.GET("/api/lists/mdblist/mine")),
+    enabled,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+// -- flows -------------------------------------------------------------------------------
+const running = (status: string | null | undefined) => status === "running";
+
+export function useFlows() {
+  return useQuery({
+    queryKey: ["flows"],
+    queryFn: () => unwrap(api.GET("/api/flows")),
+    refetchInterval: (query) => (query.state.data?.flows.some((flow) => running(flow.last_run?.status)) ? 2500 : false),
+  });
+}
+
+export function useFlow(id: number) {
+  return useQuery({
+    queryKey: ["flow", id],
+    queryFn: () => unwrap(api.GET("/api/flows/{flow_id}", { params: { path: { flow_id: id } } })),
+    refetchInterval: (query) => (running(query.state.data?.last_run?.status) ? 2500 : false),
+  });
+}
+
+export function useNodeTypes() {
+  return useQuery({ queryKey: ["flow-nodes"], queryFn: () => unwrap(api.GET("/api/flows/nodes")), staleTime: 60_000 });
+}
+
+export function useFlowRuns(flow: number, page: number) {
+  return useQuery({
+    queryKey: ["flow-runs", flow, page],
+    queryFn: () => unwrap(api.GET("/api/flows/runs", { params: { query: { flow, page } } })),
+    placeholderData: keepPreviousData,
+    refetchInterval: (query) => (query.state.data?.runs.some((run) => running(run.status)) ? 2500 : false),
+  });
+}
+
+export function useFlowRun(id: number, enabled = true) {
+  return useQuery({
+    queryKey: ["flow-run", id],
+    queryFn: () => unwrap(api.GET("/api/flows/runs/{run_id}", { params: { path: { run_id: id } } })),
+    enabled: enabled && id > 0,
+    refetchInterval: (query) => (running(query.state.data?.status) ? 2000 : false),
+  });
+}
+
+export function useFlowRunTitles(id: number, params: { show: string; q: string; page: number }, enabled = true) {
+  return useQuery({
+    queryKey: ["flow-run-titles", id, params],
+    queryFn: () => unwrap(api.GET("/api/flows/runs/{run_id}/titles", { params: { path: { run_id: id }, query: params } })),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useArrOptions(service: "radarr" | "sonarr", enabled: boolean) {
+  return useQuery({
+    queryKey: ["arr-options", service],
+    queryFn: () => unwrap(api.GET("/api/arr/{service}/options", { params: { path: { service } } })),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useScheduleCheck(value: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["flow-schedule", value],
+    queryFn: () => unwrap(api.GET("/api/flows/schedule", { params: { query: { value } } })),
+    enabled,
+    staleTime: 30_000,
   });
 }

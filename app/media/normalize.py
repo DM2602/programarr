@@ -58,9 +58,18 @@ def override_for(source: str, fp: str) -> dict | None:
 
 
 def excluded(media_id: int | None, scope: str = "global") -> bool:
+    """Own exclusion, or on the import list exclusions of Radarr (movies) or Sonarr (shows)."""
     if not media_id:
         return False
-    return bool(db.get().scalar("SELECT 1 FROM exclusions WHERE media_id=? AND scope=?", (media_id, scope)))
+    database = db.get()
+    if database.scalar("SELECT 1 FROM exclusions WHERE media_id=? AND scope=?", (media_id, scope)):
+        return True
+    if scope != "global":
+        return False
+    return bool(database.scalar(
+        "SELECT 1 FROM media_cache m JOIN arr_exclusions a ON a.state!='remove' AND ("
+        "(a.service='radarr' AND m.kind='movie' AND a.external_id=m.tmdb_id) OR "
+        "(a.service='sonarr' AND m.kind='show' AND a.external_id=m.tvdb_id)) WHERE m.id=?", (media_id,)))
 
 
 # -- resolving -------------------------------------------------------------------------------------
@@ -103,6 +112,8 @@ async def _by_ids(entry: RawEntry) -> Match | None:
     if not media_id and ids.get("tvdb") and kind != "movie":
         media_id = await store.by_external("tvdb_id", int(ids["tvdb"]), "show")
     if media_id:
+        if ids.get("tvdb"):
+            store.note_tvdb(media_id, ids["tvdb"])  # the list may know the TVDB ID TMDB lacks
         return Match("matched", "id", media_id, 1.0)
     if entry.title:
         return None  # IDs unknown to TMDB: try the title
@@ -215,7 +226,7 @@ def _decide(found: tuple[str, float, list[dict]] | None, candidates: list[dict])
         if rival and rival["popularity"] >= AMBIGUOUS * chosen["popularity"]:
             options = _merge([{**row, "similarity": 1.0} for row in hits[:5]], candidates)[:5]
             return {"status": "uncertain", "method": method, "score": round(score * 0.5, 3),
-                    "candidates": options, "error": "Several titles fit"}
+                    "candidates": options, "error": "Several matches"}
         others = [row for row in candidates if (row["kind"], row["tmdb_id"]) != (chosen["kind"], chosen["tmdb_id"])]
         return {"status": "matched", "method": method, "score": score, "candidates": others[:4], "chosen": chosen}
     if candidates and candidates[0]["similarity"] >= MIN_SIMILARITY:

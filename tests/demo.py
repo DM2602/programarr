@@ -65,9 +65,9 @@ async def build(world) -> None:
     lotr_item = tpdb.add_item("The Lord of the Rings: The Fellowship of the Ring", 2001, "movie")
     tpdb.add_movie_set(lotr_item, "DIIIVOY")
 
+    plex.upload(lotr, poster_for("posteria-lotr", "OLD"))  # uploaded with Posteria before Programarr
     await world.enable_libraries()
     await library.sync()  # existing titles
-    plex.upload(lotr, poster_for("posteria-lotr", "OLD"))  # uploaded with Posteria earlier
 
     for key in (severance, bear, dune):
         item = db.get().one("SELECT * FROM items WHERE key=?", (key,))
@@ -79,6 +79,11 @@ async def build(world) -> None:
     # New titles after the first sync
     plex.add_movie("Dune: Part Two", 2024, "693134")
     mediux.add_movie_set("693134", "Dune: Part Two", 2024, "willtong93", popularity=60)
+    plex.add_movie("Oppenheimer", 2023, "872585")  # several designers, none preferred: under Review
+    for designer, likes in (("olivier_pons", 40), ("mikenobbs", 22), ("bobaflett", 18), ("chrisdc", 12),
+                            ("zarox", 9), ("fwlolx", 6), ("rami_designs", 3)):
+        mediux.add_movie_set("872585", "Oppenheimer", 2023, designer, popularity=likes)
+    tpdb.add_movie_set(tpdb.add_item("Oppenheimer", 2023, "movie"), "MrBunker")
     plex.add_show("Shōgun", 2024, "126308", "419220", seasons=[1])
     mediux.add_show_set("126308", "Shōgun", 2024, "olivier_pons", [1], popularity=15)
     await tasks.sync_and_process()
@@ -99,11 +104,69 @@ async def build(world) -> None:
     world.sonarr.add_series(412429, "The Bear", "the-bear", seasons=[
         {"seasonNumber": n, "monitored": n != 5, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 10}}
         for n in (1, 2, 3, 4, 5)])
+    await build_flows(world)
+
+
+TOP10_FLOW = {
+    "nodes": [
+        {"id": "flixpatrol1", "type": "flixpatrol", "position": {"x": 0, "y": 120},
+         "config": {"platform": "netflix", "region": "switzerland", "sections": ["movies", "shows"], "limit": 10}},
+        {"id": "type1", "type": "type", "position": {"x": 290, "y": 120}, "config": {}},
+        {"id": "rating1", "type": "rating", "position": {"x": 580, "y": 0},
+         "config": {"metric": "imdb", "min": 6, "missing": "match"}},
+        {"id": "radarr1", "type": "radarr", "position": {"x": 870, "y": 0},
+         "config": {"quality_profile": 1, "root_folder": "/data/movies", "tags": ["top-10"], "limit": 5,
+                    "compare": ["dominik/netflix-ch"]}},
+        {"id": "sonarr1", "type": "sonarr", "position": {"x": 870, "y": 260},
+         "config": {"quality_profile": 1, "root_folder": "/data/tv", "tags": ["top-10"]}},
+    ],
+    "edges": [
+        {"source": "flixpatrol1", "port": "out", "target": "type1"},
+        {"source": "type1", "port": "movie", "target": "rating1"},
+        {"source": "rating1", "port": "match", "target": "radarr1"},
+        {"source": "type1", "port": "show", "target": "sonarr1"},
+    ],
+}
+
+
+async def build_flows(world) -> None:
+    """Netflix Switzerland to Radarr and Sonarr with one dry run, and Trakt trending split by genre, not run yet."""
+    from app.flows import engine, store
+
+    world.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")  # in Plex too: the flow leaves it alone
+    world.radarr.add_movie(1006, "Woodwalkers 2", "woodwalkers-2-1006", has_file=False)  # in Radarr, not in Plex
+    world.radarr.exclude(1007, "Hill 12", 2026)  # excluded in Radarr: no flow adds it
+    world.radarr.exclude(536869, "Cats", 2019)
+    world.sonarr.exclude(418004, "The Idol", 2023)
+    for tmdb_id, name in ((1001, "Guarding Stars"), (1002, "Steps"), (1003, "Heartland"), (1004, "The Christmas Switch")):
+        world.radarr.know(tmdb_id, name, 2026)
+    for tvdb_id, name, year in ((480001, "The Law of Beasts", 2026), (480002, "The Body", 2026), (450003, "Black Doves", 2024),
+                                (383365, "Lupin", 2021), (420005, "The Empress", 2022)):
+        world.sonarr.know(tvdb_id, name, year)
+    flow_id = store.create("Netflix Switzerland", TOP10_FLOW, "every:6h")
+    await engine.run(flow_id)
+    store.create("Trakt trending", {
+        "nodes": [
+            {"id": "trakt1", "type": "trakt", "position": {"x": 0, "y": 120},
+             "config": {"chart": "trending", "type": "movies", "limit": 20}},
+            {"id": "genre1", "type": "genre", "position": {"x": 290, "y": 120}, "config": {"rules": [
+                {"id": "action", "mode": "any", "genres": ["action", "thriller"]},
+                {"id": "family", "mode": "any", "genres": ["family", "animation"]},
+            ], "each": False}},
+            {"id": "radarr1", "type": "radarr", "position": {"x": 580, "y": 0},
+             "config": {"quality_profile": 4, "root_folder": "/data/movies", "tags": ["trakt", "action"]}},
+            {"id": "radarr2", "type": "radarr", "position": {"x": 580, "y": 260},
+             "config": {"quality_profile": 1, "root_folder": "/data/movies", "tags": ["trakt", "family"]}},
+        ],
+        "edges": [{"source": "trakt1", "port": "out", "target": "genre1"},
+                  {"source": "genre1", "port": "action", "target": "radarr1"},
+                  {"source": "genre1", "port": "family", "target": "radarr2"}],
+    })
 
 
 async def build_lists(world) -> None:
     """Previews of a FlixPatrol TOP 10, an MDBList list and a Trakt chart, one excluded title."""
-    from app.lists import runs, scrape
+    from app.lists import exclusions, runs, scrape
     from app.media import store
 
     world.fill_lists()
@@ -113,7 +176,7 @@ async def build_lists(world) -> None:
     await runs.preview("mdblist", runs.prepare("mdblist", {"list": "dominik/netflix-ch", "limit": 100}))
     await runs.preview("trakt", runs.prepare("trakt", {"chart": "trending", "type": "movies", "limit": 10}))
     power = store.find("show", 2010)
-    await runs.exclude(None, None, power["id"], "Seen it")
+    await exclusions.exclude(None, None, power["id"], "Seen it")
 
 
 def main() -> None:

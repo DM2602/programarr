@@ -41,7 +41,7 @@ export function Match() {
 
   return (
     <>
-      <PageHeader title="Match existing" subtitle="Finds the set your poster files came from. The files stay as they are." />
+      <PageHeader title="Match existing" subtitle="Finds the set your poster files came from. Files are not changed." />
       {isPending ? (
         <Loading />
       ) : error || !stats ? (
@@ -51,11 +51,11 @@ export function Match() {
           <div className="grid max-w-2xl grid-cols-2 gap-4">
             <div className="rounded-lg bg-gray-800 p-4 ring-1 ring-gray-700">
               <span className="block text-3xl font-bold text-gray-100">{stats.shows}</span>
-              <span className="mt-1 block text-sm text-gray-400">shows with posters but no set</span>
+              <span className="mt-1 block text-sm text-gray-400">{stats.shows === 1 ? "show" : "shows"} with posters but no set</span>
             </div>
             <div className="rounded-lg bg-gray-800 p-4 ring-1 ring-gray-700">
               <span className="block text-3xl font-bold text-gray-100">{stats.movies}</span>
-              <span className="mt-1 block text-sm text-gray-400">movies with posters but no set</span>
+              <span className="mt-1 block text-sm text-gray-400">{stats.movies === 1 ? "movie" : "movies"} with posters but no set</span>
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-2">
@@ -96,22 +96,20 @@ export function Match() {
         </>
       )}
 
-      <Section title="Plex uploads" id="adopt">
-        <p className="max-w-2xl text-sm text-gray-400">
-          Posters uploaded to Plex, for example with Posteria or Marquee, are saved as files in the folder and unlocked in Plex.
-        </p>
-        <Button className="mt-3" onClick={() => run(() => unwrap(api.POST("/api/adopt")), "Saving Plex uploads as files…")} data-action="adopt">
-          Save Plex uploads as files
+      <Section title="Import from Plex" id="adopt">
+        <p className="max-w-2xl text-sm text-gray-400">Saves posters selected or uploaded in Plex as files in the folder.</p>
+        <Button className="mt-3" onClick={() => run(() => unwrap(api.POST("/api/adopt")), "Importing posters from Plex…")} data-action="adopt">
+          Import posters from Plex
         </Button>
       </Section>
 
       <Section
-        title="Found"
+        title="Matches"
         id="found"
         aside={
           certain > 0 ? (
             <Button size="sm" variant="primary" onClick={linkAll} data-action="confirm-all">
-              {certain === 1 ? "Link the certain match" : `Link all ${certain} certain`}
+              {certain === 1 ? "Link certain match" : `Link all ${certain} certain matches`}
             </Button>
           ) : undefined
         }
@@ -123,7 +121,7 @@ export function Match() {
             ))}
           </div>
         ) : (
-          <Empty title="Nothing found yet" />
+          <Empty title="No matches yet" />
         )}
       </Section>
     </>

@@ -75,9 +75,50 @@ async def account(key: str | None = None) -> dict:
     }
 
 
+LIST_NAME_SECONDS = 7 * 86400
+
+
+def cached_list_name(ref: str) -> str | None:
+    """The list's title on MDBList, by 'user/slug' or number, if it was read before."""
+    return cache.get(f"mdblist:list:{ref}")
+
+
+def remember_list_name(row: dict, *refs: str) -> None:
+    name = " ".join(str(row.get("name") or "").split())
+    if not name:
+        return
+    user = row.get("user_name") or row.get("username")
+    keys = {ref for ref in refs if ref}
+    if user and row.get("slug"):
+        keys.add(f"{user}/{row['slug']}")
+    if row.get("id"):
+        keys.add(str(row["id"]))
+    for key in keys:
+        cache.put(f"mdblist:list:{key}", name, LIST_NAME_SECONDS)
+
+
+async def list_name(ref: str) -> str | None:
+    """The list's title; one request, then a week from the cache. None if MDBList does not say."""
+    cached = cached_list_name(ref)
+    if cached:
+        return cached
+    try:
+        data = await request("GET", f"/lists/{ref}")
+    except MdblistError:
+        return None
+    row = data[0] if isinstance(data, list) and data else data if isinstance(data, dict) else None
+    if not isinstance(row, dict):
+        return None
+    remember_list_name(row, ref)
+    return cached_list_name(ref)
+
+
 async def my_lists() -> list[dict]:
     data = await request("GET", "/lists/user") or []
     rows = data if isinstance(data, list) else data.get("lists") or []
+    for row in rows:
+        if isinstance(row, dict):
+            remember_list_name(row)
     return [
         {
             "id": row.get("id"),
@@ -118,6 +159,17 @@ def parse_ratings(item: dict) -> dict:
         elif source in ("popcorn", "tomatoesaudience"):
             values["rt_audience"] = _number(value if value is not None else rating.get("score"), lambda v: round(float(v)))
     return values
+
+
+def _tvdb_id(item: dict) -> int | None:
+    ids = item.get("ids") if isinstance(item.get("ids"), dict) else {}
+    for value in (ids.get("tvdb"), ids.get("tvdbid"), item.get("tvdbid"), item.get("tvdb_id")):
+        try:
+            if value and int(value) > 0:
+                return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
 
 
 def _tmdb_id(item: dict) -> int | None:
@@ -169,7 +221,7 @@ async def refresh_ratings(media_ids: list[int], max_age_days: int | None = None)
     limit = db.now() - days * 86400
     marks = ",".join("?" for _ in media_ids)
     rows = db.get().query(
-        f"SELECT id, kind, tmdb_id FROM media_cache WHERE id IN ({marks}) AND tmdb_id IS NOT NULL "
+        f"SELECT id, kind, tmdb_id, tvdb_id FROM media_cache WHERE id IN ({marks}) AND tmdb_id IS NOT NULL "
         "AND (ratings_at IS NULL OR ratings_at < ?)",
         [*media_ids, limit],
     )
@@ -183,8 +235,11 @@ async def refresh_ratings(media_ids: list[int], max_age_days: int | None = None)
             database = db.get()
             with database.transaction():
                 for row in chunk:
-                    values = parse_ratings(by_tmdb.get(row["tmdb_id"]) or {})
+                    item = by_tmdb.get(row["tmdb_id"]) or {}
+                    values = parse_ratings(item)
                     values["ratings_at"] = db.now()
+                    if kind == "show" and not row["tvdb_id"] and (tvdb := _tvdb_id(item)):
+                        values["tvdb_id"] = tvdb  # TMDB has no TVDB link for it, MDBList does
                     database.update("media_cache", "id", row["id"], values)
             asked += len(chunk)
     return asked

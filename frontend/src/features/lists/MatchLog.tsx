@@ -25,9 +25,9 @@ function Problem({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start" data-entry={entry.id}>
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <KindIcon kind={entry.kind} />
             <span className="font-semibold text-gray-100">{entry.title}</span>
             {entry.year && <span className="text-sm text-gray-400">{entry.year}</span>}
-            <KindIcon kind={entry.kind} />
             <StatusBadge entry={entry} />
           </p>
           <p className="mt-0.5 text-sm text-gray-400">{entry.error}</p>
@@ -38,8 +38,8 @@ function Problem({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void
           <Button size="sm" variant="primary" onClick={() => onFix(entry)} data-action="fix">
             Search
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/ignore", { params: { path: { entry_id: entry.id } } })), "Ignoring…")} data-action="ignore">
-            Ignore
+          <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/ignore", { params: { path: { entry_id: entry.id } } })), "Skipping…")} data-action="skip">
+            Skip
           </Button>
         </div>
       </div>
@@ -69,7 +69,7 @@ function OpenTab({ onFix }: { onFix: (entry: Entry) => void }) {
   const { data, isPending, error } = useProblems();
   if (isPending) return <Loading />;
   if (error || !data) return <Notice tone="red">{error?.message ?? "Cannot load"}</Notice>;
-  if (!data.rows.length) return <Empty title="Nothing to check" />;
+  if (!data.rows.length) return <Empty title="Nothing unresolved" />;
   return (
     <div className="space-y-4">
       {data.rows.map((entry) => (
@@ -103,7 +103,7 @@ function AllTab({ onFix }: { onFix: (entry: Entry) => void }) {
           options={[
             { value: "", label: "All" },
             { value: "matched", label: "Matched" },
-            { value: "open", label: "To check" },
+            { value: "open", label: "Unresolved" },
             { value: "excluded", label: "Excluded" },
           ]}
         />
@@ -150,12 +150,12 @@ function CorrectionsTab() {
           <img src={row.media?.poster ?? POSTER_FALLBACK} alt="" loading="lazy" className="hidden aspect-[2/3] w-11 shrink-0 rounded object-cover ring-1 ring-gray-700 sm:block" />
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-x-2">
+              <KindIcon kind={row.kind} />
               <span className="font-semibold text-gray-100">{row.title}</span>
               {row.year && <span className="text-sm text-gray-400">{row.year}</span>}
-              {row.kind && <span className="text-xs text-gray-500">{KIND_LABELS[row.kind]}</span>}
             </p>
             <p className="text-sm text-gray-400">
-              {row.ignore ? "Ignored" : row.media ? `${row.media.title} (${row.media.year ?? "?"}), TMDB ${row.media.tmdb_id}` : "Title missing"}
+              {row.ignore ? "Skipped" : row.media ? `${row.media.title} (${row.media.year ?? "?"}), TMDB ${row.media.tmdb_id}` : "Title missing"}
             </p>
             <p className="text-xs text-gray-500">
               {row.source ? SOURCE_LABELS[row.source] ?? row.source : "All sources"}, {timeAgo(row.created_at)}
@@ -177,7 +177,7 @@ export function MatchLog() {
   const [fixing, setFixing] = useState<Entry | null>(null);
   const { data: status } = useStatus();
   const tabs = [
-    { key: "open", label: "To check", count: status?.counts.match_open },
+    { key: "open", label: "Unresolved", count: status?.counts.match_open },
     { key: "all", label: "All matches" },
     { key: "corrections", label: "Corrections" },
   ];

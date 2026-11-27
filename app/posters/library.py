@@ -25,6 +25,11 @@ class SyncResult:
     items: int = 0
     seasons: int = 0
     first_sync: list[str] = field(default_factory=list)
+    # Slots whose poster changed in Plex since the last sync (Plex gives the image a new address).
+    thumb_changed: list[str] = field(default_factory=list)
+    # From the file scan: files that went missing, and files that appeared or changed in the folder.
+    vanished: list[str] = field(default_factory=list)
+    appeared: list[str] = field(default_factory=list)
 
 
 def mapper() -> paths.PathMapper:
@@ -87,7 +92,8 @@ def _ensure_slot(slot: str, item_key: str, kind: str, season: int | None) -> Non
     )
 
 
-async def sync(plex: Plex | None = None, full_scan: bool = False) -> SyncResult:
+async def sync(plex: Plex | None = None, full_scan: bool = False, also_scan: set[str] | None = None) -> SyncResult:
+    """Titles from Plex. Folders are read only for titles that are new or that Plex changed, plus also_scan."""
     plex = plex or Plex.from_settings()
     database = db.get()
     result = SyncResult()
@@ -126,10 +132,16 @@ async def sync(plex: Plex | None = None, full_scan: bool = False) -> SyncResult:
         )
         result.items += len(seen)
     settings.set("last_sync", now)
-    keys = None if full_scan else changed_items
-    scan_files(keys)
+    keys = None if full_scan else changed_items | (also_scan or set())
+    notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
+    scan_files(keys, notes)
+    result.vanished, result.appeared = notes["vanished"], notes["appeared"]
     detect_naming()
     return result
+
+
+def _thumb_changed(old: dict | None, thumb: str | None, first: bool) -> bool:
+    return bool(old and not first and old.get("thumb") and thumb and old["thumb"] != thumb and not old.get("gone"))
 
 
 def _store_movie(meta: dict, lib: dict, now: int, baseline: int | None, first: bool, result: SyncResult) -> bool:
@@ -165,9 +177,12 @@ def _store_movie(meta: dict, lib: dict, now: int, baseline: int | None, first: b
     }
     if old is None:
         values.update({"first_seen": now, "is_new": is_new})
+    if _thumb_changed(old, values["thumb"], first):
+        result.thumb_changed.append(slot_id("movie", key))
     database.upsert("items", ("key",), values)
     _ensure_slot(slot_id("movie", key), key, "movie", None)
-    return old is None or old["updated_at"] != values["updated_at"] or old["folder"] != folder or bool(old["gone"])
+    return (old is None or old["updated_at"] != values["updated_at"] or old["folder"] != folder
+            or old["files"] != values["files"] or bool(old["gone"]))  # a new file: Radarr may have cleared the folder
 
 
 async def _store_show(plex: Plex, meta: dict, lib: dict, now: int, baseline: int | None, first: bool,
@@ -201,6 +216,8 @@ async def _store_show(plex: Plex, meta: dict, lib: dict, now: int, baseline: int
     }
     if old is None:
         values.update({"first_seen": now, "is_new": is_new})
+    if _thumb_changed(old, values["thumb"], first):
+        result.thumb_changed.append(slot_id("show", key))
     stale = (
         old is None
         or not old.get("folder")
@@ -293,6 +310,8 @@ async def _store_seasons(plex: Plex, seasons: list[dict], show_keys: set[str], n
             values["folder"] = folder
         if old is None:
             values.update({"first_seen": now, "is_new": is_new})
+        if _thumb_changed(old, values["thumb"], first):
+            result.thumb_changed.append(slot_id("season", show_key, number))
         database.upsert("seasons", ("key",), values)
         _ensure_slot(slot_id("season", show_key, number), show_key, "season", number)
         result.seasons += 1
@@ -347,7 +366,7 @@ def _sha1(path: Path) -> str:
     return digest.hexdigest()
 
 
-def scan_item(item_key: str, mp: paths.PathMapper | None = None) -> None:
+def scan_item(item_key: str, mp: paths.PathMapper | None = None, notes: dict | None = None) -> None:
     database = db.get()
     item = database.one("SELECT * FROM items WHERE key=?", (item_key,))
     if not item:
@@ -365,10 +384,10 @@ def scan_item(item_key: str, mp: paths.PathMapper | None = None) -> None:
             place = place_for(item, slot["kind"], slot["season"], mp)
         except paths.PathError:
             continue
-        _update_slot_file(slot, paths.current(place, names))
+        _update_slot_file(slot, paths.current(place, names), notes)
 
 
-def _update_slot_file(slot: dict, path: Path | None) -> None:
+def _update_slot_file(slot: dict, path: Path | None, notes: dict | None = None) -> None:
     database = db.get()
     if path is None:
         if slot["file"]:
@@ -376,6 +395,8 @@ def _update_slot_file(slot: dict, path: Path | None) -> None:
                 "file": None, "file_sha1": None, "file_size": None, "file_mtime": None,
                 "plex_state": "no_file",
             })
+            if notes is not None:
+                notes["vanished"].append(slot["id"])
         elif slot["plex_state"] is None:
             database.update("slots", "id", slot["id"], {"plex_state": "no_file"})
         return
@@ -386,6 +407,8 @@ def _update_slot_file(slot: dict, path: Path | None) -> None:
     if slot["file"] == str(path) and slot["file_size"] == stat.st_size and slot["file_mtime"] == stat.st_mtime:
         return
     sha1 = _sha1(path)
+    if notes is not None and slot["plex_state"] is not None and sha1 not in (slot["file_sha1"], slot["written_sha1"]):
+        notes["appeared"].append(slot["id"])  # new or changed in the folder: Plex has to read it again
     updates: dict = {"file": str(path), "file_size": stat.st_size, "file_mtime": stat.st_mtime, "file_sha1": sha1}
     if slot["plex_state"] in (None, "no_file"):
         updates["plex_state"] = "unknown"
@@ -394,7 +417,7 @@ def _update_slot_file(slot: dict, path: Path | None) -> None:
         # and set updates leave this slot alone from now on.
         updates.update({"mode": "extern", "source": "extern", "set_key": None, "image_id": None,
                         "image_modified": None, "designer": None, "written_sha1": None})
-        event("info", "files", f"File changed by hand: {path.name}", slot["item_key"])
+        event("info", "files", f"File changed outside Programarr: {path.name}", slot["item_key"])
     elif not slot["written_sha1"] and slot["source"] in (None, "extern"):
         stamp = imaging.read_stamp_file(path)
         if stamp and stamp.get("src"):
@@ -406,7 +429,7 @@ def _update_slot_file(slot: dict, path: Path | None) -> None:
     database.update("slots", "id", slot["id"], updates)
 
 
-def scan_files(item_keys: set[str] | None = None) -> int:
+def scan_files(item_keys: set[str] | None = None, notes: dict | None = None) -> int:
     database = db.get()
     mp = mapper()
     if item_keys is None:
@@ -414,7 +437,7 @@ def scan_files(item_keys: set[str] | None = None) -> int:
     else:
         keys = list(item_keys)
     for key in keys:
-        scan_item(key, mp)
+        scan_item(key, mp, notes)
     return len(keys)
 
 

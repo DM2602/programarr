@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import config, db, settings
-from app.posters import reviews
+from app.posters import reviews, tasks
 from tests.fakes.images import poster_for
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,7 +57,11 @@ def test_setup_then_read_endpoints(world, client):
     show, movie = setup_library(world, client)
     assert settings.get("setup_done")
     overview = client.get("/api/overview").json()
-    assert overview["facts"] == {"movies": 1, "shows": 1, "linked": 0, "complete": 0}
+    facts = overview["facts"]
+    assert {key: facts[key] for key in ("movies", "shows", "linked", "complete", "exclusions")} == \
+        {"movies": 1, "shows": 1, "linked": 0, "complete": 0, "exclusions": 0}
+    assert facts["backup_files"] == 0 and overview["flows"] == [] and overview["flow_adds"] == []
+    assert [row["key"] for row in overview["schedule"]][:3] == ["sync", "setcheck", "folders"]
     assert overview["jobs"][0]["title"] == "First sync with Plex" and overview["jobs"][0]["status"] == "done"
     status = client.get("/api/status").json()
     assert status["counts"]["shows"] == 1 and status["automation"] is True and status["jobs"] == []
@@ -71,7 +75,7 @@ def test_setup_then_read_endpoints(world, client):
     assert [slot["label"] for slot in detail["slots"]] == ["Show", "Season 1", "Season 2"]
     assert {link["label"] for link in detail["links"]} >= {"TMDB", "MediUX", "TheTVDB"}
     assert client.get("/api/items/nope").status_code == 404
-    for path in ("/api/reviews", "/api/waiting", "/api/detect/stats", "/api/history", "/api/log",
+    for path in ("/api/reviews", "/api/pending", "/api/detect/stats", "/api/history", "/api/log",
                  "/api/log?level=warning", "/api/settings", f"/api/items/{movie}"):
         assert client.get(path).status_code == 200, path
     assert client.get("/health").json()["ok"]
@@ -99,7 +103,7 @@ def test_pick_set_and_upload_through_api(world, client):
     assert detail["binding"]["set_title"] == "Severance" and detail["binding"]["source_label"] == "MediUX"
     season = next(slot for slot in detail["slots"] if slot["id"] == f"S:{show}:1")
     assert season["file_name"] == "Season01.jpg" and season["folder_name"] == "Season 01"
-    assert season["mode_label"] == "from the set" and season["state_text"], season
+    assert season["mode_label"] == "linked set" and season["state_text"], season
     assert detail["history"][0]["action_label"] == "Poster set"
     recent = client.get("/api/overview").json()["recent"]
     assert recent[0]["title"] == "Dune" and recent[1]["what"] == "Show and 2 seasons"
@@ -169,6 +173,10 @@ def test_connection_tests(world, client):
     assert client.post("/api/test/tmdb", json={}).json()["ok"]
     assert client.post("/api/test/discord", json={}).json()["ok"]
     assert world.discord.titles()[-1] == "Programarr is connected"
+    assert len(world.discord.avatars) == 1 and world.discord.avatars[0].startswith("data:image/png;base64,")
+    assert world.discord.messages[-1]["username"] == "Programarr"
+    assert client.post("/api/test/discord", json={}).json()["ok"]
+    assert len(world.discord.avatars) == 1  # once per webhook
     bad = client.post("/api/test/plex", json={"value": "wrong"}).json()
     assert not bad["ok"] and "token" in bad["message"].lower()
     assert client.post("/api/test/nothing", json={}).status_code == 404
@@ -185,6 +193,10 @@ def test_webhooks_need_token(world, client):
     assert response.status_code == 200
     events = db.get().query("SELECT message FROM events WHERE area='webhook'")
     assert any("Radarr Download (Dune)" in e["message"] for e in events)
+    assert tasks._named[-1] == ("movie", {"tmdb_id": "438631"})
+    client.post(f"/api/hooks/sonarr?token={token}",
+                json={"eventType": "Download", "series": {"title": "Andor", "tvdbId": 393189, "imdbId": "tt9253284"}})
+    assert tasks._named[-1] == ("show", {"tvdb_id": "393189", "imdb_id": "tt9253284"})
     response = client.post(f"/api/hooks/plex?token={token}",
                            data={"payload": '{"event": "library.new", "Metadata": {"title": "X"}}'})
     assert response.status_code == 200
@@ -230,6 +242,53 @@ def test_review_list_and_actions(world, client):
     assert client.post("/api/reviews/confirm-all").json() == {"ok": True, "message": "Linked 0 titles", "count": 0}
 
 
+def test_review_keeps_the_plex_posters(world, client):
+    from app import imaging
+    from tests.fakes.images import poster_for
+
+    show, movie = setup_library(world, client)
+    movie_review = reviews.add(movie, "new_item", "No set from a preferred designer")
+    show_review = reviews.add(show, "new_item", "No set from a preferred designer")
+    page = {r["id"]: r for r in client.get("/api/reviews").json()["reviews"]}
+    plex = page[movie_review]["current"]
+    assert [p["slot"] for p in plex] == [f"m:{movie}"] and plex[0]["large"].endswith("&size=large")
+    assert plex[0]["file"] is False
+    assert client.get(plex[0]["large"]).status_code == 200
+    assert [p["label"] for p in page[show_review]["current"]] == ["Show", "S1", "S2"]
+    job = run(client, "POST", f"/api/reviews/{movie_review}/keep-plex")
+    assert job["status"] == "done" and job["result"]["kept"] == 1
+    poster = world.media / "movies" / "Dune (2021)" / "poster.jpg"
+    assert imaging.strip_stamp(poster.read_bytes()) == poster_for(f"agent-{movie}.jpg", "AGENT")
+    job = run(client, "POST", f"/api/reviews/{show_review}/keep-plex")
+    assert job["result"]["kept"] == 3
+    assert not reviews.open_items()
+    assert client.get(f"/img/slot/m:{movie}?size=large").headers["content-type"] == "image/jpeg"
+    assert run(client, "POST", f"/api/reviews/{movie_review}/keep-plex")["status"] == "failed"
+
+
+def test_keep_the_current_poster(world, client):
+    from tests.fakes.images import poster_for
+
+    show, movie = setup_library(world, client)
+    review = reviews.add(movie, "new_item", "No set from a preferred designer")
+    job = run(client, "POST", f"/api/items/{movie}/keep", json={"slot": f"m:{movie}"})
+    assert job["result"]["kept"] == 1 and job["result"]["message"] == "Plex poster kept as file"
+    assert (world.media / "movies" / "Dune (2021)" / "poster.jpg").exists()
+    assert not reviews.open_items()
+    # A file someone put in the folder: kept as it is, the review closes
+    season_file = world.media / "tv" / "Severance (2022)" / "Season 01" / "Season01.jpg"
+    season_file.write_bytes(poster_for("by-hand"))
+    run(client, "POST", f"/api/items/{show}/rescan")
+    review = reviews.add(show, "new_season", "No set", season=1)
+    current = {p["slot"]: p for p in client.get("/api/reviews").json()["reviews"][0]["current"]}
+    assert current[f"S:{show}:1"]["file"] is True
+    job = run(client, "POST", f"/api/reviews/{review}/keep-plex")
+    assert job["result"]["kept"] == 1 and not reviews.open_items()
+    assert season_file.read_bytes() == poster_for("by-hand")
+    job = run(client, "POST", f"/api/items/{show}/keep", json={"slot": f"S:{show}:1"})
+    assert job["result"]["message"] == "File kept"
+
+
 def test_new_title_review_offers_signed_sets(world, client):
     show, _ = setup_library(world, client)
     run(client, "POST", f"/api/items/{show}/retry")
@@ -241,19 +300,34 @@ def test_new_title_review_offers_signed_sets(world, client):
         assert client.get(f"/api/items/{show}").json()["binding"]["designer"] == "willtong93"
 
 
-def test_waiting_list_and_stop(world, client):
+def test_large_preview_of_a_set_image(world, client):
+    import io
+
+    from PIL import Image
+
+    show, _ = setup_library(world, client)
+    image = client.get(f"/api/items/{show}/sets").json()["sets"][0]["images"][0]
+    assert image["large"] == image["thumb"] + "?size=large"
+    response = client.get(image["large"])
+    assert response.headers["content-type"] == "image/jpeg"
+    assert Image.open(io.BytesIO(response.content)).width <= 720
+    assert client.get(image["large"]).content == response.content
+    assert client.get("/img/ref/garbage?size=large").headers["content-type"] == "image/svg+xml"
+
+
+def test_pending_list_and_dismiss(world, client):
     show, _ = setup_library(world, client)
     world.plex.add_season(show, 3)
     sets = client.get(f"/api/items/{show}/sets").json()
     run(client, "POST", f"/api/items/{show}/bind", json={"token": sets["sets"][0]["token"]})
     run(client, "POST", "/api/sync")
-    rows = client.get("/api/waiting").json()["rows"]
-    assert rows and rows[0]["season"] == 3 and rows[0]["waiting"] and rows[0]["set_title"] == "Severance"
-    assert client.get("/api/status").json()["counts"]["waiting"] == 1
-    response = client.post(f"/api/items/{show}/slots/stopwait", json={"slot": f"S:{show}:3"})
+    rows = client.get("/api/pending").json()["rows"]
+    assert rows and rows[0]["season"] == 3 and rows[0]["pending"] and rows[0]["set_title"] == "Severance"
+    assert client.get("/api/status").json()["counts"]["pending"] == 1
+    response = client.post(f"/api/items/{show}/slots/dismiss", json={"slot": f"S:{show}:3"})
     assert response.status_code == 200
-    rows = client.get("/api/waiting").json()["rows"]
-    assert rows[0]["waiting"] is False
+    rows = client.get("/api/pending").json()["rows"]
+    assert rows[0]["pending"] is False
 
 
 def test_restore_from_history(world, client):

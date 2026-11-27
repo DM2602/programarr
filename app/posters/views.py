@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import binding, catalog, library, refsign, reviews, status
 from .. import db, settings
-from .sources.base import SOURCE_NAMES, ImageRef, PosterSet, parse_slot_id
+from .sources.base import SOURCE_NAMES, ImageRef, PosterSet, parse_slot_id, slot_id
 from ..util import season_label
 
 PLEX_STATES = {
@@ -19,20 +19,23 @@ PLEX_STATES = {
 }
 
 MODES = {
-    "set": "from the set",
-    "manual": "picked by hand",
+    "set": "linked set",
+    "manual": "manual",
     "extern": "file in folder",
     "detected": "matched",
 }
 
 ORIGINS = {
-    "manual": "by hand",
-    "auto": "automatic (new title)",
-    "season": "new season",
-    "set_update": "set update",
-    "restore": "restored",
-    "detect": "matched",
-    "adopt": "adopted from Plex",
+    "manual": "Manual",
+    "auto": "New title",
+    "season": "New season",
+    "set_update": "Set update",
+    "restore": "Restored",
+    "detect": "Matched",
+    "adopt": "Imported from Plex",
+    "plex": "Selected in Plex",
+    "plex_file": "Plex poster kept",
+    "backup": "Restored from backup",
     "system": "Programarr",
 }
 
@@ -47,7 +50,7 @@ STATUS_FILTERS = {
     "all": ("All", ""),
     "linked": ("Linked", " AND b.item_key IS NOT NULL"),
     "unlinked": ("Not linked", " AND b.item_key IS NULL AND NOT " + status.DONE_SQL),
-    "waiting": ("Waiting", " AND EXISTS (SELECT 1 FROM slots w WHERE w.item_key=i.key AND w.waiting=1)"),
+    "pending": ("Pending", " AND EXISTS (SELECT 1 FROM slots w WHERE w.item_key=i.key AND w.waiting=1)"),
     "review": ("Review", " AND EXISTS (SELECT 1 FROM reviews r WHERE r.item_key=i.key AND r.status='open')"),
     "problem": ("Problem", " AND EXISTS (SELECT 1 FROM slots p WHERE p.item_key=i.key AND p.plex_state='not_local')"),
     "no_file": ("No file", " AND (ms.file IS NULL)"),
@@ -91,7 +94,7 @@ def counts() -> dict:
     return {
         "review": sum(open_reviews.values()),
         "review_kinds": open_reviews,
-        "waiting": database.scalar(
+        "pending": database.scalar(
             "SELECT COUNT(*) FROM slots s JOIN items i ON i.key=s.item_key WHERE s.waiting=1 AND i.gone=0", (), 0),
         "movies": database.scalar("SELECT COUNT(*) FROM items WHERE type='movie' AND gone=0", (), 0),
         "shows": database.scalar("SELECT COUNT(*) FROM items WHERE type='show' AND gone=0", (), 0),
@@ -166,9 +169,9 @@ def slot_view(slot: dict, show_folder: Path | None = None) -> dict:
         "needs_force": bool(slot.get("file")) and (slot.get("plex_state") == "not_local"
                                                    or (slot.get("plex_state") == "pending" and not fresh)),
         "applied_at": slot.get("applied_at"),
-        "waiting": bool(slot.get("waiting")),
-        "waiting_since": slot.get("waiting_since"),
-        "wait_given_up": bool(slot.get("wait_given_up")),
+        "pending": bool(slot.get("waiting")),
+        "pending_since": slot.get("waiting_since"),
+        "dismissed": bool(slot.get("wait_given_up")),
         "gone": False,
     }
 
@@ -217,7 +220,7 @@ def card_view(row: dict, now: int | None = None) -> dict:
     elif row.get("open_reviews"):
         flag = "review"
     elif row.get("waiting"):
-        flag = "waiting"
+        flag = "pending"
     elif row.get("is_new") and row.get("first_seen") and row["first_seen"] > now - NEW_FOR:
         flag = "new"
     else:
@@ -284,7 +287,8 @@ def recent_cards(limit: int = 14) -> list[dict]:
     database = db.get()
     rows = database.query(
         "SELECT h.*, i.title, i.type FROM history h JOIN items i ON i.key=h.item_key "
-        "WHERE h.action='write' ORDER BY h.id DESC LIMIT 200")
+        # Plex posters kept as files and copies from the backup are not new posters.
+        "WHERE h.action='write' AND COALESCE(h.origin, '') NOT IN ('plex_file', 'backup') ORDER BY h.id DESC LIMIT 200")
     groups: list[dict] = []
     for row in rows:
         last = groups[-1] if groups else None
@@ -358,6 +362,29 @@ def _pair_order(slot: str) -> tuple:
     return (slot.startswith("S:"), int(slot.split(":")[2]) if slot.startswith("S:") else 0)
 
 
+def current_posters(review: dict, seasons: list[int]) -> list[dict]:
+    """What the slots under Review show now (the file in the folder, else Plex' poster), to keep."""
+    item_key, kind = review["item_key"], review["kind"]
+    if review.get("type") == "movie":
+        wanted = [slot_id("movie", item_key)]
+    elif kind == "new_season" and review.get("season") is not None:
+        wanted = [slot_id("season", item_key, review["season"])]
+    else:
+        wanted = [slot_id("show", item_key)] + [slot_id("season", item_key, number) for number in seasons]
+    marks = ",".join("?" for _ in wanted)
+    rows = {row["id"]: row for row in db.get().query(f"SELECT * FROM slots WHERE id IN ({marks})", tuple(wanted))}
+    posters = []
+    for slot in wanted:
+        row = rows.get(slot)
+        if not row:
+            continue
+        thumb = f"/img/slot/{slot}?v=r{review['id']}{(row['file_sha1'] or '')[:8]}"
+        label = {"movie": "Poster", "show": "Show"}.get(row["kind"]) or (
+            "Specials" if row["season"] == 0 else f"S{row['season']}")
+        posters.append({"slot": slot, "label": label, "thumb": thumb, "large": f"{thumb}&size=large", "file": bool(row["file"])})
+    return posters
+
+
 def review_view(review: dict) -> dict:
     """One Review entry with its choices; image and set tokens are signed here."""
     data = review.get("data") or {}
@@ -387,6 +414,7 @@ def review_view(review: dict) -> dict:
     if kind in ("new_item", "new_season"):
         seasons = catalog.present_seasons(review["item_key"]) if review.get("type") == "show" else []
         view["seasons"] = seasons
+        view["current"] = current_posters(review, seasons)
         view["errors"] = {source_name(name): message for name, message in (data.get("errors") or {}).items()}
         for candidate in data.get("candidates", [])[:5]:
             poster_set = PosterSet.from_dict(candidate["set"])

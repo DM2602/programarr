@@ -5,7 +5,7 @@ import asyncio
 import uuid
 from pathlib import Path
 
-from ... import cache, config, http, settings
+from ... import cache, config, http, imaging, settings
 from ...plex import Plex, PlexError
 from . import fanart, mediux, tmdb, tpdb, tvmaze
 from .base import SOURCE_NAMES, ImageRef, PosterSet, SourceError  # noqa: F401
@@ -120,17 +120,31 @@ async def fetch(ref: ImageRef, thumb: bool = False) -> tuple[bytes, str]:
             if not path.exists():
                 raise SourceError("The uploaded file is gone, upload it again")
             return path.read_bytes(), ""
-        if ref.source == "archive":
+        if ref.source in ("archive", "backup"):
             path = Path(ref.url)
-            archive_root = (config.DATA_DIR / "archive").resolve()
-            if not path.resolve().is_relative_to(archive_root) or not path.exists():
-                raise SourceError("Archived file not found")
+            allowed = (config.DATA_DIR / ref.source).resolve()
+            if not path.resolve().is_relative_to(allowed) or not path.exists():
+                raise SourceError("Archived file not found" if ref.source == "archive" else "Backup copy not found")
             return path.read_bytes(), ""
     except PlexError as exc:
         raise SourceError(str(exc)) from exc
     except http.FetchError as exc:
         raise SourceError(str(exc)) from exc
     raise SourceError(f"Unknown source: {ref.source}")
+
+
+PREVIEW_WIDTH = 720
+
+
+async def fetch_preview_cached(ref: ImageRef) -> bytes:
+    """A larger preview than the thumb (sources' thumbs are 200 to 400 px wide), from the full image."""
+    key = f"preview:{ref.source}:{ref.image_id}:{ref.modified or ''}"
+    data = cache.image_get(key)
+    if data is None:
+        full, _ = await fetch(ref)
+        data = await asyncio.to_thread(imaging.thumbnail, full, PREVIEW_WIDTH)
+        cache.image_put(key, data)
+    return data
 
 
 async def fetch_thumb_cached(ref: ImageRef) -> bytes:

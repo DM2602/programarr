@@ -38,14 +38,15 @@ TITLE_PAGES = {
 
 # TMDB catalog (kind, id, title, date, extras). Each title tests one rule of the matcher.
 CATALOG = [
-    ("movie", 1001, "Guarding Stars", "2026-11-14", {"imdb": "tt9000001", "popularity": 80.0}),   # exact
+    ("movie", 1001, "Guarding Stars", "2026-11-14", {"imdb": "tt9000001", "popularity": 80.0,       # exact
+                                                     "genres": (28, 53)}),
     ("movie", 1002, "Steps", "2026-11-21", {"imdb": "tt9000002", "popularity": 60.0}),
     ("movie", 1095, "Steps", "1998-03-01", {"popularity": 2.0}),                                    # older namesake
-    ("movie", 1003, "Heartland", "2026-11-13", {"imdb": "tt9000003", "popularity": 45.0}),
+    ("movie", 1003, "Heartland", "2026-11-13", {"imdb": "tt9000003", "popularity": 45.0, "genres": (18, 10749)}),
     ("movie", 1093, "Heartland", "1979-06-01", {"popularity": 3.0}),
     ("tv", 2093, "Heartland", "2007-10-14", {"popularity": 90.0}),                                  # a show: wrong kind
     ("movie", 1004, "The Christmas Switch", "2025-12-20", {"popularity": 30.0}),                    # year ±1
-    ("movie", 360920, "The Grinch", "2018-11-08", {"imdb": "tt2709692", "popularity": 70.0}),
+    ("movie", 360920, "The Grinch", "2018-11-08", {"imdb": "tt2709692", "popularity": 70.0, "genres": (16, 10751, 35)}),
     ("movie", 1006, "Woodwalkers 2", "2025-10-23", {"original": "Woodwalkers 2", "popularity": 22.0}),
     ("movie", 1007, "Hill 12", "2026-11-12", {"alt": ("Never Surrender",), "popularity": 18.0}),    # alternative title
     ("movie", 1008, "Russell Brand – Open Secret", "2026-11-15", {"popularity": 15.0}),             # punctuation
@@ -166,7 +167,9 @@ class FakeMdblist:
         self.batch = True  # False: batch requests are refused (403), as for accounts without it
         self.calls: list[str] = []
         self.lists: dict[str, dict] = {}  # "user/slug" -> {"movies": [...], "shows": [...]}
+        self.names: dict[str, str] = {"dominik/netflix-ch": "Netflix CH"}  # list titles
         self.ratings: dict[str, dict] = {}  # "movie:603" -> {"imdb": (7.5, 1200), "tomatoes": 88, "popcorn": 91}
+        self.tvdb: dict[int, int] = {}  # TMDB show id -> the TVDB id MDBList knows
         self.app = self._make_app()
 
     def _media(self, kind: str, tmdb_id: int) -> dict | None:
@@ -182,7 +185,8 @@ class FakeMdblist:
         if "popcorn" in values:
             ratings.append({"source": "popcorn", "value": values["popcorn"], "score": values["popcorn"], "votes": 900})
         ratings.append({"source": "metacritic", "value": None, "score": None, "votes": None})
-        return {"title": "x", "type": kind, "ids": {"tmdb": tmdb_id, "imdb": None}, "ratings": ratings}
+        ids = {"tmdb": tmdb_id, "imdb": None, "tvdb": self.tvdb.get(tmdb_id) if kind == "show" else None}
+        return {"title": "x", "type": kind, "ids": ids, "ratings": ratings}
 
     def _make_app(self) -> FastAPI:
         app = FastAPI()
@@ -204,6 +208,14 @@ class FakeMdblist:
         async def my_lists():
             return [{"id": 11, "name": "Netflix CH", "slug": "netflix-ch", "user_name": "dominik", "items": 3,
                      "dynamic": False, "mediatype": "movie", "likes": 0}]
+
+        @app.get("/lists/{user}/{slug}")
+        async def details(user: str, slug: str):
+            if f"{user}/{slug}" not in fake.lists:
+                return JSONResponse({"error": "List not found"}, status_code=404)
+            name = fake.names.get(f"{user}/{slug}", slug.replace("-", " ").title())
+            return [{"id": 11, "name": name, "slug": slug, "user_name": user, "items": 3, "dynamic": False,
+                     "mediatype": "movie", "likes": 0}]
 
         @app.get("/lists/{user}/{slug}/items")
         async def items(user: str, slug: str, request: Request):
