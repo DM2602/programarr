@@ -2422,6 +2422,8 @@ export interface components {
             token: string;
             /** Thumb */
             thumb: string;
+            /** Large */
+            large: string | null;
             /** Kind */
             kind: string | null;
             /** Season */
@@ -6487,7 +6489,9 @@ export interface operations {
     };
     ref_image_img_ref__token__get: {
         parameters: {
-            query?: never;
+            query?: {
+                size?: "thumb" | "large";
+            };
             header?: never;
             path: {
                 token: string;

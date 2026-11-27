@@ -3740,6 +3740,20 @@
               "type": "string",
               "title": "Token"
             }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "thumb",
+                "large"
+              ],
+              "type": "string",
+              "default": "thumb",
+              "title": "Size"
+            }
           }
         ],
         "responses": {
@@ -6475,6 +6489,17 @@
             "type": "string",
             "title": "Thumb"
           },
+          "large": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Large"
+          },
           "kind": {
             "anyOf": [
               {
@@ -6576,6 +6601,7 @@
         "required": [
           "token",
           "thumb",
+          "large",
           "kind",
           "season",
           "label",

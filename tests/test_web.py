@@ -245,6 +245,21 @@ def test_new_title_review_offers_signed_sets(world, client):
         assert client.get(f"/api/items/{show}").json()["binding"]["designer"] == "willtong93"
 
 
+def test_large_preview_of_a_set_image(world, client):
+    import io
+
+    from PIL import Image
+
+    show, _ = setup_library(world, client)
+    image = client.get(f"/api/items/{show}/sets").json()["sets"][0]["images"][0]
+    assert image["large"] == image["thumb"] + "?size=large"
+    response = client.get(image["large"])
+    assert response.headers["content-type"] == "image/jpeg"
+    assert Image.open(io.BytesIO(response.content)).width <= 720
+    assert client.get(image["large"]).content == response.content
+    assert client.get("/img/ref/garbage?size=large").headers["content-type"] == "image/svg+xml"
+
+
 def test_waiting_list_and_stop(world, client):
     show, _ = setup_library(world, client)
     world.plex.add_season(show, 3)

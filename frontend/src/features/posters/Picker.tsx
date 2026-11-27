@@ -11,6 +11,7 @@ import { Tabs } from "../../components/Controls";
 import { useToast } from "../../components/Toasts";
 import { Badge, Empty, Loading, Notice } from "../../components/ui";
 import { useFocusTrap } from "../../components/useFocusTrap";
+import { ZoomImage } from "../../components/ZoomImage";
 import { hostOf, imageCaption } from "../../lib/format";
 import { Coverage } from "./Coverage";
 
@@ -34,7 +35,7 @@ function matchesSlot(slot: Slot, image: Image): boolean {
   return image.kind === slot.kind;
 }
 
-function ImageChoice({ image, caption, context, chosen, onChoose, match = false, current = false }: {
+function ImageChoice({ image, caption, context, chosen, onChoose, match = false, current = false, width = "w-28", showCaption = true }: {
   image: Image;
   caption?: string;
   context: string;
@@ -42,12 +43,14 @@ function ImageChoice({ image, caption, context, chosen, onChoose, match = false,
   onChoose: (choice: Chosen) => void;
   match?: boolean;
   current?: boolean;
+  width?: string;
+  showCaption?: boolean;
 }) {
   const selected = chosen?.image.token === image.token;
   return (
     <button
       type="button"
-      className="image-choice group w-28 shrink-0 text-left disabled:cursor-default"
+      className={`image-choice group ${width} shrink-0 text-left disabled:cursor-default`}
       aria-pressed={selected}
       data-match={match || undefined}
       disabled={current}
@@ -59,17 +62,60 @@ function ImageChoice({ image, caption, context, chosen, onChoose, match = false,
           selected ? "ring-2 ring-white" : match ? "ring-2 ring-indigo-500" : "ring-1 ring-gray-700 group-hover:ring-gray-400"
         }`}
       >
-        <img src={image.thumb} alt="" loading="lazy" className="h-full w-full object-cover" />
+        <ZoomImage src={image.thumb} large={image.large} className="h-full w-full object-cover" />
         {selected && (
           <span className="absolute top-1 right-1 rounded-full bg-white p-0.5 text-gray-900">
             <CheckIcon className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
         )}
       </span>
-      <span className={`mt-1 block truncate text-xs ${match ? "font-semibold text-indigo-300" : "text-gray-400"}`}>
-        {current ? "File in folder" : caption || image.label || " "}
-      </span>
+      {showCaption && (
+        <span className={`mt-1 block truncate text-xs ${match ? "font-semibold text-indigo-300" : "text-gray-400"}`}>
+          {current ? "File in folder" : caption || image.label || " "}
+        </span>
+      )}
     </button>
+  );
+}
+
+function movieImage(set: SetView): Image | undefined {
+  return set.images.find((image) => image.kind === "movie");
+}
+
+// Movies: one poster per designer, side by side.
+function MovieSetTile({ set, title, chosen, onChoose, onApplySet }: {
+  set: SetView;
+  title: string;
+  chosen: Chosen | null;
+  onChoose: (choice: Chosen) => void;
+  onApplySet: (set: SetView) => void;
+}) {
+  const image = movieImage(set)!;
+  const setTitle = set.title && !set.title.startsWith(title) ? set.title : null;
+  return (
+    <div className="set-tile flex min-w-0 flex-col" data-set={set.set_key}>
+      <ImageChoice image={image} context={`Poster from ${set.title} by ${set.designer}`} chosen={chosen} onChoose={onChoose} width="w-full" showCaption={false} />
+      <div className="mt-2 flex items-center gap-1">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-100" title={set.designer}>
+          {set.designer || "Unknown designer"}
+        </span>
+        {set.url && <ExternalButton href={set.url} icon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />} label={`View at ${set.source_label}`} />}
+      </div>
+      <p className="truncate text-xs text-gray-400" title={setTitle ?? undefined}>
+        {set.source_label}
+        {setTitle ? `, ${setTitle}` : ""}
+      </p>
+      {(set.bound || set.rank !== null || set.hidden) && (
+        <p className="mt-1 flex flex-wrap gap-1">
+          {set.bound && <Badge tone="indigo">Linked</Badge>}
+          {set.rank !== null && <Badge tone="green">Preferred</Badge>}
+          {set.hidden && <Badge tone="red">Hidden at MediUX</Badge>}
+        </p>
+      )}
+      <Button size="sm" variant="primary" className="mt-2" onClick={() => onApplySet(set)} data-action="apply-set">
+        Apply and link
+      </Button>
+    </div>
   );
 }
 
@@ -205,7 +251,15 @@ function SetsTab({ detail, slot, chosen, onChoose, onApplySet }: {
       {data.sets.length === 0 ? (
         <Empty title="No sets found">Set the ThePosterDB page under Details, or use another tab.</Empty>
       ) : (
-        data.sets.map((set, index) => (
+        <>
+          {detail.item.type === "movie" && data.sets.some(movieImage) && (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-x-4 gap-y-6 pt-1 pb-5">
+              {data.sets.filter(movieImage).map((set) => (
+                <MovieSetTile key={`${set.source}-${set.set_key}`} set={set} title={detail.item.title} chosen={chosen} onChoose={onChoose} onApplySet={onApplySet} />
+              ))}
+            </div>
+          )}
+          {data.sets.map((set, index) => detail.item.type === "movie" && movieImage(set) ? null : (
           <SetBlock
             key={`${set.source}-${set.set_key}`}
             itemKey={key}
@@ -218,7 +272,8 @@ function SetsTab({ detail, slot, chosen, onChoose, onApplySet }: {
             onApplySet={onApplySet}
             onLoaded={(full) => replace(index, full)}
           />
-        ))
+          ))}
+        </>
       )}
       <div className="mt-4">
         <Button size="sm" variant="ghost" onClick={searchAgain} disabled={searching || isFetching}>

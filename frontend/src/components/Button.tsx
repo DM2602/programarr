@@ -52,11 +52,11 @@ export function ButtonLink({ variant = "default", size = "md", icon, className =
   );
 }
 
-type ExternalProps = { href: string; children: ReactNode; variant?: Variant; size?: Size; icon?: ReactNode };
+type ExternalProps = { href: string; children?: ReactNode; variant?: Variant; size?: Size; icon?: ReactNode; label?: string };
 
-export function ExternalButton({ href, children, variant = "ghost", size = "sm", icon }: ExternalProps) {
+export function ExternalButton({ href, children, variant = "ghost", size = "sm", icon, label }: ExternalProps) {
   return (
-    <a className={buttonClass(variant, size)} href={href} target="_blank" rel="noopener noreferrer">
+    <a className={buttonClass(variant, size)} href={href} target="_blank" rel="noopener noreferrer" title={label} aria-label={label}>
       {icon}
       {children}
     </a>

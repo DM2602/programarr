@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from fastapi import APIRouter
@@ -88,11 +89,13 @@ async def slot_image(slot_id: str):
 
 
 @router.get("/img/ref/{token}")
-async def ref_image(token: str):
+async def ref_image(token: str, size: Literal["thumb", "large"] = "thumb"):
     try:
         ref = refsign.ref(token)
+        if size == "large":
+            return Response(await sources.fetch_preview_cached(ref), media_type="image/jpeg", headers=HEADERS)
         data = await sources.fetch_thumb_cached(ref)
-    except SourceError:
+    except (SourceError, imaging.ImageError):
         return placeholder()
     kind = _kind(data)
     if kind == "application/octet-stream":

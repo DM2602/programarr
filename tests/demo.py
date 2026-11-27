@@ -79,6 +79,11 @@ async def build(world) -> None:
     # New titles after the first sync
     plex.add_movie("Dune: Part Two", 2024, "693134")
     mediux.add_movie_set("693134", "Dune: Part Two", 2024, "willtong93", popularity=60)
+    plex.add_movie("Oppenheimer", 2023, "872585")  # several designers, none preferred: under Review
+    for designer, likes in (("olivier_pons", 40), ("mikenobbs", 22), ("bobaflett", 18), ("chrisdc", 12),
+                            ("zarox", 9), ("fwlolx", 6), ("rami_designs", 3)):
+        mediux.add_movie_set("872585", "Oppenheimer", 2023, designer, popularity=likes)
+    tpdb.add_movie_set(tpdb.add_item("Oppenheimer", 2023, "movie"), "MrBunker")
     plex.add_show("Shōgun", 2024, "126308", "419220", seasons=[1])
     mediux.add_show_set("126308", "Shōgun", 2024, "olivier_pons", [1], popularity=15)
     await tasks.sync_and_process()

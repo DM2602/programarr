@@ -10,16 +10,17 @@ import { useToast } from "../../components/Toasts";
 import { Badge, Card, Empty, Loading, Notice, PageHeader } from "../../components/ui";
 import { imageCaption, seasonLabel, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
+import { ZoomImage } from "../../components/ZoomImage";
 import { Coverage } from "./Coverage";
 
 type ReviewView = Schemas["ReviewView"];
 
-function Thumbs({ images }: { images: { src: string; caption: string }[] }) {
+function Thumbs({ images }: { images: { src: string; large?: string | null; caption: string }[] }) {
   return (
     <div className="scroll-x flex gap-2 overflow-x-auto pb-1">
       {images.map((image, index) => (
-        <figure key={`${image.src}-${index}`} className="w-16 shrink-0">
-          <img src={image.src} alt="" loading="lazy" className="aspect-[2/3] w-16 rounded object-cover ring-1 ring-gray-700" />
+        <figure key={`${image.src}-${index}`} className="w-20 shrink-0">
+          <ZoomImage src={image.src} large={image.large} className="aspect-[2/3] w-20 rounded object-cover ring-1 ring-gray-700" />
           <figcaption className="mt-1 truncate text-center text-xs text-gray-400">{image.caption}</figcaption>
         </figure>
       ))}
@@ -78,6 +79,45 @@ function useReviewActions(review: ReviewView) {
   };
 }
 
+// Movies: one poster per designer, side by side.
+function MovieCandidates({ review, onBind }: { review: ReviewView; onBind: (token: string) => void }) {
+  return (
+    <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-x-3 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] sm:gap-x-4">
+      {review.candidates.map((set) => {
+        const image = set.images.find((candidate) => candidate.kind === "movie") ?? set.images[0];
+        const setTitle = set.title && !set.title.startsWith(review.title) ? set.title : null;
+        return (
+          <div key={set.token} className="candidate flex min-w-0 flex-col" data-set={set.set_key}>
+            {image ? (
+              <ZoomImage src={image.thumb} large={image.large} className="aspect-[2/3] w-full rounded-md object-cover ring-1 ring-gray-700" />
+            ) : (
+              <div className="aspect-[2/3] w-full rounded-md bg-gray-900 ring-1 ring-gray-700" />
+            )}
+            <div className="mt-2 flex items-center gap-1">
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-100" title={set.designer}>
+                {set.designer}
+              </span>
+              {set.url && <ExternalButton href={set.url} icon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />} label={`View at ${set.source_label}`} />}
+            </div>
+            <p className="truncate text-xs text-gray-400" title={setTitle ?? undefined}>
+              {set.source_label}
+              {setTitle ? `, ${setTitle}` : ""}
+            </p>
+            {set.rank !== null && (
+              <span className="mt-1">
+                <Badge tone="green">Preferred</Badge>
+              </span>
+            )}
+            <Button size="sm" variant="primary" className="mt-2" onClick={() => onBind(set.token)} data-action="review-bind">
+              Apply
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Candidates({ review, onBind }: { review: ReviewView; onBind: (token: string) => void }) {
   if (!review.candidates.length) {
     return (
@@ -87,6 +127,7 @@ function Candidates({ review, onBind }: { review: ReviewView; onBind: (token: st
       </p>
     );
   }
+  if (review.type === "movie") return <MovieCandidates review={review} onBind={onBind} />;
   return (
     <div className="mt-3 space-y-3">
       {review.candidates.map((set) => {
@@ -110,7 +151,7 @@ function Candidates({ review, onBind }: { review: ReviewView; onBind: (token: st
                 ))}
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Thumbs images={images.map((image) => ({ src: image.thumb, caption: imageCaption(image) }))} />
+              <Thumbs images={images.map((image) => ({ src: image.thumb, large: image.large, caption: imageCaption(image) }))} />
               {set.more > 0 && <span className="text-xs text-gray-400">+{set.more}</span>}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">

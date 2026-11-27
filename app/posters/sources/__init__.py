@@ -5,7 +5,7 @@ import asyncio
 import uuid
 from pathlib import Path
 
-from ... import cache, config, http, settings
+from ... import cache, config, http, imaging, settings
 from ...plex import Plex, PlexError
 from . import fanart, mediux, tmdb, tpdb, tvmaze
 from .base import SOURCE_NAMES, ImageRef, PosterSet, SourceError  # noqa: F401
@@ -131,6 +131,20 @@ async def fetch(ref: ImageRef, thumb: bool = False) -> tuple[bytes, str]:
     except http.FetchError as exc:
         raise SourceError(str(exc)) from exc
     raise SourceError(f"Unknown source: {ref.source}")
+
+
+PREVIEW_WIDTH = 720
+
+
+async def fetch_preview_cached(ref: ImageRef) -> bytes:
+    """A larger preview than the thumb (sources' thumbs are 200 to 400 px wide), from the full image."""
+    key = f"preview:{ref.source}:{ref.image_id}:{ref.modified or ''}"
+    data = cache.image_get(key)
+    if data is None:
+        full, _ = await fetch(ref)
+        data = await asyncio.to_thread(imaging.thumbnail, full, PREVIEW_WIDTH)
+        cache.image_put(key, data)
+    return data
 
 
 async def fetch_thumb_cached(ref: ImageRef) -> bytes:

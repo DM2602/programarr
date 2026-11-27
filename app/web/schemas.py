@@ -308,6 +308,7 @@ class ItemDetail(Model):
 class ImageView(Model):
     token: str
     thumb: str
+    large: str | None = None  # 720 px wide, for the enlarged view on hover
     kind: str | None = None
     season: int | None = None
     label: str = ""

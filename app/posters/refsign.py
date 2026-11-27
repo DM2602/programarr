@@ -49,6 +49,7 @@ def image_dict(image: ImageRef) -> dict:
     return {
         "token": token,
         "thumb": f"/img/ref/{token}",
+        "large": f"/img/ref/{token}?size=large",
         "kind": image.kind,
         "season": image.season,
         "label": image.label,

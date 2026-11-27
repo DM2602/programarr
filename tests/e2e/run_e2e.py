@@ -234,6 +234,21 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         wait_for(lambda: binding_of(shogun), what="Shōgun linked")
         steps.ok("New title applied from Review", page)
 
+        # 11b
+        oppenheimer = key_of("Oppenheimer")
+        goto(page, "/review?kind=new_item")
+        tiles = page.locator(".review-card .candidate")
+        tiles.first.wait_for()
+        assert tiles.count() >= 4, "movie posters side by side"
+        tiles.nth(1).locator("img").hover()
+        page.wait_for_selector(".zoom-preview")
+        page.mouse.move(0, 0)
+        page.wait_for_selector(".zoom-preview", state="detached")
+        designer = tiles.nth(1).locator(".font-semibold").inner_text()
+        tiles.nth(1).locator("[data-action=review-bind]").click()
+        wait_for(lambda: (binding_of(oppenheimer) or {}).get("designer") == designer, what="Oppenheimer linked")
+        steps.ok("Movie in Review: posters side by side, enlarged on hover, one applied", page)
+
         # 9
         goto(page, "/settings/automation")
         page.click("[data-action=add-designer]")
