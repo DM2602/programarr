@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import config, db, settings
-from app.posters import reviews
+from app.posters import reviews, tasks
 from tests.fakes.images import poster_for
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -185,6 +185,10 @@ def test_webhooks_need_token(world, client):
     assert response.status_code == 200
     events = db.get().query("SELECT message FROM events WHERE area='webhook'")
     assert any("Radarr Download (Dune)" in e["message"] for e in events)
+    assert tasks._named[-1] == ("movie", {"tmdb_id": "438631"})
+    client.post(f"/api/hooks/sonarr?token={token}",
+                json={"eventType": "Download", "series": {"title": "Andor", "tvdbId": 393189, "imdbId": "tt9253284"}})
+    assert tasks._named[-1] == ("show", {"tvdb_id": "393189", "imdb_id": "tt9253284"})
     response = client.post(f"/api/hooks/plex?token={token}",
                            data={"payload": '{"event": "library.new", "Metadata": {"title": "X"}}'})
     assert response.status_code == 200

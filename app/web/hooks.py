@@ -1,4 +1,8 @@
-"""Webhooks from Sonarr, Radarr and Plex: start a sync soon after something new arrived."""
+"""Webhooks from Sonarr, Radarr and Plex: start a sync soon after something new arrived.
+
+Radarr and Sonarr name the title: the sync then also reads its folders, so a poster Radarr deleted
+with the old release comes back from the backup.
+"""
 from __future__ import annotations
 
 import hmac
@@ -49,8 +53,11 @@ async def sonarr(request: Request, token: str | None = None):
     if kind == "Test":
         return {"ok": True, "message": "Programarr received the test"}
     if kind in ("Download", "SeriesAdd", "Rename", "ImportComplete"):
-        title = (body.get("series") or {}).get("title", "Show")
-        _schedule(f"Sonarr {kind} ({title})")
+        series = body.get("series") or {}
+        if kind != "SeriesAdd":
+            tasks.name_title("show", {"tvdb_id": series.get("tvdbId"), "tmdb_id": series.get("tmdbId"),
+                                      "imdb_id": series.get("imdbId")})
+        _schedule(f"Sonarr {kind} ({series.get('title', 'Show')})")
     return {"ok": True}
 
 
@@ -65,8 +72,10 @@ async def radarr(request: Request, token: str | None = None):
     if kind == "Test":
         return {"ok": True, "message": "Programarr received the test"}
     if kind in ("Download", "MovieAdded", "Rename"):
-        title = (body.get("movie") or {}).get("title", "Movie")
-        _schedule(f"Radarr {kind} ({title})")
+        movie = body.get("movie") or {}
+        if kind != "MovieAdded":
+            tasks.name_title("movie", {"tmdb_id": movie.get("tmdbId"), "imdb_id": movie.get("imdbId")})
+        _schedule(f"Radarr {kind} ({movie.get('title', 'Movie')})")
     return {"ok": True}
 
 

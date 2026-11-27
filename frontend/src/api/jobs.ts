@@ -56,6 +56,11 @@ export function jobMessage(job: Job): string {
       const text = `Sync done: ${plural(r.new_items ?? 0, "new title", "new titles")}, ${plural(r.new_seasons ?? 0, "new season", "new seasons")}`;
       return r.skipped ? `${text} (automation off)` : text;
     }
+    case "folders": {
+      let text = `${plural(r.checked ?? 0, "title", "titles")} checked`;
+      if (r.restored) text += `, ${plural(r.restored, "poster", "posters")} restored`;
+      return text;
+    }
     case "setcheck":
     case "setcheck_one":
       return `${plural(r.checked ?? 1, "set", "sets")} checked, ${r.applied ?? 0} filled in, ${r.changed ?? 0} changed`;

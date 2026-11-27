@@ -16,3 +16,7 @@ def world(tmp_path):
     yield w
     http.set_transport(None)
     settings.reset_cache()
+    from app.posters import tasks
+
+    tasks._named.clear()  # titles named by webhooks belong to this test's library
+    tasks._named_keys.clear()

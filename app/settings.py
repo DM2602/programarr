@@ -86,6 +86,7 @@ DEFAULTS: dict[str, Any] = {
     "auto_count_specials": False,
     "auto_collection_consistency": True,
     "poll_minutes": 15,
+    "folder_check_hours": 24,
     "set_check_hours": 24,
     "wait_max_days": 180,
     "set_changes": "notify",
@@ -100,6 +101,7 @@ DEFAULTS: dict[str, Any] = {
     "mediux_follows": {"follow": [], "hide": [], "at": 0},
     "last_sync": 0,
     "last_set_check": 0,
+    "last_folder_check": 0,
 }
 
 SECRETS = {
@@ -116,7 +118,7 @@ SECRETS = {
     "sonarr_key",
 }
 
-INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "tpdb_cookies"}
+INTERNAL = {"naming_detected", "mediux_follows", "last_sync", "last_set_check", "last_folder_check", "tpdb_cookies"}
 
 _cache: dict[str, Any] | None = None
 

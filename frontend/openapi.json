@@ -9971,6 +9971,10 @@
             "type": "integer",
             "title": "Poll Minutes"
           },
+          "folder_check_hours": {
+            "type": "integer",
+            "title": "Folder Check Hours"
+          },
           "set_check_hours": {
             "type": "integer",
             "title": "Set Check Hours"
@@ -10070,6 +10074,7 @@
           "auto_count_specials",
           "auto_collection_consistency",
           "poll_minutes",
+          "folder_check_hours",
           "set_check_hours",
           "wait_max_days",
           "set_changes",

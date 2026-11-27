@@ -11,6 +11,31 @@ from .sources.base import ImageRef, PosterSet, SourceError, parse_slot_id
 from ..util import event, prune_events
 
 PLEX_FILE_KINDS = {"movies": ("movie",), "all": ("movie", "show", "season")}
+ID_COLUMNS = ("tmdb_id", "tvdb_id", "imdb_id")
+
+# Titles Radarr or Sonarr named in a webhook (import, upgrade, rename). The next sync reads their
+# folders whatever Plex says: on an upgrade Radarr deletes the folder, poster included.
+_named: list[tuple[str, dict[str, str]]] = []
+_named_keys: set[str] = set()  # resolved, waiting for a sync that reached Plex
+
+
+def name_title(kind: str, ids: dict) -> bool:
+    clean = {column: str(value) for column, value in ids.items() if column in ID_COLUMNS and value}
+    if clean:
+        _named.append((kind, clean))
+    return bool(clean)
+
+
+def _named_items() -> set[str]:
+    database = db.get()
+    while _named:
+        kind, ids = _named.pop()
+        where = " OR ".join(f"{column}=?" for column in ids)
+        rows = database.query(f"SELECT key FROM items WHERE gone=0 AND type=? AND ({where})", (kind, *ids.values()))
+        _named_keys.update(row["key"] for row in rows)
+    keys = set(_named_keys)
+    _named_keys.clear()
+    return keys
 PLEX_FILE_RETRY = 7 * 86400  # a title whose Plex poster could not be saved is tried again after a week
 
 _last_error_notice = 0.0
@@ -26,9 +51,11 @@ async def _plex_down(exc: Exception) -> None:
 
 async def sync_and_process(full_scan: bool = False) -> dict:
     jobs.progress(message="Syncing with Plex …")
+    named = _named_items()
     try:
-        result = await library.sync(full_scan=full_scan)
+        result = await library.sync(full_scan=full_scan, also_scan=named)
     except PlexError as exc:
+        _named_keys.update(named)  # next time
         settings.set("last_sync", db.now())
         await _plex_down(exc)
         raise
@@ -79,6 +106,14 @@ async def sync_and_process(full_scan: bool = False) -> dict:
         event("info", "sync", f"Sync: {len(result.new_items)} new titles, {len(result.new_seasons)} new seasons")
     if settings.get("automation"):
         summary.update(await _follow_up(result))
+    # Titles Radarr or Sonarr named while this sync ran
+    while _named or _named_keys:
+        notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
+        library.scan_files(_named_items(), notes)
+        if settings.get("automation"):
+            more = await _follow_up(library.SyncResult(vanished=notes["vanished"], appeared=notes["appeared"]))
+            for key, value in more.items():
+                summary[key] = summary.get(key, 0) + value
     if settings.get("verify_plex"):
         try:
             summary["rechecked"] = await apply.recheck_pending()
@@ -125,6 +160,21 @@ async def _follow_up(result: library.SyncResult) -> dict:
             await apply.refresh_in_plex(item, slots, plex)
             summary["refreshed"] += 1
     return {key: value for key, value in summary.items() if value}
+
+
+async def check_folders() -> dict:
+    """Every folder, for poster files added, replaced or deleted outside Programarr (setting
+    folder_check_hours; a sync reads only the folders of titles Plex changed)."""
+    settings.set("last_folder_check", db.now())
+    jobs.progress(message="Checking the folders …")
+    notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
+    result: dict = {"checked": library.scan_files(None, notes)}
+    if settings.get("automation"):
+        try:
+            result.update(await _follow_up(library.SyncResult(vanished=notes["vanished"], appeared=notes["appeared"])))
+        except PlexError as exc:
+            event("warning", "plex", f"Folder check: {exc}")
+    return result
 
 
 async def keep_plex_posters(limit: int | None = 200) -> dict:
@@ -270,16 +320,6 @@ async def maintenance() -> dict:
         for row in database.query("SELECT DISTINCT slot_id FROM history WHERE archived IS NOT NULL"):
             paths.prune_archive(row["slot_id"], keep)
     result: dict = {"ok": True}
-    # Every folder, for files added, changed or deleted outside Programarr (a sync looks only at
-    # titles Plex changed).
-    notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
-    library.scan_files(None, notes)
-    if settings.get("automation"):
-        try:
-            result["files"] = await _follow_up(library.SyncResult(vanished=notes["vanished"],
-                                                                  appeared=notes["appeared"]))
-        except PlexError as exc:
-            event("warning", "plex", f"Clean up: {exc}")
     try:
         result["backup"] = backup.run()
     except OSError as exc:

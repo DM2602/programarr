@@ -365,7 +365,7 @@ async def test_automation_off_leaves_new_titles_and_seasons_alone(world):
     assert not any(title.startswith(("New", "Review")) for title in world.discord.titles())
     # The scheduler leaves set checks out; a click still runs them.
     now = time.time()
-    settings.update({"last_sync": now, "last_set_check": 0})
+    settings.update({"last_sync": now, "last_set_check": 0, "last_folder_check": now})
     assert jobs.due(now) == []
     settings.set("automation", True)
     assert jobs.due(now) == ["setcheck"]

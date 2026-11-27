@@ -3513,6 +3513,8 @@ export interface components {
             auto_collection_consistency: boolean;
             /** Poll Minutes */
             poll_minutes: number;
+            /** Folder Check Hours */
+            folder_check_hours: number;
             /** Set Check Hours */
             set_check_hours: number;
             /** Wait Max Days */

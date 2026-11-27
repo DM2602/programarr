@@ -1,7 +1,7 @@
 """Posters picked in Plex, files changed in the folder, the backup and Plex posters kept as files."""
 import time
 
-from app import db, imaging, settings
+from app import db, imaging, jobs, settings
 from app.posters import apply, backup, binding, catalog, library, paths, reviews, tasks
 from app.posters.apply import Assignment
 from app.posters.sources.base import ImageRef
@@ -120,10 +120,51 @@ async def test_file_added_in_the_folder_is_shown_in_plex(world):
     await library.sync()
     (world.media / "movies" / "Dune (2021)" / "poster.jpg").write_bytes(poster_for("by-hand"))
     assert not world.plex.selected_is_local(movie)
-    result = await tasks.maintenance()
-    assert result["files"] == {"refreshed": 1}
+    result = await tasks.check_folders()
+    assert result["refreshed"] == 1
     assert world.plex.selected_is_local(movie)
     assert slot(f"m:{movie}")["source"] == "extern"
+
+
+async def test_folders_are_read_only_when_due(world):
+    now = time.time()
+    assert "folders" in jobs.due(now)
+    await tasks.check_folders()
+    assert "folders" not in jobs.due(time.time() + 3600)
+    assert "folders" in jobs.due(time.time() + 25 * 3600)
+    settings.set("folder_check_hours", 0)
+    assert "folders" not in jobs.due(time.time() + 100 * 3600)
+
+
+async def test_title_named_by_radarr_gets_its_poster_back(world):
+    movie = world.plex.add_movie("Dune", 2021, "438631")
+    await world.enable_libraries()
+    await library.sync()
+    await apply.apply(movie, [Assignment(f"m:{movie}", upload_ref("movie"))], "manual", "manual")
+    await tasks.sync_and_process()  # Plex reports the new poster once
+    poster = world.media / "movies" / "Dune (2021)" / "poster.jpg"
+    poster.unlink()  # Radarr upgraded the release and cleared the folder
+    assert "restored" not in await tasks.sync_and_process()  # Plex changed nothing: the folder is not read
+    assert not poster.exists()
+    assert tasks.name_title("movie", {"tmdb_id": 438631, "imdb_id": None})
+    assert not tasks.name_title("movie", {"tmdb_id": None})
+    summary = await tasks.sync_and_process()
+    assert summary["restored"] == 1
+    assert imaging.strip_stamp(poster.read_bytes()) == poster_for("upload-1", "UP")
+    assert world.plex.selected_is_local(movie)
+
+
+async def test_new_release_in_plex_reads_the_folder(world):
+    movie = world.plex.add_movie("Dune", 2021, "438631")
+    await world.enable_libraries()
+    await library.sync()
+    await apply.apply(movie, [Assignment(f"m:{movie}", upload_ref("movie"))], "manual", "manual")
+    await tasks.sync_and_process()
+    poster = world.media / "movies" / "Dune (2021)" / "poster.jpg"
+    poster.unlink()  # Radarr upgraded the release; Plex has the new file
+    world.plex.items[movie]["file"] = world.plex.items[movie]["file"].replace(".mkv", " 2160p.mkv")
+    summary = await tasks.sync_and_process()
+    assert summary["restored"] == 1 and poster.exists()
 
 
 # -- backup -------------------------------------------------------------------------------
@@ -165,8 +206,8 @@ async def test_deleted_poster_comes_back_from_the_backup(world):
     await apply.apply(movie, [Assignment(f"m:{movie}", upload_ref("movie"))], "manual", "manual")
     poster = world.media / "movies" / "Dune (2021)" / "poster.jpg"
     poster.unlink()
-    result = await tasks.maintenance()
-    assert result["files"] == {"restored": 1}
+    result = await tasks.check_folders()
+    assert result["restored"] == 1
     assert imaging.strip_stamp(poster.read_bytes()) == poster_for("upload-1", "UP")
     stamp = imaging.read_stamp_file(poster)
     assert stamp["src"] == "upload" and stamp["mode"] == "manual"
@@ -212,8 +253,8 @@ async def test_removed_poster_stays_removed(world):
     assert backup.find(item(movie), "movie", None) is not None
     await apply.remove_file(movie, f"m:{movie}")
     assert backup.find(item(movie), "movie", None) is None
+    assert not (await tasks.check_folders()).get("restored")
     result = await tasks.maintenance()
-    assert "files" not in result or not result["files"].get("restored")
     assert result["plex_files"]["kept"] == 0
     assert not (world.media / "movies" / "Dune (2021)" / "poster.jpg").exists()
 
@@ -226,6 +267,7 @@ async def test_backup_off_restores_nothing(world):
     await apply.apply(movie, [Assignment(f"m:{movie}", upload_ref("movie"))], "manual", "manual")
     assert not backup.root().exists() or backup.stats()["files"] == 0
     (world.media / "movies" / "Dune (2021)" / "poster.jpg").unlink()
+    await tasks.check_folders()
     result = await tasks.maintenance()
     assert not (world.media / "movies" / "Dune (2021)" / "poster.jpg").exists()
     assert result["backup"] == {"saved": 0, "checked": 0}
@@ -274,7 +316,7 @@ async def test_copy_in_the_backup_comes_before_the_plex_poster(world):
     # Deleted while automation was off
     settings.set("automation", False)
     poster.unlink()
-    await tasks.maintenance()
+    await tasks.check_folders()
     assert not poster.exists()
     settings.set("automation", True)
     result = await tasks.keep_plex_posters()

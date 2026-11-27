@@ -161,6 +161,8 @@ class Runner:
                         self.submit("sync", "Sync with Plex", tasks.sync_and_process, dedupe=True)
                     elif kind == "setcheck":
                         self.submit("setcheck", "Check linked sets", tasks.check_sets, dedupe=True)
+                    elif kind == "folders":
+                        self.submit("folders", "Check folders", tasks.check_folders, dedupe=True)
                 if now - last_maintenance >= 6 * 3600:
                     last_maintenance = now
                     self.submit("maintenance", "Clean up", tasks.maintenance, dedupe=True)
@@ -173,7 +175,7 @@ runner = Runner()
 
 
 def due(now: float) -> list[str]:
-    """Which regular jobs are due (Plex sync, set check)."""
+    """Which regular jobs are due (Plex sync, set check, folder check)."""
     if not (settings.get("setup_done") and settings.get("plex_url")):
         return []
     result = []
@@ -184,6 +186,10 @@ def due(now: float) -> list[str]:
     # Set checks write posters for waiting seasons: only with automation on.
     if settings.get("automation") and now - (settings.get("last_set_check") or 0) >= check:
         result.append("setcheck")
+    # Every folder on the disks: rarely, a sync reads only the folders of titles that changed.
+    folders = int(settings.get("folder_check_hours") or 0)
+    if folders and now - (settings.get("last_folder_check") or 0) >= folders * 3600:
+        result.append("folders")
     return result
 
 

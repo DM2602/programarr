@@ -34,7 +34,7 @@ scheduled set checks are skipped. Turn it on under Settings › Automation.
 With automation on, Programarr also keeps the folders and Plex in step:
 
 - A poster picked or uploaded in Plex (Plex locks it) is saved as the file in the folder, then unlocked.
-- A poster file added or replaced in the folder is read by Plex. Every folder is checked every 6 hours.
+- A poster file added or replaced in the folder is read by Plex.
 - Titles without a file get the poster Plex shows as file, an hour after they appear (Settings › Files:
   off, movies, or movies and shows). Titles waiting under Review are left alone.
 - Every poster file has a copy in `/data/backup`, kept by TMDB, TVDB or IMDb ID. A deleted poster comes
@@ -42,6 +42,13 @@ With automation on, Programarr also keeps the folders and Plex in step:
   "Remove file" on a title removes the copy too.
 
 Match existing › Posters from Plex does this for the whole library at once.
+
+What reads the disks: the sync with Plex (Settings › Automation › Schedule, default every 15 minutes)
+asks Plex and reads only the folders of titles that are new or that Plex changed. All folders are read
+once a day ("Check all folders every", 0 turns it off). With the Sonarr and Radarr webhooks
+(Settings › Webhooks; On File Import, On File Upgrade, On Rename) a title's folder is read right after
+an import, so a poster Radarr deleted with the old release comes back within two minutes; with them,
+a sync every few hours is enough.
 
 ### Access
 

@@ -582,6 +582,7 @@ class SettingsValues(Model):
     auto_count_specials: bool
     auto_collection_consistency: bool
     poll_minutes: int
+    folder_check_hours: int
     set_check_hours: int
     wait_max_days: int
     set_changes: Literal["notify", "apply"]

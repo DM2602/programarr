@@ -315,7 +315,8 @@ export function AutomationSection({ view }: { view: View }) {
       </SettingsSection>
       <Designers form={form} view={view} />
       <SettingsSection title="Schedule">
-        <NumberField form={form} name="poll_minutes" label="Sync with Plex every" hint="Minutes. Webhooks sync right away." min={5} max={1440} />
+        <PollRow form={form} />
+        <NumberField form={form} name="folder_check_hours" label="Check all folders every" hint="Hours, 0 = off. Reads the disks." min={0} max={720} />
         <NumberField form={form} name="set_check_hours" label="Check linked sets every" hint="Hours" min={1} max={720} />
         <NumberField form={form} name="wait_max_days" label="Wait for missing seasons" hint="Days, 0 waits forever" min={0} max={3650} />
         <SelectRow
@@ -330,6 +331,32 @@ export function AutomationSection({ view }: { view: View }) {
         <CheckRow form={form} name="detect_movies" label="Include movies in Match existing" />
       </SettingsSection>
     </SettingsForm>
+  );
+}
+
+const POLL_CHOICES: [number, string][] = [
+  [15, "15 minutes"],
+  [30, "30 minutes"],
+  [60, "1 hour"],
+  [120, "2 hours"],
+  [360, "6 hours"],
+  [720, "12 hours"],
+  [1440, "24 hours"],
+];
+
+function PollRow({ form }: { form: Form }) {
+  const value = Number(form.get("poll_minutes"));
+  const choices = POLL_CHOICES.some(([minutes]) => minutes === value) ? POLL_CHOICES : [...POLL_CHOICES, [value, `${value} minutes`] as [number, string]];
+  return (
+    <Row label="Sync with Plex every" hint="Reads folders only of new or changed titles. Webhooks sync right away." htmlFor="f-poll_minutes">
+      <select id="f-poll_minutes" className="field-input" value={value} onChange={(event) => form.set("poll_minutes", Number(event.target.value))}>
+        {choices.map(([minutes, label]) => (
+          <option key={minutes} value={minutes}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </Row>
   );
 }
 
@@ -389,11 +416,14 @@ function CopyLine({ value, label }: { value: string; label: string }) {
 export function WebhooksSection({ view }: { view: View }) {
   return (
     <>
-      <SettingsSection title="Webhooks" description="Sonarr, Radarr or Plex start a sync 90 seconds after something new arrives.">
-        <Row label="Sonarr" hint="Settings › Connect › Webhook, events On Import and On Series Add">
+      <SettingsSection
+        title="Webhooks"
+        description="A sync 90 seconds after something new arrives. After an import from Sonarr or Radarr, missing posters of that title come back from the backup."
+      >
+        <Row label="Sonarr" hint="Settings › Connect › Webhook: On File Import, On File Upgrade, On Rename, On Series Add">
           <CopyLine value={view.hooks.sonarr} label="Webhook for Sonarr" />
         </Row>
-        <Row label="Radarr" hint="Settings › Connect › Webhook, event On Import">
+        <Row label="Radarr" hint="Settings › Connect › Webhook: On File Import, On File Upgrade, On Rename">
           <CopyLine value={view.hooks.radarr} label="Webhook for Radarr" />
         </Row>
         <Row label="Plex" hint="Settings › Webhooks, needs Plex Pass">

@@ -92,7 +92,8 @@ def _ensure_slot(slot: str, item_key: str, kind: str, season: int | None) -> Non
     )
 
 
-async def sync(plex: Plex | None = None, full_scan: bool = False) -> SyncResult:
+async def sync(plex: Plex | None = None, full_scan: bool = False, also_scan: set[str] | None = None) -> SyncResult:
+    """Titles from Plex. Folders are read only for titles that are new or that Plex changed, plus also_scan."""
     plex = plex or Plex.from_settings()
     database = db.get()
     result = SyncResult()
@@ -131,7 +132,7 @@ async def sync(plex: Plex | None = None, full_scan: bool = False) -> SyncResult:
         )
         result.items += len(seen)
     settings.set("last_sync", now)
-    keys = None if full_scan else changed_items
+    keys = None if full_scan else changed_items | (also_scan or set())
     notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
     scan_files(keys, notes)
     result.vanished, result.appeared = notes["vanished"], notes["appeared"]
@@ -180,7 +181,8 @@ def _store_movie(meta: dict, lib: dict, now: int, baseline: int | None, first: b
         result.thumb_changed.append(slot_id("movie", key))
     database.upsert("items", ("key",), values)
     _ensure_slot(slot_id("movie", key), key, "movie", None)
-    return old is None or old["updated_at"] != values["updated_at"] or old["folder"] != folder or bool(old["gone"])
+    return (old is None or old["updated_at"] != values["updated_at"] or old["folder"] != folder
+            or old["files"] != values["files"] or bool(old["gone"]))  # a new file: Radarr may have cleared the folder
 
 
 async def _store_show(plex: Plex, meta: dict, lib: dict, now: int, baseline: int | None, first: bool,

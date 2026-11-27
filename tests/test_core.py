@@ -233,7 +233,8 @@ def test_scheduler_due(world):
     from app import jobs
 
     now = time.time()
-    settings.update({"last_sync": now - 60, "last_set_check": now - 3600, "poll_minutes": 15, "set_check_hours": 24})
+    settings.update({"last_sync": now - 60, "last_set_check": now - 3600, "last_folder_check": now - 3600,
+                     "poll_minutes": 15, "set_check_hours": 24})
     assert jobs.due(now) == []
     settings.set("last_sync", now - 16 * 60)
     assert jobs.due(now) == ["sync"]
