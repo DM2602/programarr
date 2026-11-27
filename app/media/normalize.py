@@ -226,7 +226,7 @@ def _decide(found: tuple[str, float, list[dict]] | None, candidates: list[dict])
         if rival and rival["popularity"] >= AMBIGUOUS * chosen["popularity"]:
             options = _merge([{**row, "similarity": 1.0} for row in hits[:5]], candidates)[:5]
             return {"status": "uncertain", "method": method, "score": round(score * 0.5, 3),
-                    "candidates": options, "error": "Several titles fit"}
+                    "candidates": options, "error": "Several matches"}
         others = [row for row in candidates if (row["kind"], row["tmdb_id"]) != (chosen["kind"], chosen["tmdb_id"])]
         return {"status": "matched", "method": method, "score": score, "candidates": others[:4], "chosen": chosen}
     if candidates and candidates[0]["similarity"] >= MIN_SIMILARITY:

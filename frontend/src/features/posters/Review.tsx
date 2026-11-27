@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 import { api, errorText, unwrap, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useItem, useReviews } from "../../api/queries";
+import { useReviews } from "../../api/queries";
 import { Button, ButtonLink, ExternalButton } from "../../components/Button";
 import { Tabs } from "../../components/Controls";
 import { useToast } from "../../components/Toasts";
@@ -13,7 +13,7 @@ import { imageCaption, seasonLabel, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
 import { ZoomImage } from "../../components/ZoomImage";
 import { Coverage } from "./Coverage";
-import { Picker } from "./Picker";
+import { PickerDrawer } from "./Picker";
 
 type ReviewView = Schemas["ReviewView"];
 
@@ -73,11 +73,11 @@ function useReviewActions(review: ReviewView) {
     accept: (take: boolean) =>
       run(
         () => unwrap(api.POST("/api/reviews/{review_id}/accept", { params: { path: { review_id: review.id }, query: { take } } })),
-        take ? "Taking the new posters…" : "Keeping the current posters…",
+        take ? "Applying new posters…" : "Keeping current posters…",
       ),
     retry: () => run(() => unwrap(api.POST("/api/items/{key}/retry", { params: { path: { key: review.item_key } } })), "Searching sets…"),
     keepPlex: () =>
-      run(() => unwrap(api.POST("/api/reviews/{review_id}/keep-plex", { params: { path: { review_id: review.id } } })), "Keeping the Plex posters…"),
+      run(() => unwrap(api.POST("/api/reviews/{review_id}/keep-plex", { params: { path: { review_id: review.id } } })), "Keeping Plex posters…"),
     force: (slot: string) =>
       run(() => unwrap(api.POST("/api/items/{key}/force", { params: { path: { key: review.item_key } }, body: { slot } })), "Switching Plex to the file…"),
   };
@@ -85,13 +85,7 @@ function useReviewActions(review: ReviewView) {
 
 function currentSource(posters: ReviewView["current"]): string {
   const files = posters.filter((poster) => poster.file).length;
-  return files === posters.length ? "In the folder" : files ? "In the folder and from Plex" : "From Plex";
-}
-
-// The picker from the title page, opened over Review.
-function ReviewPicker({ itemKey, slotId, onClose }: { itemKey: string; slotId: string; onClose: () => void }) {
-  const { data } = useItem(itemKey);
-  return data ? <Picker detail={data} slotId={slotId} onClose={onClose} /> : null;
+  return files === posters.length ? "In folder" : files ? "In folder and Plex" : "From Plex";
 }
 
 function pickerSlot(review: ReviewView): string {
@@ -255,7 +249,7 @@ export function ReviewCard({ review }: { review: ReviewView }) {
   );
   const kindLine =
     review.kind === "detect"
-      ? `${review.confidence === "high" ? "Certain" : "Not certain, compare"}${review.via ? `, ${review.via}` : ""}`
+      ? `${review.confidence === "high" ? "Certain" : "Uncertain, compare"}${review.via ? `, ${review.via}` : ""}`
       : `${review.kind_label}${review.season !== null ? `, ${seasonLabel(review.season)}` : ""}, ${timeAgo(review.created_at)}`;
 
   return (
@@ -271,11 +265,11 @@ export function ReviewCard({ review }: { review: ReviewView }) {
         {(review.kind === "new_item" || review.kind === "new_season") && (
           <>
             <Candidates review={review} onBind={(token) => void actions.bind(token)} onKeepPlex={() => void actions.keepPlex()} onPick={() => setPicking(true)} />
-            {picking && <ReviewPicker itemKey={review.item_key} slotId={pickerSlot(review)} onClose={() => setPicking(false)} />}
+            {picking && <PickerDrawer itemKey={review.item_key} slotId={pickerSlot(review)} onClose={() => setPicking(false)} />}
             <div className="mt-3 flex flex-wrap gap-2">
               {review.type !== "movie" && (
                 <Button size="sm" onClick={() => setPicking(true)} data-action="review-pick">
-                  Pick myself
+                  Select manually
                 </Button>
               )}
               {review.kind === "new_item" && (
@@ -292,7 +286,7 @@ export function ReviewCard({ review }: { review: ReviewView }) {
 
         {review.kind === "detect" && (
           <>
-            <Compare before="In the folder" after="In the set" pairs={review.pairs} />
+            <Compare before="In folder" after="In set" pairs={review.pairs} />
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" variant="primary" onClick={actions.confirm} data-action="review-confirm">
                 Link
@@ -311,10 +305,10 @@ export function ReviewCard({ review }: { review: ReviewView }) {
 
         {review.kind === "set_changed" && (
           <>
-            <Compare before="Now" after="New in the set" pairs={review.changes} />
+            <Compare before="Current" after="New" pairs={review.changes} />
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" variant="primary" onClick={() => void actions.accept(true)}>
-                Take new posters
+                Apply new posters
               </Button>
               <Button size="sm" onClick={() => void actions.accept(false)}>
                 Keep
@@ -363,8 +357,8 @@ export function Review() {
     <>
       <PageHeader
         title="Review"
-        subtitle="Decisions Programarr left to you."
-        actions={kind === "detect" && data?.reviews.length ? <ButtonLink to="/match">Link certain matches at once</ButtonLink> : undefined}
+        subtitle="Items that need a decision."
+        actions={kind === "detect" && data?.reviews.length ? <ButtonLink to="/match">Link all certain matches</ButtonLink> : undefined}
       />
       <Tabs label="Kinds" items={tabs} />
       <div className="mt-6">

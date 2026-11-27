@@ -1,4 +1,4 @@
-"""Poster API: library, one title, the picker, Review, Waiting, Match existing and History."""
+"""Poster API: library, one title, the picker, Review, Pending, Match existing and History."""
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +15,7 @@ from ..util import fold
 from .common import item_or_404, job_row, slot_of, start_job
 from .schemas import (ApplyBody, ArrLink, BackupView, BindBody, ConfirmAll, DetectStats, Follows, HistoryPage, ImageUrlBody,
                       ImageView, Images, ItemDetail, JobStarted, LibraryPage, MissingSeasons, Ok, OnlineResponse,
-                      ReviewsPage, SetsResponse, SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, WaitingPage)
+                      ReviewsPage, SetsResponse, SetView, SlotBody, TokenBody, TpdbSaved, UrlBody, PendingPage)
 
 router = APIRouter(prefix="/api", tags=["posters"])
 
@@ -204,7 +204,7 @@ async def item_bind(key: str, body: BindBody):
 async def item_unbind(key: str):
     item_or_404(key)
     binding.unbind(key)
-    return {"ok": True, "message": "Unlinked. Files stay, new seasons no longer come automatically."}
+    return {"ok": True, "message": "Unlinked. Files are kept, new seasons are no longer set automatically."}
 
 
 @router.post("/items/{key}/check", response_model=JobStarted)
@@ -244,7 +244,7 @@ async def item_force(key: str, body: SlotBody):
 async def item_keep(key: str, body: SlotBody):
     item = item_or_404(key)
     slot_of(item, body.slot)
-    return start_job("keep", f"Keep the current poster: {item['title']}", tasks.keep_current, key, body.slot)
+    return start_job("keep", f"Keep current poster: {item['title']}", tasks.keep_current, key, body.slot)
 
 
 @router.post("/items/{key}/remove", response_model=JobStarted)
@@ -276,12 +276,13 @@ async def item_tpdb(key: str, body: UrlBody):
     return {"message": "ThePosterDB page saved", "url": page}
 
 
-@router.post("/items/{key}/slots/stopwait", response_model=Ok)
-async def stop_waiting(key: str, body: SlotBody):
+@router.post("/items/{key}/slots/dismiss", response_model=Ok)
+async def dismiss_pending(key: str, body: SlotBody):
+    """A pending season stops waiting for its set."""
     item = item_or_404(key)
     slot_of(item, body.slot)
     db.get().update("slots", "id", body.slot, {"waiting": 0, "wait_given_up": 1})
-    return {"ok": True, "message": "Stopped waiting for the set"}
+    return {"ok": True, "message": "Dismissed"}
 
 
 # -- uploads and links ------------------------------------------------------------------------
@@ -337,12 +338,12 @@ async def review_dismiss(review_id: int):
 
 @router.post("/reviews/{review_id}/keep-plex", response_model=JobStarted)
 async def review_keep_plex(review_id: int):
-    return start_job("keep_plex", "Keep the current posters", tasks.keep_plex_for_review, review_id)
+    return start_job("keep_plex", "Keep current posters", tasks.keep_plex_for_review, review_id)
 
 
 @router.post("/reviews/{review_id}/accept", response_model=JobStarted)
 async def review_accept(review_id: int, take: bool = True):
-    return start_job("accept", "Take set changes" if take else "Keep current posters",
+    return start_job("accept", "Apply set changes" if take else "Keep current posters",
                      tasks.accept_changes, review_id, take)
 
 
@@ -359,9 +360,10 @@ async def review_confirm_all():
     return {"ok": True, "message": f"Linked {count} title{'s' if count != 1 else ''}", "count": count}
 
 
-# -- waiting -------------------------------------------------------------------------------------
-@router.get("/waiting", response_model=WaitingPage)
-async def waiting_list():
+# -- pending -------------------------------------------------------------------------------------
+@router.get("/pending", response_model=PendingPage)
+async def pending_list():
+    """Seasons waiting for their set to get a poster, and those dismissed."""
     rows = db.get().query(
         "SELECT s.id, s.item_key, s.season, s.waiting, s.waiting_since, s.wait_checked_at, i.title, i.year, "
         "b.set_title, b.designer, b.source, b.checked_at FROM slots s JOIN items i ON i.key=s.item_key "
@@ -375,8 +377,8 @@ async def waiting_list():
             "year": row["year"],
             "season": row["season"],
             "thumb": f"/img/slot/{row['id']}?v=w",
-            "waiting": bool(row["waiting"]),
-            "waiting_since": row["waiting_since"],
+            "pending": bool(row["waiting"]),
+            "pending_since": row["waiting_since"],
             "checked_at": row["wait_checked_at"] or row["checked_at"],
             "set_title": row["set_title"],
             "designer": row["designer"],
@@ -413,7 +415,7 @@ async def detect_library(scope: str = "shows"):
 
 @router.post("/adopt", response_model=JobStarted)
 async def adopt():
-    return start_job("adopt", "Take posters from Plex", tasks.take_from_plex, lane="bg", dedupe=True)
+    return start_job("adopt", "Import posters from Plex", tasks.take_from_plex, lane="bg", dedupe=True)
 
 
 @router.get("/backup", response_model=BackupView)
@@ -428,7 +430,7 @@ async def backup_run():
 
 @router.post("/backup/restore", response_model=JobStarted)
 async def backup_restore():
-    return start_job("restore_backup", "Restore missing posters from the backup", tasks.restore_backup,
+    return start_job("restore_backup", "Restore missing posters from backup", tasks.restore_backup,
                      lane="bg", dedupe=True)
 
 

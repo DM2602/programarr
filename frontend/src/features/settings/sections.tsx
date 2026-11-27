@@ -36,21 +36,21 @@ const SEASON_NAMES: Record<string, string> = {
 export function FilesSection({ view }: { view: View }) {
   const form = useSettingsForm(view.values);
   const now = view.naming_detected;
-  const movieNow = now.movie ? ` (now: ${now.movie === "file" ? "name of the video file" : `${now.movie}.jpg`})` : "";
-  const showNow = now.show ? ` (now: ${now.show}.jpg)` : "";
-  const seasonNow = now.season ? ` (now: ${SEASON_NAMES[now.season] ?? now.season})` : "";
+  const movieNow = now.movie ? ` (${now.movie === "file" ? "video file name" : `${now.movie}.jpg`})` : "";
+  const showNow = now.show ? ` (${now.show}.jpg)` : "";
+  const seasonNow = now.season ? ` (${SEASON_NAMES[now.season] ?? now.season})` : "";
   return (
     <SettingsForm form={form}>
-      <SettingsSection title="File names" description="A fixed name always applies; other poster files for the same spot move to the archive. As existing keeps the names already in use.">
+      <SettingsSection title="File names">
         <SelectRow
           form={form}
           name="naming_movie"
           label="Movies"
           hint="Several movies in one folder always use the video file's name"
           options={[
-            { value: "auto", label: `As existing${movieNow}` },
+            { value: "auto", label: `Keep current${movieNow}` },
             { value: "poster", label: "poster.jpg" },
-            { value: "file", label: "Like the video file (Movie (2021).jpg)" },
+            { value: "file", label: "Video file name (Movie (2021).jpg)" },
           ]}
         />
         <SelectRow
@@ -58,7 +58,7 @@ export function FilesSection({ view }: { view: View }) {
           name="naming_show"
           label="Shows"
           options={[
-            { value: "auto", label: `As existing${showNow}` },
+            { value: "auto", label: `Keep current${showNow}` },
             { value: "poster", label: "poster.jpg" },
             { value: "show", label: "show.jpg" },
             { value: "folder", label: "folder.jpg" },
@@ -70,7 +70,7 @@ export function FilesSection({ view }: { view: View }) {
           label="Seasons"
           hint="Without season folders, in the show folder. Specials: season-specials-poster.jpg"
           options={[
-            { value: "auto", label: `As existing${seasonNow}` },
+            { value: "auto", label: `Keep current${seasonNow}` },
             { value: "root", label: SEASON_NAMES.root },
             { value: "root_plain", label: SEASON_NAMES.root_plain },
             { value: "folder", label: SEASON_NAMES.folder },
@@ -82,19 +82,19 @@ export function FilesSection({ view }: { view: View }) {
         <SelectRow
           form={form}
           name="conflicts"
-          label="Other poster files for the same spot"
+          label="Conflicting poster files"
           hint="Plex may pick the wrong one otherwise. Restore them under History."
           options={[
-            { value: "archive", label: "Move to the archive" },
-            { value: "keep", label: "Leave them" },
+            { value: "archive", label: "Move to archive" },
+            { value: "keep", label: "Keep" },
           ]}
         />
         <CheckRow form={form} name="unlock_fields" label="Unlock posters in Plex" hint="A locked poster ignores the file in the folder." />
-        <CheckRow form={form} name="verify_plex" label="Check that Plex shows the file" hint="After writing. Otherwise it shows up under Review." />
+        <CheckRow form={form} name="verify_plex" label="Verify that Plex shows the file" hint="After writing. Otherwise it shows up under Review." />
         <SelectRow
           form={form}
           name="plex_poster_files"
-          label="Keep the Plex poster as file"
+          label="Keep Plex poster as file"
           hint="For titles without a file"
           options={[
             { value: "off", label: "Off" },
@@ -102,7 +102,7 @@ export function FilesSection({ view }: { view: View }) {
             { value: "all", label: "Movies and shows" },
           ]}
         />
-        <NumberField form={form} name="archive_keep" label="Older versions per poster in the archive" hint="0 keeps all" min={0} max={100} />
+        <NumberField form={form} name="archive_keep" label="Archived versions per poster" hint="0 = no limit" min={0} max={100} />
       </SettingsSection>
       <BackupRows form={form} />
     </SettingsForm>
@@ -115,7 +115,7 @@ function BackupRows({ form }: { form: Form }) {
   const hint = data ? `${plural(data.files, "file", "files")}, ${fileSize(data.bytes)} in ${data.folder}` : undefined;
   return (
     <SettingsSection title="Backup">
-      <CheckRow form={form} name="backup_posters" label="Copy every poster to the backup" hint={hint} />
+      <CheckRow form={form} name="backup_posters" label="Back up all posters" hint={hint} />
       <div className="flex flex-wrap items-center gap-3 py-4">
         <Button size="sm" onClick={() => run(() => unwrap(api.POST("/api/backup")), "Backing up posters…")} data-action="backup">
           Back up now
@@ -146,24 +146,24 @@ export function SourcesSection({ view }: { view: View }) {
         />
         <TestButton what="mediux" label="Check token" body={() => ({ value: typed(form, "mediux_token") })} />
       </SettingsSection>
-      <SettingsSection title="ThePosterDB" description="Downloads need an account.">
+      <SettingsSection title="ThePosterDB" description="Downloads require an account.">
         <TextField form={form} name="tpdb_email" label="Email or username" />
         <SecretField form={form} name="tpdb_password" label="Password" autoComplete="new-password" />
-        <NumberField form={form} name="tpdb_delay" label="Pause between page loads" hint="Seconds" min={0} max={10} step={0.25} />
+        <NumberField form={form} name="tpdb_delay" label="Delay between page loads" hint="Seconds" min={0} max={10} step={0.25} />
         <NumberField form={form} name="tpdb_pages" label="Pages per title" hint="24 posters per page" min={1} max={10} />
         <TextField form={form} name="flaresolverr_url" label="FlareSolverr" hint="Optional, only for Cloudflare checks" placeholder="http://flaresolverr:8191" type="url" />
         <TestButton what="tpdb" label="Test sign-in" body={() => ({})} />
         <TestButton what="flaresolverr" label="Test FlareSolverr" body={() => ({ value: (form.get("flaresolverr_url") as string) || null })} />
       </SettingsSection>
-      <SettingsSection title="More sources" description="Shown in the picker under Online. TMDB or TVmaze also tell whether a show has ended.">
+      <SettingsSection title="More sources" description="Shown under Online in the picker. TMDB and TVmaze also provide the show status.">
         <SecretField form={form} name="tmdb_key" label="TMDB API key" hint="v3 key or v4 read token" />
-        <TextField form={form} name="tmdb_languages" label="TMDB languages" hint="In order of preference, null means textless" />
+        <TextField form={form} name="tmdb_languages" label="TMDB languages" hint="In order of preference, null = textless" />
         <TestButton what="tmdb" label="Test TMDB" body={() => ({ value: typed(form, "tmdb_key") })} />
         <SecretField form={form} name="fanart_key" label="fanart.tv API key" hint="Project key" />
-        <SecretField form={form} name="fanart_client_key" label="fanart.tv personal key" hint="Optional, new images sooner" />
+        <SecretField form={form} name="fanart_client_key" label="fanart.tv personal key" hint="Optional, faster access to new images" />
         <TestButton what="fanart" label="Test fanart.tv" body={() => ({ value: typed(form, "fanart_key") })} />
         <CheckRow form={form} name="tvmaze_enabled" label="Use TVmaze" hint="No key needed" />
-        <CheckRow form={form} name="allow_private_urls" label="Allow links into your network" hint="Image links to addresses in your home network" />
+        <CheckRow form={form} name="allow_private_urls" label="Allow local image links" hint="Links to addresses in your local network" />
       </SettingsSection>
     </SettingsForm>
   );
@@ -183,11 +183,11 @@ export function ListsSection({ view }: { view: View }) {
         <TestButton what="trakt" label="Check client ID" body={() => ({ value: typed(form, "trakt_client_id") })} />
       </SettingsSection>
       <SettingsSection title="FlixPatrol" description={<>Cloudflare checks go through FlareSolverr (<Link to="/settings/sources" className="underline underline-offset-2">Sources</Link>).</>}>
-        <NumberField form={form} name="flixpatrol_delay" label="Pause between page loads" hint="Seconds" min={0} max={10} step={0.25} />
+        <NumberField form={form} name="flixpatrol_delay" label="Delay between page loads" hint="Seconds" min={0} max={10} step={0.25} />
       </SettingsSection>
       <SettingsSection title="Matching">
         <NumberField form={form} name="ratings_days" label="Refresh ratings after" hint="Days" min={1} max={90} />
-        <NumberField form={form} name="runs_keep_days" label="Keep previews and flow runs" hint="Days. The last run of each list and flow stays." min={1} max={365} />
+        <NumberField form={form} name="runs_keep_days" label="Keep previews and flow runs" hint="Days. The last run of each list and flow is kept." min={1} max={365} />
       </SettingsSection>
     </SettingsForm>
   );
@@ -236,7 +236,7 @@ function Designers({ form, view }: { form: Form; view: View }) {
     }
   };
   return (
-    <SettingsSection title="Preferred designers" description="Higher in the list wins.">
+    <SettingsSection title="Preferred designers" description="Higher in the list takes priority.">
       <div className="space-y-2 py-4" data-repeat="designers">
         {designers.map((designer, index) => (
           <div key={index} className="designer flex flex-wrap gap-2 sm:flex-nowrap">
@@ -275,7 +275,7 @@ function Designers({ form, view }: { form: Form; view: View }) {
           Add designer
         </Button>
       </div>
-      <CheckRow form={form} name="use_mediux_follows" label="Designers I follow on MediUX count too" hint="After the list above. Hidden designers never." />
+      <CheckRow form={form} name="use_mediux_follows" label="Include designers I follow on MediUX" hint="Ranked after the list above. Hidden designers are excluded." />
       <div className="flex flex-wrap items-center gap-3 py-4 text-sm text-gray-400">
         <span>
           {follows.follow.length ? `You follow ${follows.follow.join(", ")}.` : "You follow nobody on MediUX."}
@@ -298,15 +298,15 @@ export function AutomationSection({ view }: { view: View }) {
         <CheckRow
           form={form}
           name="automation"
-          label="Write posters on its own"
-          hint="New titles, new seasons and set updates. When off, Programarr writes only when you click."
+          label="Write posters automatically"
+          hint="New titles, new seasons and set updates. When off, only manual changes are written."
         />
       </SettingsSection>
       <SettingsSection title="New titles">
-        <CheckRow form={form} name="auto_new" label="Apply sets for new titles" hint="Preferred designers only, the rest goes to Review" />
+        <CheckRow form={form} name="auto_new" label="Apply sets for new titles" hint="Preferred designers only, others go to Review" />
         <CheckRow form={form} name="auto_require_complete" label="Shows only with complete sets" hint="Show poster and every season in Plex" />
-        <CheckRow form={form} name="auto_count_specials" label="Count specials too" />
-        <CheckRow form={form} name="auto_collection_consistency" label="Movies of a collection use the same set" hint="A new movie follows the set of the others" />
+        <CheckRow form={form} name="auto_count_specials" label="Include specials" />
+        <CheckRow form={form} name="auto_collection_consistency" label="Same set for all movies in a collection" hint="New movies follow the set of the others" />
         <Row label="On a tie, prefer" htmlFor="f-source_order">
           <select id="f-source_order" className="field-input" value={order} onChange={(event) => form.set("source_order", event.target.value.split(","))}>
             <option value="mediux,tpdb">MediUX, then ThePosterDB</option>
@@ -319,14 +319,14 @@ export function AutomationSection({ view }: { view: View }) {
         <PollRow form={form} />
         <NumberField form={form} name="folder_check_hours" label="Check all folders every" hint="Hours, 0 = off. Reads the disks." min={0} max={720} />
         <NumberField form={form} name="set_check_hours" label="Check linked sets every" hint="Hours" min={1} max={720} />
-        <NumberField form={form} name="wait_max_days" label="Wait for missing seasons" hint="Days, 0 waits forever" min={0} max={3650} />
+        <NumberField form={form} name="wait_max_days" label="Keep seasons pending for" hint="Days, 0 = no limit" min={0} max={3650} />
         <SelectRow
           form={form}
           name="set_changes"
-          label="When a designer changes an image in a linked set"
+          label="Changes in linked sets"
           options={[
-            { value: "notify", label: "Tell me, I decide under Review" },
-            { value: "apply", label: "Take it right away" },
+            { value: "notify", label: "Add to Review" },
+            { value: "apply", label: "Apply" },
           ]}
         />
         <CheckRow form={form} name="detect_movies" label="Include movies in Match existing" />
@@ -349,7 +349,7 @@ function PollRow({ form }: { form: Form }) {
   const value = Number(form.get("poll_minutes"));
   const choices = POLL_CHOICES.some(([minutes]) => minutes === value) ? POLL_CHOICES : [...POLL_CHOICES, [value, `${value} minutes`] as [number, string]];
   return (
-    <Row label="Sync with Plex every" hint="Reads folders only of new or changed titles. Webhooks sync right away." htmlFor="f-poll_minutes">
+    <Row label="Sync with Plex every" hint="Reads folders of new or changed titles only. Webhooks sync immediately." htmlFor="f-poll_minutes">
       <select id="f-poll_minutes" className="field-input" value={value} onChange={(event) => form.set("poll_minutes", Number(event.target.value))}>
         {choices.map(([minutes, label]) => (
           <option key={minutes} value={minutes}>
@@ -420,7 +420,7 @@ export function WebhooksSection({ view }: { view: View }) {
     <>
       <SettingsSection
         title="Webhooks"
-        description="A sync 90 seconds after something new arrives. After an import from Sonarr or Radarr, missing posters of that title come back from the backup."
+        description="Sync 90 seconds after an event. After a Sonarr or Radarr import, missing posters are restored from backup."
       >
         <Row label="Sonarr" hint="Settings › Connect › Webhook: On File Import, On File Upgrade, On Rename, On Series Add">
           <CopyLine value={view.hooks.sonarr} label="Webhook for Sonarr" />
@@ -431,7 +431,7 @@ export function WebhooksSection({ view }: { view: View }) {
         <Row label="Plex" hint="Settings › Webhooks, needs Plex Pass">
           <CopyLine value={view.hooks.plex} label="Webhook for Plex" />
         </Row>
-        <p className="py-4 text-xs text-gray-500">Behind a proxy with sign-in, such as Pangolin SSO, allow /api/hooks/ without it. The token protects the webhooks.</p>
+        <p className="py-4 text-xs text-gray-500">Behind an authenticating proxy such as Pangolin SSO, exclude /api/hooks/ from sign-in. The token protects the webhooks.</p>
       </SettingsSection>
       <SettingsSection title="API">
         <p className="py-4 text-sm text-gray-400">
@@ -451,14 +451,14 @@ export function AboutSection({ view }: { view: View }) {
   return (
     <>
       <SettingsSection title="Data">
-        <Row label="Data folder" hint="Back up this folder. Posters themselves live in the media folders.">
+        <Row label="Data folder" hint="Back up this folder. Posters are stored in the media folders.">
           <p className="pt-2 font-mono text-xs break-all text-gray-200">{view.data_dir}</p>
         </Row>
         <Row label="Version">
           <p className="pt-2 text-gray-200">Programarr {view.version}</p>
         </Row>
       </SettingsSection>
-      <SettingsSection title="Maintenance" description="After changing files in the folders by hand.">
+      <SettingsSection title="Maintenance" description="After editing files outside Programarr.">
         <div className="flex flex-wrap gap-2 py-4">
           <Button onClick={() => run(() => unwrap(api.POST("/api/rescan")), "Rescanning folders…")}>Rescan all folders</Button>
           <Button onClick={() => run(() => unwrap(api.POST("/api/sync", { params: { query: { full: true } } })), "Full sync with Plex…")}>Full sync with Plex</Button>

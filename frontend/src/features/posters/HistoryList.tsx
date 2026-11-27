@@ -26,7 +26,7 @@ const ICON = "h-3.5 w-3.5";
 const plex = { tone: "yellow" as Tone, icon: <MonoBrandIcon icon={siPlex} className={ICON} /> };
 const automatic = { tone: "green" as Tone, icon: <BoltIcon className={ICON} /> };
 
-// How a change came about: by hand, automatic, through Plex or from the backup.
+// How a change came about: manual, automatic, through Plex or restored from backup.
 const HOW: Record<string, { tone: Tone; icon: ReactNode }> = {
   manual: { tone: "indigo", icon: <HandRaisedIcon className={ICON} /> },
   restore: { tone: "indigo", icon: <ArrowUturnLeftIcon className={ICON} /> },
@@ -41,10 +41,6 @@ const HOW: Record<string, { tone: Tone; icon: ReactNode }> = {
   system: { tone: "gray", icon: <Cog6ToothIcon className={ICON} /> },
 };
 
-function capital(text: string): string {
-  return text ? text[0].toUpperCase() + text.slice(1) : text;
-}
-
 function placeholderIcon(row: Row) {
   if (row.action === "remove") return <TrashIcon className="h-5 w-5" />;
   if (row.action === "unlock") return <LockOpenIcon className="h-5 w-5" />;
@@ -57,7 +53,7 @@ export function HistoryList({ rows, linkTitles = false }: { rows: Row[]; linkTit
   const { confirm } = useDialogs();
 
   const restore = async (row: Row) => {
-    const ok = await confirm({ title: "Restore this poster?", body: "The current file goes to the archive.", confirm: "Restore" });
+    const ok = await confirm({ title: "Restore this poster?", body: "The current file moves to the archive.", confirm: "Restore" });
     if (!ok) return;
     await run(() => unwrap(api.POST("/api/history/{history_id}/restore", { params: { path: { history_id: row.id } } })), "Restoring…");
   };
@@ -93,7 +89,7 @@ export function HistoryList({ rows, linkTitles = false }: { rows: Row[]; linkTit
               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
                 {row.origin_label && (
                   <Badge tone={how.tone} icon={how.icon}>
-                    {capital(row.origin_label)}
+                    {row.origin_label}
                   </Badge>
                 )}
                 {source && <Badge tone="gray">{source}</Badge>}

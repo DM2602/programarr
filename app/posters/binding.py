@@ -59,7 +59,7 @@ def _store(item: dict, poster_set: PosterSet, origin: str, snapshot: dict) -> No
 
 
 def _mark_waiting(item: dict, poster_set: PosterSet) -> list[int]:
-    """Seasons Plex has but the set does not (yet) – they wait for the set."""
+    """Seasons Plex has but the set does not (yet): they stay pending."""
     if item["type"] != "show" or not followable(poster_set):
         return []
     database = db.get()
@@ -146,7 +146,7 @@ def bind_existing(item_key: str, poster_set: PosterSet, matched: dict[str, Image
     waiting = _mark_waiting(item, poster_set)
     reviews.resolve_for(item_key, ("new_item", "new_season", "detect"))
     event("info", "set", f"{item['title']}: linked to set \"{poster_set.title}\" by {poster_set.designer} "
-                         f"({len(matched)} file(s) matched{', ' + str(len(waiting)) + ' waiting' if waiting else ''})",
+                         f"({len(matched)} file(s) matched{', ' + str(len(waiting)) + ' pending' if waiting else ''})",
           item_key)
 
 
@@ -177,7 +177,7 @@ async def handle_new_season(item_key: str, number: int) -> str:
         try:
             poster_set = await catalog.load_set(bound["source"], bound["set_key"], item, fresh=True)
         except SourceError as exc:
-            event("warning", "set", f"{label}: cannot load set ({exc}), will try again at the next set check", item_key)
+            event("warning", "set", f"{label}: cannot load set ({exc}), retrying at the next set check", item_key)
             database.update("slots", "id", slot, {"waiting": 1, "waiting_since": db.now(), "wait_checked_at": db.now()})
             return "error"
         if poster_set is None:
@@ -202,10 +202,10 @@ async def handle_new_season(item_key: str, number: int) -> str:
             return "failed"
         database.update("slots", "id", slot, {"waiting": 1, "waiting_since": db.now(), "wait_checked_at": db.now(),
                                               "wait_given_up": 0})
-        event("info", "season", f"{label}: the set does not have this season yet, waiting", item_key)
-        await notify.send("waiting", f"Waiting for set: {label}",
+        event("info", "season", f"{label}: not in the set yet, pending", item_key)
+        await notify.send("waiting", f"Pending: {label}",
                           f"The set \"{bound['set_title']}\" by {bound['designer']} has no poster for "
-                          f"{season_label(number)} yet. Programarr checks daily.", item_key=item_key)
+                          f"{season_label(number)} yet. Checked again with every set check.", item_key=item_key)
         return "waiting"
     # No binding: offer sets that have this season.
     candidates = []
@@ -222,7 +222,7 @@ async def handle_new_season(item_key: str, number: int) -> str:
 
 
 async def check_binding(item_key: str) -> dict:
-    """Look at a bound set again: fill waiting seasons, report changed images."""
+    """Look at a bound set again: fill pending seasons, report changed images."""
     database = db.get()
     item = database.one("SELECT * FROM items WHERE key=?", (item_key,))
     bound = get(item_key)
@@ -260,9 +260,9 @@ async def check_binding(item_key: str) -> dict:
                 if max_wait and row["waiting_since"] and row["waiting_since"] < db.now() - max_wait:
                     database.update("slots", "id", slot, {"waiting": 0, "wait_given_up": 1})
                     result["gave_up"] += 1
-                    await notify.send("waiting", f"Stopped waiting: {item['title']}, {season_label(season)}",
+                    await notify.send("waiting", f"No longer pending: {item['title']}, {season_label(season)}",
                                       f"The set still has no poster after {settings.get('wait_max_days')} days. "
-                                      "Pick one by hand.", item_key=item_key)
+                                      "Select one manually.", item_key=item_key)
                 else:
                     database.update("slots", "id", slot, {"wait_checked_at": db.now()})
             continue
@@ -282,9 +282,9 @@ async def check_binding(item_key: str) -> dict:
                 snapshot[assignment.slot_id] = assignment.ref.version()
                 result["applied"] += 1
                 if assignment.ref.kind == "season":
-                    await notify.send("season", f"Poster arrived: {item['title']}, "
+                    await notify.send("season", f"Poster set: {item['title']}, "
                                                 f"{season_label(assignment.ref.season)}",
-                                      f"The set \"{poster_set.title}\" has a poster for it now.",
+                                      f"The set \"{poster_set.title}\" now has a poster for it.",
                                       image=outcome.image, item_key=item_key)
     if changes:
         result["changed"] = len(changes)
@@ -295,7 +295,7 @@ async def check_binding(item_key: str) -> dict:
             notified[change["slot"]] = ImageRef.from_dict(change["new"]).version()
         await notify.send("set_changed", f"Set changed: {item['title']}",
                           f"{len(changes)} poster(s) changed in the set \"{poster_set.title}\" by {poster_set.designer}. "
-                          "Take or keep them under Review.", item_key=item_key)
+                          "Apply or keep them under Review.", item_key=item_key)
     snapshot["_notified"] = notified
     database.update("bindings", "item_key", item_key, {
         "snapshot": db.dumps(snapshot), "checked_at": db.now(), "set_updated": poster_set.updated,

@@ -11,7 +11,7 @@ import { useTitle } from "../../lib/useTitle";
 const FLAGS: Record<string, { label: string; tone: Tone }> = {
   problem: { label: "Plex", tone: "red" },
   review: { label: "Review", tone: "yellow" },
-  waiting: { label: "Waiting", tone: "indigo" },
+  pending: { label: "Pending", tone: "indigo" },
   new: { label: "New", tone: "green" },
 };
 
@@ -36,7 +36,7 @@ export function TitleCard({ card }: { card: Schemas["Card"] }) {
           {flag && <Badge tone={flag.tone}>{flag.label}</Badge>}
         </div>
         {card.complete && (
-          <span className="absolute right-2 bottom-2 rounded-full bg-gray-900/80 p-0.5 text-green-400" title="Complete: ended, every poster is a file">
+          <span className="absolute right-2 bottom-2 rounded-full bg-gray-900/80 p-0.5 text-green-400" title="Complete: ended, all posters are files">
             <CheckBadgeIcon className="h-6 w-6" aria-label="Complete" />
           </span>
         )}

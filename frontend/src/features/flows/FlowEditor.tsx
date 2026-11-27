@@ -290,11 +290,11 @@ function RulesEditor({ info, config, ports, onChange }: {
       {several && (
         <div>
           <label htmlFor="rules-each" className="mb-1 block text-xs font-semibold text-gray-400">
-            A title that fits several outputs
+            Titles matching several outputs
           </label>
           <select id="rules-each" className="field-input" value={each ? "each" : "first"} onChange={(event) => write(rules, event.target.value === "each")} data-field="each">
-            <option value="first">Goes to the first</option>
-            <option value="each">Goes to each</option>
+            <option value="first">Use first</option>
+            <option value="each">Use all</option>
           </select>
         </div>
       )}
@@ -349,7 +349,7 @@ function NodePanel({ node, info, problems, ports, onChange, onRemove, onClose }:
             .map((field) => (
               <ConfigField key={`${node.id}-${field.key}`} field={field} value={config[field.key]} onChange={(value) => set(field.key, value)} />
             ))}
-          {!info.fields.length && <p className="text-sm text-gray-400">Nothing to set.</p>}
+          {!info.fields.length && <p className="text-sm text-gray-400">No settings</p>}
         </div>
       )}
       <div className="mt-6 border-t border-gray-700 pt-4">
@@ -455,7 +455,7 @@ function FlowSettings({ flow, settings, onSettings, onDryRunMode, onDelete }: {
       <div className="flex flex-wrap gap-2 border-t border-gray-700 pt-4">
         {!flow.dry_run && (
           <Button size="sm" onClick={onDryRunMode} data-action="dry-run-mode">
-            Back to dry run
+            Switch to dry run
           </Button>
         )}
         <Button variant="ghost" size="sm" icon={<TrashIcon className="h-4 w-4" />} onClick={onDelete} data-action="delete-flow">
@@ -719,7 +719,7 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
     if (live) {
       const ok = await dialogs.confirm({
         title: "Go live?",
-        body: "Runs of this flow add new titles to Radarr and Sonarr, with the output's tags. Each output adds at most its limit of new titles per run.",
+        body: "Runs add new titles to Radarr and Sonarr with the output tags, up to each output's limit per run.",
         confirm: "Go live",
       });
       if (!ok) return;
@@ -729,14 +729,14 @@ function Editor({ flow, types }: { flow: FlowView; types: NodeType[] }) {
       const updated = await unwrap(api.PUT("/api/flows/{flow_id}", { params: { path: { flow_id: flow.id } }, body: { dry_run: !live } }));
       queryClient.setQueryData(["flow", flow.id], updated);
       queryClient.invalidateQueries({ queryKey: ["flows"] });
-      toast.show(live ? "Flow is live" : "Flow is back in dry run", { kind: "success" });
+      toast.show(live ? "Flow is live" : "Flow switched to dry run", { kind: "success" });
     } catch (error) {
       toast.show(errorText(error), { kind: "error", timeout: 8000 });
     }
   };
 
   const remove = async () => {
-    const ok = await dialogs.confirm({ title: `Delete ${flow.name}?`, body: "Its history goes with it.", confirm: "Delete", danger: true });
+    const ok = await dialogs.confirm({ title: `Delete ${flow.name}?`, body: "Its run history is deleted too.", confirm: "Delete", danger: true });
     if (!ok) return;
     try {
       await unwrap(api.DELETE("/api/flows/{flow_id}", { params: { path: { flow_id: flow.id } } }));

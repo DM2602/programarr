@@ -113,7 +113,7 @@ async def test_flixpatrol_netflix_switzerland_like_script(lists):
     grinch_extra = db.loads(by_title["The Grinch"]["extra"])
     assert (grinch_extra["days"], grinch_extra["change"], grinch_extra["original"]) == (51, -1, False)
     assert (run["matched"], run["uncertain"], run["failed"], run["excluded"], run["raw_count"]) == (17, 2, 1, 0, 20)
-    assert result["message"] == "Netflix Switzerland – Movies, TV Shows: 17 of 20 matched, 3 to check"
+    assert result["message"] == "Netflix Switzerland – Movies, TV Shows: 17 of 20 matched, 3 unresolved"
     # Ratings come from MDBList in one batch per kind.
     grinch = store.find("movie", 360920)
     assert (grinch["imdb_rating"], grinch["imdb_votes"], grinch["rt_critics"], grinch["rt_audience"]) == (6.3, 140000, 60, 61)

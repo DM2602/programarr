@@ -1,4 +1,4 @@
-"""New titles: take a set automatically when it is safe, otherwise ask under Review."""
+"""New titles: apply a set automatically when it is safe, otherwise add them to Review."""
 from __future__ import annotations
 
 from . import backup, binding, catalog, detect, reviews
@@ -25,7 +25,7 @@ def _sibling_set(item: dict, ranked: list[catalog.Ranked]) -> catalog.Ranked | N
 
 
 def choose(item: dict, ranked: list[catalog.Ranked], tpdb_sure: bool) -> tuple[catalog.Ranked | None, str]:
-    """The set to take automatically, or None with the reason why not."""
+    """The set to apply automatically, or None with the reason why not."""
     if settings.get("auto_collection_consistency"):
         sibling = _sibling_set(item, ranked)
         if sibling:
@@ -81,8 +81,8 @@ async def handle_new_item(item_key: str) -> str:
         result = await binding.bind(item_key, choice.set, origin="auto", replace_all=False)
         if result["written"]:
             waiting = result["waiting"]
-            extra = f" {len(waiting)} season(s) waiting for the set." if waiting else ""
-            event("info", "auto", f"{item['title']}: took the set by {choice.set.designer} automatically ({reason})",
+            extra = f" {len(waiting)} season(s) pending." if waiting else ""
+            event("info", "auto", f"{item['title']}: applied the set by {choice.set.designer} automatically ({reason})",
                   item_key)
             await notify.send(
                 "auto",

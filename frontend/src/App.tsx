@@ -20,7 +20,7 @@ import { ItemPage } from "./features/posters/ItemPage";
 import { Library } from "./features/posters/Library";
 import { Match } from "./features/posters/Match";
 import { Review } from "./features/posters/Review";
-import { Waiting } from "./features/posters/Waiting";
+import { Pending } from "./features/posters/Pending";
 import { Settings } from "./features/settings/Settings";
 import { Logs } from "./features/system/Logs";
 import { NotFound } from "./features/system/NotFound";
@@ -74,7 +74,8 @@ export function App() {
         <Route path="library" element={<Library />} />
         <Route path="item/:key" element={<ItemPage />} />
         <Route path="review" element={<Review />} />
-        <Route path="waiting" element={<Waiting />} />
+        <Route path="pending" element={<Pending />} />
+        <Route path="waiting" element={<Navigate to="/pending" replace />} />
         <Route path="match" element={<Match />} />
         <Route path="history" element={<History />} />
         <Route path="lists" element={<Lists />} />

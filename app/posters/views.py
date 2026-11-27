@@ -19,23 +19,23 @@ PLEX_STATES = {
 }
 
 MODES = {
-    "set": "from the set",
-    "manual": "picked by hand",
+    "set": "linked set",
+    "manual": "manual",
     "extern": "file in folder",
     "detected": "matched",
 }
 
 ORIGINS = {
-    "manual": "by hand",
-    "auto": "automatic (new title)",
-    "season": "new season",
-    "set_update": "set update",
-    "restore": "restored",
-    "detect": "matched",
-    "adopt": "adopted from Plex",
-    "plex": "chosen in Plex",
-    "plex_file": "Plex poster kept as file",
-    "backup": "from the backup",
+    "manual": "Manual",
+    "auto": "New title",
+    "season": "New season",
+    "set_update": "Set update",
+    "restore": "Restored",
+    "detect": "Matched",
+    "adopt": "Imported from Plex",
+    "plex": "Selected in Plex",
+    "plex_file": "Plex poster kept",
+    "backup": "Restored from backup",
     "system": "Programarr",
 }
 
@@ -50,7 +50,7 @@ STATUS_FILTERS = {
     "all": ("All", ""),
     "linked": ("Linked", " AND b.item_key IS NOT NULL"),
     "unlinked": ("Not linked", " AND b.item_key IS NULL AND NOT " + status.DONE_SQL),
-    "waiting": ("Waiting", " AND EXISTS (SELECT 1 FROM slots w WHERE w.item_key=i.key AND w.waiting=1)"),
+    "pending": ("Pending", " AND EXISTS (SELECT 1 FROM slots w WHERE w.item_key=i.key AND w.waiting=1)"),
     "review": ("Review", " AND EXISTS (SELECT 1 FROM reviews r WHERE r.item_key=i.key AND r.status='open')"),
     "problem": ("Problem", " AND EXISTS (SELECT 1 FROM slots p WHERE p.item_key=i.key AND p.plex_state='not_local')"),
     "no_file": ("No file", " AND (ms.file IS NULL)"),
@@ -94,7 +94,7 @@ def counts() -> dict:
     return {
         "review": sum(open_reviews.values()),
         "review_kinds": open_reviews,
-        "waiting": database.scalar(
+        "pending": database.scalar(
             "SELECT COUNT(*) FROM slots s JOIN items i ON i.key=s.item_key WHERE s.waiting=1 AND i.gone=0", (), 0),
         "movies": database.scalar("SELECT COUNT(*) FROM items WHERE type='movie' AND gone=0", (), 0),
         "shows": database.scalar("SELECT COUNT(*) FROM items WHERE type='show' AND gone=0", (), 0),
@@ -169,9 +169,9 @@ def slot_view(slot: dict, show_folder: Path | None = None) -> dict:
         "needs_force": bool(slot.get("file")) and (slot.get("plex_state") == "not_local"
                                                    or (slot.get("plex_state") == "pending" and not fresh)),
         "applied_at": slot.get("applied_at"),
-        "waiting": bool(slot.get("waiting")),
-        "waiting_since": slot.get("waiting_since"),
-        "wait_given_up": bool(slot.get("wait_given_up")),
+        "pending": bool(slot.get("waiting")),
+        "pending_since": slot.get("waiting_since"),
+        "dismissed": bool(slot.get("wait_given_up")),
         "gone": False,
     }
 
@@ -220,7 +220,7 @@ def card_view(row: dict, now: int | None = None) -> dict:
     elif row.get("open_reviews"):
         flag = "review"
     elif row.get("waiting"):
-        flag = "waiting"
+        flag = "pending"
     elif row.get("is_new") and row.get("first_seen") and row["first_seen"] > now - NEW_FOR:
         flag = "new"
     else:

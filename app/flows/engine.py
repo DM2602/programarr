@@ -254,7 +254,7 @@ def _message(dry: bool, totals: dict) -> str:
     if totals["added"]:
         parts.append(f"{totals['added']} to add" if dry else f"{totals['added']} added")
     if totals["present"]:
-        parts.append(f"{totals['present']} already there")
+        parts.append(f"{totals['present']} existing")
     if totals["failed"]:
         parts.append(f"{totals['failed']} failed")
     text = ", ".join(parts) if parts else "Nothing to add"

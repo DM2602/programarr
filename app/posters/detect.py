@@ -215,7 +215,7 @@ async def run(scope: str = "shows") -> dict:
     await catalog.refresh_follows()
     total = len(items)
     found = high = errors = 0
-    jobs.progress(0, total, "Starting …")
+    jobs.progress(0, total, "Starting…")
     for index, row in enumerate(items, start=1):
         jobs.progress(index - 1, total, row["title"])
         try:

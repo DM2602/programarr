@@ -60,7 +60,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const posters: NavItem[] = [
     { to: "/library", label: "Library", icon: Squares2X2Icon },
     { to: "/review", label: "Review", icon: InboxStackIcon, count: counts?.review },
-    { to: "/waiting", label: "Waiting", icon: ClockIcon, count: counts?.waiting },
+    { to: "/pending", label: "Pending", icon: ClockIcon, count: counts?.pending },
     { to: "/match", label: "Match existing", icon: LinkIcon },
     { to: "/history", label: "History", icon: ArchiveBoxIcon },
   ];

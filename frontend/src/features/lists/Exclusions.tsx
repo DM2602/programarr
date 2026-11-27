@@ -25,9 +25,9 @@ const PER_PAGE = 50;
 const rowKey = (row: Row) => (row.id !== null ? String(row.id) : `${row.service}-${row.external_id}`);
 
 function syncLine(services: Service[], syncedAt: number | null): string {
-  if (!services.length) return "Never in a list.";
+  if (!services.length) return "Excluded from all lists.";
   const names = services.map((service) => SERVICE_LABELS[service]).join(" and ");
-  return syncedAt ? `Never in a list. Synced with ${names} ${timeAgo(syncedAt)}.` : `Never in a list. Not yet synced with ${names}.`;
+  return syncedAt ? `Excluded from all lists. Synced with ${names} ${timeAgo(syncedAt)}.` : `Excluded from all lists. Not synced with ${names} yet.`;
 }
 
 export function Exclusions() {
@@ -196,7 +196,7 @@ function ExclusionRow({ row, onRemove }: { row: Row; onRemove: () => void }) {
       <div className="flex items-center gap-3 self-end sm:self-auto">
         {service &&
           (row.pending ? (
-            <Badge tone="yellow" title={`Goes to ${service} at the next sync`} icon={<MonoBrandIcon icon={serviceIcon} />}>
+            <Badge tone="yellow" title={`Written to ${service} at the next sync`} icon={<MonoBrandIcon icon={serviceIcon} />}>
               {service} pending
             </Badge>
           ) : (

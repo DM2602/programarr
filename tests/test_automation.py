@@ -1,4 +1,4 @@
-"""Set links, new seasons, waiting, set changes, new titles, Match existing and Complete."""
+"""Set links, new seasons, pending seasons, set changes, new titles, Match existing and Complete."""
 import io
 
 from PIL import Image
@@ -56,7 +56,7 @@ async def test_new_season_waits_then_arrives_with_set_check(world):
     world.plex.add_season(show, 3)
     summary = await tasks.sync_and_process()
     assert summary["seasons"] == {"waiting": 1}
-    assert any(title.startswith("Waiting for set") for title in world.discord.titles())
+    assert any(title.startswith("Pending: ") for title in world.discord.titles())
     # Nothing new yet
     result = await binding.check_binding(show)
     assert result["applied"] == 0 and result["waiting"] == 1
@@ -201,7 +201,7 @@ async def test_detection_binds_existing_files_to_their_set(world):
     assert detect.confirm(review["id"])
     bound = binding.get(show)
     assert bound["bound_by"] == "detect"
-    # Files stay as they are; season 3 now waits for the set
+    # Files stay as they are; season 3 is pending now
     assert (root / "Season01.jpg").exists() and not (root / "season01-poster.jpg").exists()
     assert db.get().scalar("SELECT waiting FROM slots WHERE id=?", (f"S:{show}:3",)) == 1
     world.mediux.add_season_to_set(raw, 3)

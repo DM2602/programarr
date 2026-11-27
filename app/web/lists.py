@@ -103,7 +103,7 @@ async def ignore(entry_id: int):
         changed = runs.ignore(entry_id)
     except SourceError as exc:
         raise _bad(exc) from exc
-    return {"ok": True, "changed": changed, "message": "Ignored"}
+    return {"ok": True, "changed": changed, "message": "Skipped"}
 
 
 @router.post("/lists/entries/{entry_id}/reset", response_model=Changed)
@@ -112,7 +112,7 @@ async def reset(entry_id: int):
         changed = await runs.reset(entry_id)
     except (SourceError, tmdb.TmdbError) as exc:
         raise _bad(exc) from exc
-    return {"ok": True, "changed": changed, "message": "Back to automatic"}
+    return {"ok": True, "changed": changed, "message": "Match reset"}
 
 
 @router.get("/lists/overrides", response_model=OverridesPage)

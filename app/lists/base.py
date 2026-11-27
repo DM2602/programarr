@@ -120,12 +120,12 @@ def clean_values(fields: list[Field], params: dict, error: type[Exception]) -> d
             if spec.dynamic:
                 value = "" if value is None else str(value).strip()
                 if required and not value:
-                    raise error(f"{spec.label}: choose one")
+                    raise error(f"{spec.label}: select one")
             elif value not in allowed:
                 if not required and value in (None, ""):
                     value = None
                 else:
-                    raise error(f"{spec.label}: choose one")
+                    raise error(f"{spec.label}: select one")
         else:
             value = str(value or "").strip()
             if required and not value:

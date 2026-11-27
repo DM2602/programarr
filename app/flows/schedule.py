@@ -51,7 +51,7 @@ def _field(text: str, low: int, high: int, names: dict[str, int] | None, what: s
         if "/" in part:
             part, step_text = part.split("/", 1)
             if not step_text.isdigit() or int(step_text) < 1:
-                raise ScheduleError(f"Cron: wrong step in the {what} field")
+                raise ScheduleError(f"Cron: invalid step in the {what} field")
             step = int(step_text)
         if part in ("*", ""):
             start, end = low, high
@@ -100,15 +100,15 @@ def normalise(value: str | None) -> str | None:
     if match:
         seconds = int(match.group(1)) * UNIT_SECONDS[match.group(2)]
         if seconds < MIN_SECONDS:
-            raise ScheduleError("Run at most every 15 minutes")
+            raise ScheduleError("Minimum interval is 15 minutes")
         if seconds > MAX_SECONDS:
-            raise ScheduleError("Run at least every 30 days")
+            raise ScheduleError("Maximum interval is 30 days")
         return text.lower()
     if text.lower().startswith("every"):
         raise ScheduleError("Use every:<number><m|h|d>, e.g. every:6h")
     parse_cron(text)
     if next_run(text, datetime.now().timestamp()) is None:
-        raise ScheduleError("Cron: this date never comes")
+        raise ScheduleError("Cron: this date never occurs")
     return text
 
 

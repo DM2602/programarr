@@ -100,11 +100,11 @@ function OutputCard({ node, dry, onShow }: { node: RunNode; dry: boolean; onShow
   );
 }
 
-function Steps({ nodes, dry }: { nodes: RunNode[]; dry: boolean }) {
+function NodeList({ nodes, dry }: { nodes: RunNode[]; dry: boolean }) {
   return (
     <Card className="divide-y divide-gray-700">
       {nodes.map((node) => (
-        <div key={node.id} className="run-step flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4" data-step={node.id}>
+        <div key={node.id} className="run-node flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:gap-4" data-node={node.id}>
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <NodeIcon type={node.type} category={node.category} />
             <span className="font-medium text-gray-100">{node.label}</span>
@@ -119,7 +119,7 @@ function Steps({ nodes, dry }: { nodes: RunNode[]; dry: boolean }) {
                   node.entries && (
                     <span>
                       <span className="font-semibold text-gray-100">{node.entries.matched ?? 0}</span> of {node.count_in} matched
-                      {(node.entries.uncertain ?? 0) + (node.entries.failed ?? 0) > 0 && `, ${(node.entries.uncertain ?? 0) + (node.entries.failed ?? 0)} to check`}
+                      {(node.entries.uncertain ?? 0) + (node.entries.failed ?? 0) > 0 && `, ${(node.entries.uncertain ?? 0) + (node.entries.failed ?? 0)} unresolved`}
                       {(node.entries.excluded ?? 0) > 0 && `, ${node.entries.excluded} excluded`}
                     </span>
                   )
@@ -192,7 +192,7 @@ const SHOW: { key: string; label: (dry: boolean) => string }[] = [
   { key: "all", label: () => "All" },
   { key: "added", label: (dry) => outcomeLabel("added", dry) },
   { key: "tagged", label: (dry) => outcomeLabel("tagged", dry) },
-  { key: "present", label: () => "Already there" },
+  { key: "present", label: () => "Already exists" },
   { key: "skipped", label: () => "Skipped" },
   { key: "failed", label: () => "Failed" },
   { key: "filtered", label: () => "Filtered out" },
@@ -337,8 +337,8 @@ export function FlowRun() {
         </Section>
       )}
       {run.nodes.length > 0 && run.status !== "running" && (
-        <Section title="Steps" id="run-steps">
-          <Steps nodes={run.nodes} dry={run.dry_run} />
+        <Section title="Nodes" id="run-nodes">
+          <NodeList nodes={run.nodes} dry={run.dry_run} />
         </Section>
       )}
     </>

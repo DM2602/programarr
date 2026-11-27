@@ -50,7 +50,7 @@ async def _plex_down(exc: Exception) -> None:
 
 
 async def sync_and_process(full_scan: bool = False) -> dict:
-    jobs.progress(message="Syncing with Plex …")
+    jobs.progress(message="Syncing with Plex…")
     named = _named_items()
     try:
         result = await library.sync(full_scan=full_scan, also_scan=named)
@@ -84,7 +84,7 @@ async def sync_and_process(full_scan: bool = False) -> dict:
     total = len(result.new_items) + len(result.new_seasons)
     done = 0
     for key in result.new_items:
-        jobs.progress(done, total, "New titles …")
+        jobs.progress(done, total, "New titles…")
         try:
             outcome = await auto.handle_new_item(key)
         except Exception as exc:  # noqa: BLE001 - one title must not stop the rest
@@ -94,7 +94,7 @@ async def sync_and_process(full_scan: bool = False) -> dict:
         done += 1
     for show_key, number in result.new_seasons:
         status.forget(show_key)
-        jobs.progress(done, total, "New seasons …")
+        jobs.progress(done, total, "New seasons…")
         try:
             outcome = await binding.handle_new_season(show_key, number)
         except Exception as exc:  # noqa: BLE001
@@ -146,7 +146,7 @@ async def _follow_up(result: library.SyncResult) -> dict:
             try:
                 outcome = await apply.take_plex_choice(item_key, slot, plex)
             except (PlexError, SourceError) as exc:
-                event("warning", "plex", f"Poster chosen in Plex not saved: {exc}", item_key)
+                event("warning", "plex", f"Poster selected in Plex not saved: {exc}", item_key)
                 continue
             summary["plex_choices"] += outcome == "saved"
             summary["refreshed"] += outcome == "refreshed"
@@ -166,7 +166,7 @@ async def check_folders() -> dict:
     """Every folder, for poster files added, replaced or deleted outside Programarr (setting
     folder_check_hours; a sync reads only the folders of titles Plex changed)."""
     settings.set("last_folder_check", db.now())
-    jobs.progress(message="Checking the folders …")
+    jobs.progress(message="Checking folders…")
     notes: dict[str, list[str]] = {"vanished": [], "appeared": []}
     result: dict = {"checked": library.scan_files(None, notes)}
     if settings.get("automation"):
@@ -206,7 +206,7 @@ async def keep_plex_posters(limit: int | None = 200) -> dict:
             break
         if cache.get(f"plexfile:tried:{row['id']}"):
             continue
-        jobs.progress(index, len(rows), "Keeping Plex posters as files …")
+        jobs.progress(index, len(rows), "Keeping Plex posters as files…")
         checked += 1
         if await backup.restore(row["item_key"], [row["id"]]):
             restored += 1
@@ -236,7 +236,7 @@ async def take_from_plex() -> dict:
     )
     adopted = unlocked = refreshed = failed = 0
     for index, row in enumerate(rows):
-        jobs.progress(index, len(rows), "Checking Plex posters …")
+        jobs.progress(index, len(rows), "Checking Plex posters…")
         try:
             outcome = await apply.take_plex_choice(row["item_key"], row["id"], plex, uploads=True)
         except (PlexError, SourceError):
@@ -246,7 +246,7 @@ async def take_from_plex() -> dict:
         unlocked += outcome == "unlocked"
         refreshed += outcome == "refreshed"
     files = await keep_plex_posters(limit=None)
-    event("info", "plex", f"Posters from Plex: {adopted} chosen there saved as files, {files['kept']} kept as files"
+    event("info", "plex", f"Imported from Plex: {adopted} selected in Plex, {files['kept']} Plex posters kept"
                           f"{f', {failed} failed' if failed else ''} ({len(rows)} checked)")
     return {"checked": len(rows), "adopted": adopted, "kept": files["kept"], "restored": files["restored"],
             "unlocked": unlocked, "refreshed": refreshed, "failed": failed}
@@ -278,21 +278,21 @@ async def keep_plex_for_review(review_id: int) -> dict:
 
 
 async def backup_now() -> dict:
-    jobs.progress(message="Checking the folders …")
+    jobs.progress(message="Checking folders…")
     library.scan_files(None)
     return backup.run()
 
 
 async def restore_backup() -> dict:
     """Every poster that is missing in its folder and has a copy in the backup comes back."""
-    jobs.progress(message="Checking the folders …")
+    jobs.progress(message="Checking folders…")
     library.scan_files(None)
     database = db.get()
     keys = [row["item_key"] for row in database.query(
         "SELECT DISTINCT s.item_key FROM slots s JOIN items i ON i.key=s.item_key WHERE s.file IS NULL AND i.gone=0")]
     restored = 0
     for index, key in enumerate(keys):
-        jobs.progress(index, len(keys), "Restoring from the backup …")
+        jobs.progress(index, len(keys), "Restoring from backup…")
         restored += len(await backup.restore(key))
     return {"restored": restored, "checked": len(keys)}
 
@@ -306,7 +306,7 @@ async def check_sets(item_keys: list[str] | None = None) -> dict:
         item_keys = [row["item_key"] for row in rows]
     totals = {"checked": 0, "applied": 0, "changed": 0, "waiting": 0, "gave_up": 0}
     for index, key in enumerate(item_keys):
-        jobs.progress(index, len(item_keys), "Checking sets …")
+        jobs.progress(index, len(item_keys), "Checking sets…")
         try:
             result = await binding.check_binding(key)
         except Exception as exc:  # noqa: BLE001

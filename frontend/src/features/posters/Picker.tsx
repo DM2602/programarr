@@ -5,7 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type DragEvent, ty
 import { createPortal } from "react-dom";
 import { api, errorText, unwrap, uploadImage, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
-import { useOnlineImages, usePlexImages, useSets } from "../../api/queries";
+import { useItem, useOnlineImages, usePlexImages, useSets } from "../../api/queries";
 import { Button, ExternalButton } from "../../components/Button";
 import { Tabs } from "../../components/Controls";
 import { useToast } from "../../components/Toasts";
@@ -184,7 +184,7 @@ function SetBlock({ itemKey, set, data, slot, itemType, chosen, onChoose, onAppl
           )}
           {set.source === "tpdb" && !set.loaded && (
             <Button size="sm" onClick={loadWhole} disabled={loading}>
-              {loading ? "Loading…" : "Load whole set"}
+              {loading ? "Loading…" : "Load full set"}
             </Button>
           )}
           {set.url && (
@@ -287,7 +287,7 @@ function PlexTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slo
   const { data, isPending, error } = usePlexImages(detail.item.key, slot.id, true);
   if (isPending) return <Loading text="Loading posters from Plex…" />;
   if (error || !data) return <Notice tone="red">{error?.message ?? "Cannot load posters from Plex"}</Notice>;
-  if (!data.images.length) return <Empty title="Plex has no posters for this" />;
+  if (!data.images.length) return <Empty title="No posters in Plex" />;
   return (
     <div className="flex flex-wrap gap-3">
       {data.images.map((image) => (
@@ -307,7 +307,7 @@ function PlexTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slo
 
 function OnlineTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: Slot; chosen: Chosen | null; onChoose: (choice: Chosen) => void }) {
   const { data, isPending, error } = useOnlineImages(detail.item.key, slot.id, true);
-  if (isPending) return <Loading text="Asking TMDB, fanart.tv and TVmaze…" />;
+  if (isPending) return <Loading text="Searching TMDB, fanart.tv and TVmaze…" />;
   if (error || !data) return <Notice tone="red">{error?.message ?? "Cannot reach the online sources"}</Notice>;
   return (
     <div className="space-y-6">
@@ -319,7 +319,7 @@ function OnlineTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: S
           ) : source.error ? (
             <Notice>{source.error}</Notice>
           ) : !source.images.length ? (
-            <p className="text-sm text-gray-400">{source.key === "tvmaze" && detail.item.type === "movie" ? "Shows only." : "Nothing found."}</p>
+            <p className="text-sm text-gray-400">{source.key === "tvmaze" && detail.item.type === "movie" ? "Shows only" : "No posters"}</p>
           ) : (
             <div className="flex flex-wrap gap-3">
               {source.images.map((image) => (
@@ -406,7 +406,7 @@ function FileTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null
         }`}
       >
         <PhotoIcon className="h-8 w-8 text-gray-400" aria-hidden="true" />
-        <span className="font-semibold text-gray-200">Drop an image or choose a file</span>
+        <span className="font-semibold text-gray-200">Upload file</span>
         <span className="text-xs text-gray-400">JPEG, PNG or WebP</span>
       </label>
       <div className="mt-4">
@@ -416,6 +416,12 @@ function FileTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null
       </div>
     </div>
   );
+}
+
+/** The picker for a title that is not open: loads the title, then slides in over the page. */
+export function PickerDrawer({ itemKey, slotId, onClose }: { itemKey: string; slotId: string; onClose: () => void }) {
+  const { data } = useItem(itemKey);
+  return data ? <Picker detail={data} slotId={slotId} onClose={onClose} /> : null;
 }
 
 export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: string; onClose: () => void }) {
@@ -451,7 +457,7 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
     const token = chosen.image.token;
     close();
     if (keepFile) {
-      void run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping the file…");
+      void run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping file…");
       return;
     }
     void run(() => unwrap(api.POST("/api/items/{key}/apply", { params: { path: { key } }, body: { slot: slot.id, token } })), "Setting poster…");
@@ -505,7 +511,7 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
                 <span className="truncate text-sm text-gray-300">{chosen.context}</span>
               </>
             ) : (
-              <span className="text-sm text-gray-500">Nothing picked yet</span>
+              <span className="text-sm text-gray-500">Nothing selected</span>
             )}
           </div>
           <Button variant="primary" disabled={!chosen} onClick={apply} data-action="apply-image">

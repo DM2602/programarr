@@ -31,23 +31,23 @@ In Plex, turn on "Use local assets" for each library (Advanced).
 Off by default. While it is off, Programarr syncs the library but writes posters only when you click;
 scheduled set checks are skipped. Turn it on under Settings › Automation.
 
-With automation on, Programarr also keeps the folders and Plex in step:
+With automation on, Programarr also keeps the folders and Plex in sync:
 
-- A poster picked or uploaded in Plex (Plex locks it) is saved as the file in the folder, then unlocked.
+- A poster selected or uploaded in Plex (Plex locks it) is saved as the file in the folder, then unlocked.
 - A poster file added or replaced in the folder is read by Plex.
 - Titles without a file get the poster Plex shows as file, an hour after they appear (Settings › Files:
-  off, movies, or movies and shows). Titles waiting under Review are left alone.
-- Every poster file has a copy in `/data/backup`, kept by TMDB, TVDB or IMDb ID. A deleted poster comes
-  back from it, also when a title is deleted and downloaded again; a linked set is linked again.
+  off, movies, or movies and shows). Titles under Review are left alone.
+- Every poster file has a copy in `/data/backup`, kept by TMDB, TVDB or IMDb ID. A deleted poster is
+  restored from it, also when a title is deleted and downloaded again; a linked set is linked again.
   "Remove file" on a title removes the copy too.
 
-Match existing › Posters from Plex does this for the whole library at once.
+Match existing › Import from Plex does this for the whole library at once.
 
 What reads the disks: the sync with Plex (Settings › Automation › Schedule, default every 15 minutes)
 asks Plex and reads only the folders of titles that are new or that Plex changed. All folders are read
 once a day ("Check all folders every", 0 turns it off). With the Sonarr and Radarr webhooks
 (Settings › Webhooks; On File Import, On File Upgrade, On Rename) a title's folder is read right after
-an import, so a poster Radarr deleted with the old release comes back within two minutes; with them,
+an import, so a poster Radarr deleted with the old release is restored within two minutes; with them,
 a sync every few hours is enough.
 
 ### Access
@@ -61,21 +61,21 @@ a sync every few hours is enough.
 Lists › Lists reads a source once and shows how every entry was matched. FlixPatrol titles are
 matched like the FlixPatrol script did: exact title and year, then year ±1, then the title without a
 year; TMDB's alternative titles count too. Anything else lands in Lists › Match log with candidates.
-A fix or an ignore holds for future runs; excluded titles never appear in a list.
+A fix or a skip holds for future runs; excluded titles never appear in a list.
 
-Lists › Exclusions is kept in step with the import list exclusions of Radarr (movies) and Sonarr
+Lists › Exclusions is kept in sync with the import list exclusions of Radarr (movies) and Sonarr
 (shows) in both directions: a title excluded there is excluded here, an exclusion here is written
 there, and removing it on either side removes it on the other. The sync runs before every flow run,
-every 6 hours and with Sync on the page. If Radarr or Sonarr cannot be reached, the change waits for
-the next sync.
+every 6 hours and with Sync on the page. If Radarr or Sonarr cannot be reached, the change stays
+pending until the next sync.
 
 ### Flows
 
 Flows › Flows connects sources, filters (rating, release, genre, country, language, list position,
 seasons, movie or show, in Plex) and Radarr or Sonarr in an editor. A filter sends a title to Match or
 No match; rating, release, genre, country, language, list position and season filters can have
-several outputs (e.g. one per genre or rating tier), each with its own rule. A title that fits several
-goes to the first or to each of them, as set on the filter. Radarr and Sonarr add new titles with the
+several outputs (e.g. one per genre or rating tier), each with its own rule. A title matching several
+outputs goes to the first or to all of them (Use first, Use all on the filter). Radarr and Sonarr add new titles with the
 profile, root folder and tags of their node, at most the set number per run. Titles already in Plex,
 Radarr or Sonarr are left as they are, tags included: tags only go on with a new title. Excluded titles
 never get through. Sonarr needs Sonarr v4 and a TVDB ID: from TMDB, or where TMDB has none, from the
@@ -83,9 +83,15 @@ list itself, from MDBList or from Sonarr's own lookup by TMDB or IMDb ID.
 
 New flows run as a dry run: each run shows what would be added, title by title, without writing
 anything to Radarr or Sonarr. "Go live" switches a flow to real runs. An output can compare its titles with MDBList lists,
-e.g. the import lists in Radarr and Sonarr, until the flow gives the same result. Flows run by hand,
+e.g. the import lists in Radarr and Sonarr, until the flow gives the same result. Flows run manually,
 on an interval (`every:6h`) or by cron (`0 6 * * *`, container time zone). Runs are kept 60 days
 (Settings › Lists), the last run of every flow stays.
+
+### Dashboard
+
+To do (Review, pending seasons, posters Plex does not show, unresolved matches, failed flows), recently
+set posters, every flow with its last run and MDBList comparison, titles added by live runs, library
+facts, the schedule of the regular jobs and recent jobs.
 
 ### Data
 

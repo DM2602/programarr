@@ -59,8 +59,8 @@ def test_schedules():
     assert schedule.describe("0 6 * * *") == "Daily at 06:00"
     assert schedule.describe("30 7 * * mon") == "Mondays at 07:30"
     assert schedule.describe("0 */4 * * *") == "Cron 0 */4 * * *"
-    for wrong, message in (("every:5m", "at most every 15 minutes"), ("every 6h", "every:6h"),
-                           ("1 2 3", "five fields"), ("61 * * * *", "0–59"), ("0 0 31 2 *", "never comes"),
+    for wrong, message in (("every:5m", "Minimum interval is 15 minutes"), ("every 6h", "every:6h"),
+                           ("1 2 3", "five fields"), ("61 * * * *", "0–59"), ("0 0 31 2 *", "never occurs"),
                            ("0 0 * * funday", "not valid")):
         with pytest.raises(schedule.ScheduleError, match=message):
             schedule.normalise(wrong)
@@ -97,7 +97,7 @@ def test_graph_checks(world):
     checked = graph.check(broken)
     problems = {(p.node, p.message) for p in checked.problems}
     assert ("x", "Unknown node type: nope") in problems
-    assert ("radarr", "Root folder: choose one") in problems
+    assert ("radarr", "Root folder: select one") in problems
     assert ("r", "IMDb rating: 0–10") in problems
     assert ("r", "Connect an input") in problems and ("r", "Connect an output") in problems
     assert len(checked.graph["edges"]) == 3  # the broken connections are dropped
@@ -140,7 +140,7 @@ def test_filters(world):
     assert verdict("year", {"mode": "recent", "months": 6}, title()) == ("no_match", "No release date")
     assert verdict("year", {"mode": "range", "from": 2020}, title(year=2024)) == ("match", "2024")
     assert verdict("year", {"mode": "range", "from": 2020, "to": 2022}, title(year=2024))[0] == "no_match"
-    with pytest.raises(ConfigError, match="first or last year"):
+    with pytest.raises(ConfigError, match="start or end year"):
         TYPES.types["year"].clean({"mode": "range"})
 
     drama_crime = title(genres="[18, 80]")
@@ -239,7 +239,7 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     result = await engine.run(flow_id)
     assert result["dry_run"] is True and result["outcome"] == "partial"  # the limit was reached
     assert (result["added"], result["tagged"], result["present"], result["skipped"], result["failed"]) == (9, 0, 2, 5, 0)
-    assert result["message"] == "Dry run: 9 to add, 2 already there"
+    assert result["message"] == "Dry run: 9 to add, 2 existing"
     assert lists.radarr.writes == lists.sonarr.writes == 0
     assert [tag["label"] for tag in lists.radarr.tags] == ["kids"]  # not even the tag is created
 
@@ -283,7 +283,7 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     # The path names the list a title came from, not just the source.
     assert [(step["label"], step["port_label"], step["detail"]) for step in lupin["steps"]] == [
         ("Netflix Switzerland", "Titles", "#4 TV Shows"), ("Movie or show", "Shows", ""),
-        ("Sonarr", "Already there", "")]
+        ("Sonarr", "Already exists", "")]
 
 
 async def test_tvdb_ids_where_tmdb_has_none(lists):
@@ -347,7 +347,7 @@ async def test_live_run_adds_once_and_never_tags_afterwards(lists):
     store.update(flow_id, dry_run=False)
     first = await engine.run(flow_id)
     assert first["dry_run"] is False and (first["added"], first["tagged"], first["present"]) == (3, 0, 1)
-    assert first["message"] == "3 added, 1 already there"
+    assert first["message"] == "3 added, 1 existing"
     top10_tag = next(tag["id"] for tag in lists.radarr.tags if tag["label"] == "top-10")
     added = {body["tmdbId"]: body for body in lists.radarr.added}
     assert list(added) == [1001, 1002]
@@ -480,7 +480,7 @@ def test_api(lists, client):  # noqa: F811
     assert updated["outputs"] == ["Radarr", "Sonarr"] and updated["next_run_at"] is None
     assert client.put(f"/api/flows/{flow_id}", json={"graph": top10()}).json()["version"] == 2  # unchanged
     assert client.put(f"/api/flows/{flow_id}", json={"schedule": "every:1m"}).json()["detail"] == \
-        "Run at most every 15 minutes"
+        "Minimum interval is 15 minutes"
     check = client.get("/api/flows/schedule", params={"value": "0 6 * * *"}).json()
     assert check["ok"] and check["text"] == "Daily at 06:00" and check["next_run_at"] > time.time()
 
@@ -511,6 +511,45 @@ def test_api(lists, client):  # noqa: F811
     # Flow runs stay out of the recent previews on the Lists page.
     assert client.get("/api/lists/runs", params={"previews": True}).json()["runs"] == []
 
+
+
+def test_dashboard_lists_flows_adds_and_schedule(lists, client):  # noqa: F811
+    lists.radarr.add_movie(360920, "The Grinch", "the-grinch-360920")
+    for tmdb_id, name, year in ((1001, "Guarding Stars", 2026), (1002, "Steps", 2026)):
+        lists.radarr.know(tmdb_id, name, year)
+    lists.sonarr.know(480001, "The Law of Beasts", 2026)
+    graph_ = top10(radarr={"limit": 2, "search": False, "compare": ["dominik/netflix-ch"]}, sonarr={"limit": 1})
+    flow_id = store.create("Netflix CH", graph_, "every:6h")
+    store.create("Not run", top10())
+    store.update(flow_id, dry_run=False)
+    job = wait_job(client, client.post(f"/api/flows/{flow_id}/run", json={}).json()["job"])
+    assert job["result"]["added"] == 3
+
+    overview = client.get("/api/overview").json()
+    cards = {card["name"]: card for card in overview["flows"]}
+    assert cards["Not run"]["last_run"] is None and cards["Not run"]["compare"] is None
+    card = cards["Netflix CH"]
+    assert card["dry_run"] is False and card["last_run"]["added"] == 3 and card["next_run_at"]
+    assert card["compare"]["lists"][0]["name"] == "Netflix CH"
+    assert card["compare"]["both"] == 2 and card["compare"]["flow_only"] > 0  # Radarr's and Sonarr's added up
+    adds = overview["flow_adds"]
+    assert [(add["media"]["title"], add["service"]) for add in adds] == \
+        [("The Law of Beasts", "sonarr"), ("Steps", "radarr"), ("Guarding Stars", "radarr")]
+    assert adds[0]["flow_name"] == "Netflix CH" and adds[0]["run_id"] == job["result"]["run"] and adds[0]["at"]
+
+    # A dry run adds nothing to the strip; neither does a title added twice.
+    store.update(flow_id, dry_run=True)
+    wait_job(client, client.post(f"/api/flows/{flow_id}/run", json={}).json()["job"])
+    assert len(client.get("/api/overview").json()["flow_adds"]) == 3
+
+    rows = {row["key"]: row for row in overview["schedule"]}
+    assert rows["sync"]["interval"] == 15 * 60 and rows["sync"]["state"] == "on" and rows["sync"]["next"]
+    assert rows["exclusions"]["interval"] == 6 * 3600  # Radarr and Sonarr are set up
+    settings.set("automation", False)
+    settings.set("folder_check_hours", 0)
+    rows = {row["key"]: row for row in client.get("/api/overview").json()["schedule"]}
+    assert rows["setcheck"]["state"] == "paused" and rows["setcheck"]["next"] is None
+    assert rows["folders"]["state"] == "off" and rows["folders"]["interval"] is None
 
 # -- exclusions in step with Radarr and Sonarr ---------------------------------------------------------
 

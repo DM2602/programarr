@@ -20,11 +20,11 @@ export const OUTCOMES: Outcome[] = ["added", "tagged", "present", "skipped", "fa
 export function outcomeLabel(outcome: string, dry: boolean): string {
   switch (outcome) {
     case "added":
-      return dry ? "To add" : "Added";
+      return dry ? "Would add" : "Added";
     case "tagged":
-      return dry ? "To tag" : "Tags added";
+      return dry ? "Would tag" : "Tags added";
     case "present":
-      return "Already there";
+      return "Already exists";
     case "skipped":
       return "Skipped";
     case "failed":
@@ -34,7 +34,7 @@ export function outcomeLabel(outcome: string, dry: boolean): string {
   }
 }
 
-/** The outcome after a count: "3 to add", "3 added", "25 already there". */
+/** The outcome after a count: "3 to add", "3 added", "25 existing". */
 export function outcomeCount(outcome: string, dry: boolean): string {
   switch (outcome) {
     case "added":
@@ -42,7 +42,7 @@ export function outcomeCount(outcome: string, dry: boolean): string {
     case "tagged":
       return dry ? "to tag" : "tagged";
     case "present":
-      return "already there";
+      return "existing";
     default:
       return outcomeLabel(outcome, dry).toLowerCase();
   }
@@ -79,11 +79,11 @@ export function ModeBadge({ dryRun }: { dryRun: boolean }) {
 export function RunStatus({ run }: { run: Pick<FlowRunBrief, "status" | "error"> }) {
   if (run.status === "running") return <Badge tone="indigo">Running</Badge>;
   if (run.status === "error") return <Badge tone="red" title={run.error ?? undefined}>Failed</Badge>;
-  if (run.status === "partial") return <Badge tone="yellow">With notes</Badge>;
+  if (run.status === "partial") return <Badge tone="yellow">Warnings</Badge>;
   return <Badge tone="green">Done</Badge>;
 }
 
-/** What a run did, e.g. "3 to add, 25 already there". */
+/** What a run did, e.g. "3 to add, 25 existing". */
 export function RunTotals({ run }: { run: FlowRunBrief }) {
   if (run.status === "running" || (run.status === "error" && !run.titles)) return null;
   const parts: ReactNode[] = [];

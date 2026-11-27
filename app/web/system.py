@@ -5,8 +5,9 @@ from fastapi import APIRouter, HTTPException, Request
 
 from .. import arr, config, db, http, jobs, notify, settings
 from ..plex import Plex, PlexError
-from ..posters import library, tasks, views
+from ..posters import backup, library, tasks, views
 from ..flows import store as flow_store
+from ..lists import exclusions as exclusion_sync
 from ..lists import runs as list_runs
 from ..lists import trakt
 from ..media import mdblist
@@ -36,6 +37,32 @@ async def status():
     }
 
 
+def _schedule(now: int) -> list[dict]:
+    rows = jobs.schedule(now)
+    if any(arr.configured(service) for service in exclusion_sync.SERVICES):
+        last = (exclusion_sync.last_sync() or {}).get("at")
+        started = int(jobs.runner.last_maintenance)
+        rows.append({"key": "exclusions", "label": "Exclusion sync", "interval": jobs.MAINTENANCE_SECONDS,
+                     "last": last, "next": started + jobs.MAINTENANCE_SECONDS if started else None, "state": "on"})
+    return rows
+
+
+def _facts(counts: dict) -> dict:
+    database = db.get()
+    stored = backup.stats(max_age=600) if backup.enabled() else None
+    return {
+        "movies": counts["movies"],
+        "shows": counts["shows"],
+        "linked": counts["linked"],
+        "complete": views.complete_count(),
+        "files": database.scalar(
+            "SELECT COUNT(*) FROM slots s JOIN items i ON i.key=s.item_key WHERE s.file IS NOT NULL AND i.gone=0", (), 0),
+        "backup_files": stored["files"] if stored else None,
+        "backup_bytes": stored["bytes"] if stored else None,
+        "exclusions": len(exclusion_sync.exclusions()),
+    }
+
+
 @router.get("/overview", response_model=Overview)
 async def overview():
     counts = views.counts()
@@ -48,7 +75,7 @@ async def overview():
         "last_set_check": settings.get("last_set_check") or 0,
         "todo": {
             "review": counts["review"],
-            "waiting": counts["waiting"],
+            "pending": counts["pending"],
             "problems": views.problems(),
             "unlinked_with_files": views.unlinked_with_files("show"),
             "detect_open": counts["review_kinds"].get("detect", 0),
@@ -56,9 +83,11 @@ async def overview():
             "flows_failed": flow_store.failed_count(),
         },
         "recent": views.recent_cards(),
-        "facts": {"movies": counts["movies"], "shows": counts["shows"], "linked": counts["linked"],
-                  "complete": views.complete_count()},
+        "facts": _facts(counts),
         "jobs": recent_jobs,
+        "flows": flow_store.cards(),
+        "flow_adds": flow_store.recent_adds(),
+        "schedule": _schedule(db.now()),
     }
 
 

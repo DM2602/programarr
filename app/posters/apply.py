@@ -335,7 +335,7 @@ async def take_plex_choice(item_key: str, slot: str, plex: Plex | None = None, u
         # The file holds the chosen poster now; with the lock Plex would never show the file.
         await plex.unlock(item["library_key"], plex_type, rating_key)
         await plex.refresh(item["key"])
-    event("info", "plex", f"{'Uploaded to' if upload else 'Chosen in'} Plex, saved as file: "
+    event("info", "plex", f"{'Uploaded to' if upload else 'Selected in'} Plex, saved as file: "
                           f"{slot_label(item, slot)}", item_key)
     return "saved"
 

@@ -26,7 +26,7 @@ export function jobProgress(job: Pick<Job, "title" | "done" | "total" | "message
 
 const AUTO_OUTCOMES: Record<string, string> = {
   applied: "Set applied",
-  restored: "Posters restored from the backup",
+  restored: "Restored from backup",
   review: "Added to Review",
   bound: "Already linked",
   missing: "Title not found",
@@ -47,7 +47,7 @@ export function jobMessage(job: Job): string {
       const waiting = Array.isArray(r.waiting) ? r.waiting.length : 0;
       let text = `${plural(r.written ?? 0, "poster", "posters")} set`;
       if (r.failed) text += `, ${r.failed} failed`;
-      if (waiting) text += `, ${plural(waiting, "season waits", "seasons wait")} for the set`;
+      if (waiting) text += `, ${plural(waiting, "season", "seasons")} pending`;
       const bad = r.outcomes?.find((outcome) => !outcome.ok);
       return bad ? `${text}: ${bad.message}` : text;
     }
@@ -63,7 +63,7 @@ export function jobMessage(job: Job): string {
     }
     case "setcheck":
     case "setcheck_one":
-      return `${plural(r.checked ?? 1, "set", "sets")} checked, ${r.applied ?? 0} filled in, ${r.changed ?? 0} changed`;
+      return `${plural(r.checked ?? 1, "set", "sets")} checked, ${r.applied ?? 0} applied, ${r.changed ?? 0} changed`;
     case "detect":
       return `${r.checked ?? 0} checked, ${r.found ?? 0} found, ${r.high ?? 0} certain`;
     case "detect_one":
@@ -82,7 +82,7 @@ export function jobMessage(job: Job): string {
     case "restore_backup":
       return r.restored ? `${plural(r.restored, "poster", "posters")} restored` : "Nothing to restore";
     case "accept":
-      return r.written ? `${plural(r.written, "poster", "posters")} taken` : "Kept current posters";
+      return r.written ? `${plural(r.written, "poster", "posters")} applied` : "Current posters kept";
     case "auto":
       return AUTO_OUTCOMES[r.outcome ?? ""] ?? "Done";
     case "preview":

@@ -97,7 +97,7 @@ export function TitleSearch({ target, confirm, onPick, onClose, heading }: {
               </div>
             ))
           ) : (
-            <p className="px-5 py-6 text-sm text-gray-400">{submitted ? "Nothing found." : "Search TMDB."}</p>
+            <p className="px-5 py-6 text-sm text-gray-400">{submitted ? "No matches" : "Search TMDB"}</p>
           )}
         </div>
       </div>

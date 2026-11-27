@@ -103,8 +103,8 @@ export function useReviews(kind: string) {
   });
 }
 
-export function useWaiting() {
-  return useQuery({ queryKey: ["waiting"], queryFn: () => unwrap(api.GET("/api/waiting")) });
+export function usePending() {
+  return useQuery({ queryKey: ["pending"], queryFn: () => unwrap(api.GET("/api/pending")) });
 }
 
 export function useBackup() {

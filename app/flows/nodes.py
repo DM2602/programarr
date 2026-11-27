@@ -251,7 +251,7 @@ class RatingFilter(RuleFilter):
     label = "Rating"
     rule_fields: ClassVar[list[Field]] = [
         Field("metric", "Rating", "select", options=[(key, value[0]) for key, value in RATINGS.items()], default="imdb"),
-        Field("min", "At least", "decimal", default=7.0, step=0.1, min=0),
+        Field("min", "Minimum", "decimal", default=7.0, step=0.1, min=0),
         Field("missing", "Without rating", "select", options=[("no_match", "No match"), ("match", "Match")],
               default="no_match"),
     ]
@@ -296,9 +296,9 @@ class YearFilter(RuleFilter):
         clean = super().clean_rule(rule)
         if clean["mode"] == "range":
             if clean["from"] is None and clean["to"] is None:
-                raise ConfigError("Set a first or last year")
+                raise ConfigError("Set a start or end year")
             if clean["from"] is not None and clean["to"] is not None and clean["from"] > clean["to"]:
-                raise ConfigError("The first year comes after the last")
+                raise ConfigError("Start year is after end year")
         return clean
 
     @staticmethod
@@ -469,16 +469,16 @@ class SeasonsFilter(RuleFilter):
     key = "seasons"
     label = "Seasons"
     rule_fields: ClassVar[list[Field]] = [
-        Field("min", "At least", "number", default=None, required=False, min=0, max=200),
-        Field("max", "At most", "number", default=None, required=False, min=0, max=200),
+        Field("min", "Minimum", "number", default=None, required=False, min=0, max=200),
+        Field("max", "Maximum", "number", default=None, required=False, min=0, max=200),
     ]
 
     def clean_rule(self, rule: dict) -> dict:
         clean = super().clean_rule(rule)
         if clean["min"] is None and clean["max"] is None:
-            raise ConfigError("Set a lowest or highest number of seasons")
+            raise ConfigError("Set a minimum or maximum number of seasons")
         if clean["min"] is not None and clean["max"] is not None and clean["min"] > clean["max"]:
-            raise ConfigError("At least is more than at most")
+            raise ConfigError("Minimum is above maximum")
         return clean
 
     def rule_summary(self, rule: dict) -> str:
@@ -505,7 +505,7 @@ class TypeSwitch(Filter):
     fields: ClassVar[list[Field]] = []
 
     def summary(self, config: dict) -> str:
-        return "Movies and shows apart"
+        return "Split movies and shows"
 
     def route(self, config: dict, title: Title) -> tuple[list[str], str]:
         return [title.media["kind"]], ""
@@ -529,7 +529,7 @@ class PlexFilter(Filter):
 OUTCOMES = {
     "added": "Added",
     "tagged": "Tags added",  # runs from before 26 Nov 2026 only
-    "present": "Already there",
+    "present": "Already exists",
     "skipped": "Skipped",
     "failed": "Failed",
 }
@@ -554,7 +554,7 @@ class ArrOutput(NodeType):
         try:
             clean["quality_profile"] = int(clean["quality_profile"])
         except (TypeError, ValueError):
-            raise ConfigError("Quality profile: choose one") from None
+            raise ConfigError("Quality profile: select one") from None
         tags = []
         for value in clean["tags"]:
             tag = clean_tag(value)
@@ -608,7 +608,7 @@ class RadarrOutput(ArrOutput):
               options=[("announced", "Announced"), ("inCinemas", "In cinemas"), ("released", "Released")],
               default="released"),
         Field("search", "Search on add", "bool", default=True),
-        Field("limit", "New titles per run, at most", "number", default=20, min=1, max=500),
+        Field("limit", "Max new titles per run", "number", default=20, min=1, max=500),
         _compare_field(),
     ]
 
@@ -639,7 +639,7 @@ class SonarrOutput(ArrOutput):
               options=[("standard", "Standard"), ("daily", "Daily"), ("anime", "Anime")], default="standard"),
         Field("season_folder", "Season folders", "bool", default=True),
         Field("search", "Search for missing episodes", "bool", default=True),
-        Field("limit", "New titles per run, at most", "number", default=20, min=1, max=500),
+        Field("limit", "Max new titles per run", "number", default=20, min=1, max=500),
         _compare_field(),
     ]
 

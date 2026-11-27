@@ -417,7 +417,7 @@ def _update_slot_file(slot: dict, path: Path | None, notes: dict | None = None) 
         # and set updates leave this slot alone from now on.
         updates.update({"mode": "extern", "source": "extern", "set_key": None, "image_id": None,
                         "image_modified": None, "designer": None, "written_sha1": None})
-        event("info", "files", f"File changed by hand: {path.name}", slot["item_key"])
+        event("info", "files", f"File changed outside Programarr: {path.name}", slot["item_key"])
     elif not slot["written_sha1"] and slot["source"] in (None, "extern"):
         stamp = imaging.read_stamp_file(path)
         if stamp and stamp.get("src"):

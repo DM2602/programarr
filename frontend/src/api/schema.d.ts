@@ -612,7 +612,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/items/{key}/slots/stopwait": {
+    "/api/items/{key}/slots/dismiss": {
         parameters: {
             query?: never;
             header?: never;
@@ -621,8 +621,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Stop Waiting */
-        post: operations["stop_waiting_api_items__key__slots_stopwait_post"];
+        /**
+         * Dismiss Pending
+         * @description A pending season stops waiting for its set.
+         */
+        post: operations["dismiss_pending_api_items__key__slots_dismiss_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -765,15 +768,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/waiting": {
+    "/api/pending": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Waiting List */
-        get: operations["waiting_list_api_waiting_get"];
+        /**
+         * Pending List
+         * @description Seasons waiting for their set to get a poster, and those dismissed.
+         */
+        get: operations["pending_list_api_pending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1767,7 +1773,7 @@ export interface components {
             /** Has File */
             has_file: boolean;
             /** Flag */
-            flag: ("problem" | "review" | "waiting" | "new") | null;
+            flag: ("problem" | "review" | "pending" | "new") | null;
             /** Complete */
             complete: boolean;
             /** Designer */
@@ -1814,6 +1820,20 @@ export interface components {
             /** Other */
             other: string;
         };
+        /**
+         * CompareSummary
+         * @description A run's MDBList comparisons, added up over its outputs.
+         */
+        CompareSummary: {
+            /** Lists */
+            lists: components["schemas"]["CompareList"][];
+            /** Both */
+            both: number;
+            /** Flow Only */
+            flow_only: number;
+            /** List Only */
+            list_only: number;
+        };
         /** CompareView */
         CompareView: {
             /** Lists */
@@ -1845,8 +1865,8 @@ export interface components {
             review_kinds: {
                 [key: string]: number;
             };
-            /** Waiting */
-            waiting: number;
+            /** Pending */
+            pending: number;
             /** Movies */
             movies: number;
             /** Shows */
@@ -2048,6 +2068,75 @@ export interface components {
             kind: "movie" | "show";
             /** Tmdb Id */
             tmdb_id: number;
+        };
+        /**
+         * FlowAdd
+         * @description A title a live run added to Radarr or Sonarr.
+         */
+        FlowAdd: {
+            media: components["schemas"]["MediaView"];
+            /**
+             * Service
+             * @enum {string}
+             */
+            service: "radarr" | "sonarr";
+            /** Flow Id */
+            flow_id: number;
+            /** Flow Name */
+            flow_name: string;
+            /** Run Id */
+            run_id: number;
+            /** At */
+            at: number | null;
+            /** Plex Key */
+            plex_key: string | null;
+        };
+        /** FlowCard */
+        FlowCard: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Version */
+            version: number;
+            /** Schedule */
+            schedule: string | null;
+            /** Schedule Text */
+            schedule_text: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Dry Run */
+            dry_run: boolean;
+            /** Next Run At */
+            next_run_at: number | null;
+            /** Created At */
+            created_at: number | null;
+            /** Updated At */
+            updated_at: number | null;
+            /** Problems */
+            problems: components["schemas"]["FlowProblem"][];
+            /** Summaries */
+            summaries: {
+                [key: string]: string;
+            };
+            /**
+             * Facts
+             * @default {}
+             */
+            facts: {
+                [key: string]: components["schemas"]["NodeFact"][];
+            };
+            /** Ports */
+            ports: {
+                [key: string]: components["schemas"]["NodeTypePort"][];
+            };
+            /** Outputs */
+            outputs: string[];
+            /** Nodes */
+            nodes: number;
+            last_run: components["schemas"]["FlowRunBrief"] | null;
+            graph: components["schemas"]["FlowGraph-Output"] | null;
+            compare: components["schemas"]["CompareSummary"] | null;
         };
         /** FlowCheck */
         FlowCheck: {
@@ -2719,6 +2808,14 @@ export interface components {
             linked: number;
             /** Complete */
             complete: number;
+            /** Files */
+            files: number;
+            /** Backup Files */
+            backup_files: number | null;
+            /** Backup Bytes */
+            backup_bytes: number | null;
+            /** Exclusions */
+            exclusions: number;
         };
         /** LibraryPage */
         LibraryPage: {
@@ -3054,6 +3151,12 @@ export interface components {
             facts: components["schemas"]["LibraryFacts"];
             /** Jobs */
             jobs: components["schemas"]["Job"][];
+            /** Flows */
+            flows: components["schemas"]["FlowCard"][];
+            /** Flow Adds */
+            flow_adds: components["schemas"]["FlowAdd"][];
+            /** Schedule */
+            schedule: components["schemas"]["ScheduleRow"][];
         };
         /** PathCheck */
         PathCheck: {
@@ -3086,6 +3189,40 @@ export interface components {
             plex: string;
             /** Local */
             local: string;
+        };
+        /** PendingPage */
+        PendingPage: {
+            /** Rows */
+            rows: components["schemas"]["PendingRow"][];
+            /** Max Days */
+            max_days: number;
+        };
+        /** PendingRow */
+        PendingRow: {
+            /** Slot */
+            slot: string;
+            /** Item Key */
+            item_key: string;
+            /** Title */
+            title: string;
+            /** Year */
+            year: number | null;
+            /** Season */
+            season: number | null;
+            /** Thumb */
+            thumb: string;
+            /** Pending */
+            pending: boolean;
+            /** Pending Since */
+            pending_since: number | null;
+            /** Checked At */
+            checked_at: number | null;
+            /** Set Title */
+            set_title: string | null;
+            /** Designer */
+            designer: string | null;
+            /** Source Label */
+            source_label: string | null;
         };
         /** PortCount */
         PortCount: {
@@ -3337,6 +3474,24 @@ export interface components {
             next_run_at: number | null;
             /** Message */
             message: string | null;
+        };
+        /** ScheduleRow */
+        ScheduleRow: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Interval */
+            interval: number | null;
+            /** Last */
+            last: number | null;
+            /** Next */
+            next: number | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "on" | "off" | "paused";
         };
         /** SetSummary */
         SetSummary: {
@@ -3666,12 +3821,12 @@ export interface components {
             needs_force: boolean;
             /** Applied At */
             applied_at: number | null;
-            /** Waiting */
-            waiting: boolean;
-            /** Waiting Since */
-            waiting_since: number | null;
-            /** Wait Given Up */
-            wait_given_up: boolean;
+            /** Pending */
+            pending: boolean;
+            /** Pending Since */
+            pending_since: number | null;
+            /** Dismissed */
+            dismissed: boolean;
             /** Gone */
             gone: boolean;
         };
@@ -3741,8 +3896,8 @@ export interface components {
         Todo: {
             /** Review */
             review: number;
-            /** Waiting */
-            waiting: number;
+            /** Pending */
+            pending: number;
             /** Problems */
             problems: number;
             /** Unlinked With Files */
@@ -3804,40 +3959,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /** WaitingPage */
-        WaitingPage: {
-            /** Rows */
-            rows: components["schemas"]["WaitingRow"][];
-            /** Max Days */
-            max_days: number;
-        };
-        /** WaitingRow */
-        WaitingRow: {
-            /** Slot */
-            slot: string;
-            /** Item Key */
-            item_key: string;
-            /** Title */
-            title: string;
-            /** Year */
-            year: number | null;
-            /** Season */
-            season: number | null;
-            /** Thumb */
-            thumb: string;
-            /** Waiting */
-            waiting: boolean;
-            /** Waiting Since */
-            waiting_since: number | null;
-            /** Checked At */
-            checked_at: number | null;
-            /** Set Title */
-            set_title: string | null;
-            /** Designer */
-            designer: string | null;
-            /** Source Label */
-            source_label: string | null;
         };
     };
     responses: never;
@@ -4927,7 +5048,7 @@ export interface operations {
             };
         };
     };
-    stop_waiting_api_items__key__slots_stopwait_post: {
+    dismiss_pending_api_items__key__slots_dismiss_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -5208,7 +5329,7 @@ export interface operations {
             };
         };
     };
-    waiting_list_api_waiting_get: {
+    pending_list_api_pending_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -5223,7 +5344,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WaitingPage"];
+                    "application/json": components["schemas"]["PendingPage"];
                 };
             };
         };

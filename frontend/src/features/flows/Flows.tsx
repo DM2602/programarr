@@ -51,7 +51,7 @@ function FlowRow({ flow }: { flow: FlowView }) {
             <span>{timeAgo(last.started_at)}</span>
           </Link>
         ) : (
-          <span className="text-xs text-gray-500">Not run yet</span>
+          <span className="text-xs text-gray-500">Never run</span>
         )}
         {last && <RunTotals run={last} />}
       </div>

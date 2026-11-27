@@ -37,7 +37,7 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
         <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-800 shadow-poster ring-1 ring-gray-700 transition duration-300 group-hover:ring-gray-500">
           <img src={slot.thumb} alt="" loading="lazy" className={`h-full w-full object-cover ${slot.file ? "" : "opacity-60 grayscale-[35%]"}`} />
           <div className="absolute top-2 left-2">
-            {slot.waiting ? <Badge tone="indigo">Waiting</Badge> : slot.state === "bad" ? <Badge tone="red">Plex</Badge> : null}
+            {slot.pending ? <Badge tone="indigo">Pending</Badge> : slot.state === "bad" ? <Badge tone="red">Plex</Badge> : null}
           </div>
         </div>
       </button>
@@ -53,8 +53,8 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
         {origin}
       </p>
       <div className="mt-1.5">
-        {slot.waiting ? (
-          <Badge tone="indigo">Waiting since {dateOnly(slot.waiting_since)}</Badge>
+        {slot.pending ? (
+          <Badge tone="indigo">Pending since {dateOnly(slot.pending_since)}</Badge>
         ) : (
           <Badge tone={STATE_TONES[slot.state]}>{slot.state_text}</Badge>
         )}
@@ -77,20 +77,20 @@ function SlotCard({ detail, slot, onPick }: { detail: Detail; slot: Slot; onPick
           <Button
             size="sm"
             variant="ghost"
-            title="Save the poster Plex shows as file"
-            onClick={() => run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping the Plex poster…")}
+            title="Save the current Plex poster as file"
+            onClick={() => run(() => unwrap(api.POST("/api/items/{key}/keep", { params: { path: { key } }, body: { slot: slot.id } })), "Keeping Plex poster…")}
             data-action="keep"
           >
             Keep
           </Button>
         )}
-        {slot.waiting && (
+        {slot.pending && (
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => run(() => unwrap(api.POST("/api/items/{key}/slots/stopwait", { params: { path: { key } }, body: { slot: slot.id } })), "Stop waiting…")}
+            onClick={() => run(() => unwrap(api.POST("/api/items/{key}/slots/dismiss", { params: { path: { key } }, body: { slot: slot.id } })), "Dismissing…")}
           >
-            Stop waiting
+            Dismiss
           </Button>
         )}
       </div>
@@ -141,7 +141,7 @@ function SetCard({ detail, onPick }: { detail: Detail; onPick: () => void }) {
   const key = detail.item.key;
   const binding = detail.binding;
   const unlink = async () => {
-    const ok = await confirm({ title: "Unlink the set?", body: "The files stay. New seasons no longer come automatically.", confirm: "Unlink", danger: true });
+    const ok = await confirm({ title: "Unlink the set?", body: "Files are kept. New seasons are no longer set automatically.", confirm: "Unlink", danger: true });
     if (ok) await run(() => unwrap(api.POST("/api/items/{key}/unbind", { params: { path: { key } } })), "Unlinking…");
   };
 
@@ -213,7 +213,7 @@ function DetailsCard({ detail }: { detail: Detail }) {
   const setTpdb = async () => {
     const url = await prompt({
       title: "ThePosterDB page",
-      label: "Link of the title page",
+      label: "Title page URL",
       initial: detail.item.tpdb_url ?? "",
       placeholder: "https://theposterdb.com/posters/12345",
       confirm: "Save",
@@ -319,7 +319,7 @@ function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
             </Badge>
             {isShow && <Badge tone="gray">{seasons}</Badge>}
             {detail.complete ? (
-              <Badge tone="green" icon={<CheckBadgeIcon className="h-3.5 w-3.5" />} title="Ended, every poster is a file">
+              <Badge tone="green" icon={<CheckBadgeIcon className="h-3.5 w-3.5" />} title="Ended, all posters are files">
                 Complete
               </Badge>
             ) : item.show_status === "ended" ? (
@@ -348,7 +348,7 @@ function Header({ detail, onPick }: { detail: Detail; onPick: () => void }) {
           </Button>
           <Button
             icon={<ArrowPathIcon className="h-4 w-4" />}
-            title="Like Refresh Metadata in Plex"
+            title="Same as Refresh Metadata in Plex"
             onClick={() => run(() => unwrap(api.POST("/api/items/{key}/refresh", { params: { path: { key: item.key } } })), "Refreshing metadata…")}
           >
             Refresh Metadata
@@ -368,7 +368,7 @@ export function ItemPage() {
   const [picking, setPicking] = useState<string | null>(null);
   useTitle(data?.item.title ?? "Title");
 
-  // Waiting links here with #pick=<slot> to open the picker for that season.
+  // Links with #pick=<slot> open the picker for that season.
   useEffect(() => {
     if (!data || !location.hash.startsWith("#pick=")) return;
     setPicking(decodeURIComponent(location.hash.slice(6)));

@@ -90,7 +90,7 @@ async def preview(source: str, params: dict, flow_run_id: int | None = None) -> 
     open_count = counts["uncertain"] + counts["failed"]
     message = f"{label}: {counts['matched']} of {len(rows)} matched"
     if open_count:
-        message += f", {open_count} to check"
+        message += f", {open_count} unresolved"
     return {"run": run_id, "outcome": status, "message": message}
 
 
@@ -356,7 +356,7 @@ def ignore(entry_id: int) -> int:
         "source": entry["source"], "fingerprint": entry["fingerprint"], "media_id": None, "ignore": 1,
         "created_at": db.now(),
     })
-    event("info", "lists", f"Ignored in lists: {entry['raw_title']}")
+    event("info", "lists", f"Skipped in lists: {entry['raw_title']}")
     return _apply(entry["source"], entry["fingerprint"], {
         "status": "excluded", "method": "ignored", "media_id": None, "score": 1.0, "error": None,
     })

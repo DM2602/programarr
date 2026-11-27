@@ -38,8 +38,8 @@ function Problem({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void
           <Button size="sm" variant="primary" onClick={() => onFix(entry)} data-action="fix">
             Search
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/ignore", { params: { path: { entry_id: entry.id } } })), "Ignoring…")} data-action="ignore">
-            Ignore
+          <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/ignore", { params: { path: { entry_id: entry.id } } })), "Skipping…")} data-action="skip">
+            Skip
           </Button>
         </div>
       </div>
@@ -69,7 +69,7 @@ function OpenTab({ onFix }: { onFix: (entry: Entry) => void }) {
   const { data, isPending, error } = useProblems();
   if (isPending) return <Loading />;
   if (error || !data) return <Notice tone="red">{error?.message ?? "Cannot load"}</Notice>;
-  if (!data.rows.length) return <Empty title="Nothing to check" />;
+  if (!data.rows.length) return <Empty title="Nothing unresolved" />;
   return (
     <div className="space-y-4">
       {data.rows.map((entry) => (
@@ -103,7 +103,7 @@ function AllTab({ onFix }: { onFix: (entry: Entry) => void }) {
           options={[
             { value: "", label: "All" },
             { value: "matched", label: "Matched" },
-            { value: "open", label: "To check" },
+            { value: "open", label: "Unresolved" },
             { value: "excluded", label: "Excluded" },
           ]}
         />
@@ -155,7 +155,7 @@ function CorrectionsTab() {
               {row.year && <span className="text-sm text-gray-400">{row.year}</span>}
             </p>
             <p className="text-sm text-gray-400">
-              {row.ignore ? "Ignored" : row.media ? `${row.media.title} (${row.media.year ?? "?"}), TMDB ${row.media.tmdb_id}` : "Title missing"}
+              {row.ignore ? "Skipped" : row.media ? `${row.media.title} (${row.media.year ?? "?"}), TMDB ${row.media.tmdb_id}` : "Title missing"}
             </p>
             <p className="text-xs text-gray-500">
               {row.source ? SOURCE_LABELS[row.source] ?? row.source : "All sources"}, {timeAgo(row.created_at)}
@@ -177,7 +177,7 @@ export function MatchLog() {
   const [fixing, setFixing] = useState<Entry | null>(null);
   const { data: status } = useStatus();
   const tabs = [
-    { key: "open", label: "To check", count: status?.counts.match_open },
+    { key: "open", label: "Unresolved", count: status?.counts.match_open },
     { key: "all", label: "All matches" },
     { key: "corrections", label: "Corrections" },
   ];

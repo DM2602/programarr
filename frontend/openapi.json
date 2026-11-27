@@ -1511,13 +1511,14 @@
         }
       }
     },
-    "/api/items/{key}/slots/stopwait": {
+    "/api/items/{key}/slots/dismiss": {
       "post": {
         "tags": [
           "posters"
         ],
-        "summary": "Stop Waiting",
-        "operationId": "stop_waiting_api_items__key__slots_stopwait_post",
+        "summary": "Dismiss Pending",
+        "description": "A pending season stops waiting for its set.",
+        "operationId": "dismiss_pending_api_items__key__slots_dismiss_post",
         "parameters": [
           {
             "name": "key",
@@ -1915,20 +1916,21 @@
         }
       }
     },
-    "/api/waiting": {
+    "/api/pending": {
       "get": {
         "tags": [
           "posters"
         ],
-        "summary": "Waiting List",
-        "operationId": "waiting_list_api_waiting_get",
+        "summary": "Pending List",
+        "description": "Seasons waiting for their set to get a poster, and those dismissed.",
+        "operationId": "pending_list_api_pending_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WaitingPage"
+                  "$ref": "#/components/schemas/PendingPage"
                 }
               }
             }
@@ -4508,7 +4510,7 @@
                 "enum": [
                   "problem",
                   "review",
-                  "waiting",
+                  "pending",
                   "new"
                 ]
               },
@@ -4675,6 +4677,38 @@
         ],
         "title": "ComparePair"
       },
+      "CompareSummary": {
+        "properties": {
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/CompareList"
+            },
+            "type": "array",
+            "title": "Lists"
+          },
+          "both": {
+            "type": "integer",
+            "title": "Both"
+          },
+          "flow_only": {
+            "type": "integer",
+            "title": "Flow Only"
+          },
+          "list_only": {
+            "type": "integer",
+            "title": "List Only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lists",
+          "both",
+          "flow_only",
+          "list_only"
+        ],
+        "title": "CompareSummary",
+        "description": "A run's MDBList comparisons, added up over its outputs."
+      },
       "CompareView": {
         "properties": {
           "lists": {
@@ -4749,9 +4783,9 @@
             "type": "object",
             "title": "Review Kinds"
           },
-          "waiting": {
+          "pending": {
             "type": "integer",
-            "title": "Waiting"
+            "title": "Pending"
           },
           "movies": {
             "type": "integer",
@@ -4779,7 +4813,7 @@
         "required": [
           "review",
           "review_kinds",
-          "waiting",
+          "pending",
           "movies",
           "shows",
           "linked",
@@ -5445,6 +5479,238 @@
           "tmdb_id"
         ],
         "title": "FixBody"
+      },
+      "FlowAdd": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaView"
+          },
+          "service": {
+            "type": "string",
+            "enum": [
+              "radarr",
+              "sonarr"
+            ],
+            "title": "Service"
+          },
+          "flow_id": {
+            "type": "integer",
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "type": "string",
+            "title": "Flow Name"
+          },
+          "run_id": {
+            "type": "integer",
+            "title": "Run Id"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "plex_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plex Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "service",
+          "flow_id",
+          "flow_name",
+          "run_id",
+          "at",
+          "plex_key"
+        ],
+        "title": "FlowAdd",
+        "description": "A title a live run added to Radarr or Sonarr."
+      },
+      "FlowCard": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "schedule_text": {
+            "type": "string",
+            "title": "Schedule Text"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/FlowProblem"
+            },
+            "type": "array",
+            "title": "Problems"
+          },
+          "summaries": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Summaries"
+          },
+          "facts": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeFact"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Facts",
+            "default": {}
+          },
+          "ports": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/NodeTypePort"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Ports"
+          },
+          "outputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Outputs"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowRunBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "graph": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlowGraph-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompareSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version",
+          "schedule",
+          "schedule_text",
+          "enabled",
+          "dry_run",
+          "next_run_at",
+          "created_at",
+          "updated_at",
+          "problems",
+          "summaries",
+          "facts",
+          "ports",
+          "outputs",
+          "nodes",
+          "last_run",
+          "graph",
+          "compare"
+        ],
+        "title": "FlowCard"
       },
       "FlowCheck": {
         "properties": {
@@ -7601,6 +7867,36 @@
           "complete": {
             "type": "integer",
             "title": "Complete"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          },
+          "backup_files": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Files"
+          },
+          "backup_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Bytes"
+          },
+          "exclusions": {
+            "type": "integer",
+            "title": "Exclusions"
           }
         },
         "type": "object",
@@ -7608,7 +7904,11 @@
           "movies",
           "shows",
           "linked",
-          "complete"
+          "complete",
+          "files",
+          "backup_files",
+          "backup_bytes",
+          "exclusions"
         ],
         "title": "LibraryFacts"
       },
@@ -8737,6 +9037,27 @@
             },
             "type": "array",
             "title": "Jobs"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/FlowCard"
+            },
+            "type": "array",
+            "title": "Flows"
+          },
+          "flow_adds": {
+            "items": {
+              "$ref": "#/components/schemas/FlowAdd"
+            },
+            "type": "array",
+            "title": "Flow Adds"
+          },
+          "schedule": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRow"
+            },
+            "type": "array",
+            "title": "Schedule"
           }
         },
         "type": "object",
@@ -8749,7 +9070,10 @@
           "todo",
           "recent",
           "facts",
-          "jobs"
+          "jobs",
+          "flows",
+          "flow_adds",
+          "schedule"
         ],
         "title": "Overview"
       },
@@ -8830,6 +9154,144 @@
           "local"
         ],
         "title": "PathMap"
+      },
+      "PendingPage": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/PendingRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "max_days": {
+            "type": "integer",
+            "title": "Max Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows",
+          "max_days"
+        ],
+        "title": "PendingPage"
+      },
+      "PendingRow": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "item_key": {
+            "type": "string",
+            "title": "Item Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "season": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Season"
+          },
+          "thumb": {
+            "type": "string",
+            "title": "Thumb"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending"
+          },
+          "pending_since": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Since"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "set_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Title"
+          },
+          "designer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Designer"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "item_key",
+          "title",
+          "year",
+          "season",
+          "thumb",
+          "pending",
+          "pending_since",
+          "checked_at",
+          "set_title",
+          "designer",
+          "source_label"
+        ],
+        "title": "PendingRow"
       },
       "PortCount": {
         "properties": {
@@ -9653,6 +10115,70 @@
           "message"
         ],
         "title": "ScheduleCheck"
+      },
+      "ScheduleRow": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off",
+              "paused"
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "interval",
+          "last",
+          "next",
+          "state"
+        ],
+        "title": "ScheduleRow"
       },
       "SetSummary": {
         "properties": {
@@ -10509,11 +11035,11 @@
             ],
             "title": "Applied At"
           },
-          "waiting": {
+          "pending": {
             "type": "boolean",
-            "title": "Waiting"
+            "title": "Pending"
           },
-          "waiting_since": {
+          "pending_since": {
             "anyOf": [
               {
                 "type": "integer"
@@ -10522,11 +11048,11 @@
                 "type": "null"
               }
             ],
-            "title": "Waiting Since"
+            "title": "Pending Since"
           },
-          "wait_given_up": {
+          "dismissed": {
             "type": "boolean",
-            "title": "Wait Given Up"
+            "title": "Dismissed"
           },
           "gone": {
             "type": "boolean",
@@ -10553,9 +11079,9 @@
           "state_text",
           "needs_force",
           "applied_at",
-          "waiting",
-          "waiting_since",
-          "wait_given_up",
+          "pending",
+          "pending_since",
+          "dismissed",
           "gone"
         ],
         "title": "SlotView"
@@ -10787,9 +11313,9 @@
             "type": "integer",
             "title": "Review"
           },
-          "waiting": {
+          "pending": {
             "type": "integer",
-            "title": "Waiting"
+            "title": "Pending"
           },
           "problems": {
             "type": "integer",
@@ -10817,7 +11343,7 @@
         "type": "object",
         "required": [
           "review",
-          "waiting",
+          "pending",
           "problems",
           "unlinked_with_files",
           "detect_open",
@@ -10954,144 +11480,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "WaitingPage": {
-        "properties": {
-          "rows": {
-            "items": {
-              "$ref": "#/components/schemas/WaitingRow"
-            },
-            "type": "array",
-            "title": "Rows"
-          },
-          "max_days": {
-            "type": "integer",
-            "title": "Max Days"
-          }
-        },
-        "type": "object",
-        "required": [
-          "rows",
-          "max_days"
-        ],
-        "title": "WaitingPage"
-      },
-      "WaitingRow": {
-        "properties": {
-          "slot": {
-            "type": "string",
-            "title": "Slot"
-          },
-          "item_key": {
-            "type": "string",
-            "title": "Item Key"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "year": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Year"
-          },
-          "season": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Season"
-          },
-          "thumb": {
-            "type": "string",
-            "title": "Thumb"
-          },
-          "waiting": {
-            "type": "boolean",
-            "title": "Waiting"
-          },
-          "waiting_since": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Waiting Since"
-          },
-          "checked_at": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Checked At"
-          },
-          "set_title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Set Title"
-          },
-          "designer": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Designer"
-          },
-          "source_label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source Label"
-          }
-        },
-        "type": "object",
-        "required": [
-          "slot",
-          "item_key",
-          "title",
-          "year",
-          "season",
-          "thumb",
-          "waiting",
-          "waiting_since",
-          "checked_at",
-          "set_title",
-          "designer",
-          "source_label"
-        ],
-        "title": "WaitingRow"
       }
     }
   }

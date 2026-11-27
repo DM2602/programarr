@@ -91,7 +91,7 @@ class Job(JobBrief):
 class Counts(Model):
     review: int
     review_kinds: dict[str, int]
-    waiting: int
+    pending: int
     movies: int
     shows: int
     linked: int
@@ -129,7 +129,7 @@ class SetupSteps(Model):
 
 class Todo(Model):
     review: int
-    waiting: int
+    pending: int
     problems: int
     unlinked_with_files: int
     detect_open: int
@@ -154,6 +154,10 @@ class LibraryFacts(Model):
     shows: int
     linked: int
     complete: int
+    files: int  # poster files in the folders
+    backup_files: int | None = None  # None: backup off
+    backup_bytes: int | None = None
+    exclusions: int
 
 
 class Overview(Model):
@@ -166,6 +170,9 @@ class Overview(Model):
     recent: list[RecentCard]
     facts: LibraryFacts
     jobs: list[Job]
+    flows: list[FlowCard]
+    flow_adds: list[FlowAdd]
+    schedule: list[ScheduleRow]
 
 
 # -- library ---------------------------------------------------------------------------
@@ -177,7 +184,7 @@ class Card(Model):
     library_key: str | None = None
     thumb: str
     has_file: bool
-    flag: Literal["problem", "review", "waiting", "new"] | None = None
+    flag: Literal["problem", "review", "pending", "new"] | None = None
     complete: bool
     designer: str | None = None
     source_label: str | None = None
@@ -242,9 +249,9 @@ class SlotView(Model):
     state_text: str
     needs_force: bool
     applied_at: int | None = None
-    waiting: bool
-    waiting_since: int | None = None
-    wait_given_up: bool
+    pending: bool
+    pending_since: int | None = None
+    dismissed: bool
     gone: bool
 
 
@@ -401,7 +408,7 @@ class TpdbSaved(Model):
     url: str
 
 
-# -- review, waiting, match -------------------------------------------------------------
+# -- review, pending, match -------------------------------------------------------------
 class ComparePair(Model):
     slot: str
     label: str
@@ -466,23 +473,23 @@ class ConfirmAll(Model):
     count: int
 
 
-class WaitingRow(Model):
+class PendingRow(Model):
     slot: str
     item_key: str
     title: str
     year: int | None = None
     season: int | None = None
     thumb: str
-    waiting: bool
-    waiting_since: int | None = None
+    pending: bool
+    pending_since: int | None = None
     checked_at: int | None = None
     set_title: str | None = None
     designer: str | None = None
     source_label: str | None = None
 
 
-class WaitingPage(Model):
-    rows: list[WaitingRow]
+class PendingPage(Model):
+    rows: list[PendingRow]
     max_days: int
 
 
@@ -1166,3 +1173,39 @@ class ArrOptions(Model):
     root_folders: list[ArrRootFolder]
     tags: list[ArrTag]
     error: str | None = None
+
+
+# -- dashboard ----------------------------------------------------------------------------------
+class ScheduleRow(Model):
+    key: str
+    label: str
+    interval: int | None = None  # seconds; None when off
+    last: int | None = None
+    next: int | None = None  # None: off, paused or unknown
+    state: Literal["on", "off", "paused"]
+
+
+class CompareSummary(Model):
+    """A run's MDBList comparisons, added up over its outputs."""
+    lists: list[CompareList]
+    both: int
+    flow_only: int
+    list_only: int
+
+
+class FlowCard(FlowView):
+    compare: CompareSummary | None = None
+
+
+class FlowAdd(Model):
+    """A title a live run added to Radarr or Sonarr."""
+    media: MediaView
+    service: Literal["radarr", "sonarr"]
+    flow_id: int
+    flow_name: str
+    run_id: int
+    at: int | None = None
+    plex_key: str | None = None
+
+
+Overview.model_rebuild()

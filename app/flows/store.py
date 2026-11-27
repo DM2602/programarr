@@ -316,6 +316,62 @@ def run_titles(run_id: int, show: str = "all", q: str = "", page: int = 1) -> di
     return {"rows": rows, "counts": counts, "total": total, "page": page, "pages": pages}
 
 
+def compare_summary(stats: dict) -> dict | None:
+    """The MDBList comparisons of a run, added up over its outputs."""
+    found = [info["compare"] for info in (stats.get("nodes") or {}).values() if (info or {}).get("compare")]
+    if not found:
+        return None
+    lists = {entry["ref"]: entry for compare in found for entry in compare.get("lists", [])}
+    return {
+        "lists": [{"ref": ref, "name": entry.get("name"), "run": entry.get("run"), "error": entry.get("error")}
+                  for ref, entry in lists.items()],
+        "both": sum(len(compare.get("both", [])) for compare in found),
+        "flow_only": sum(len(compare.get("flow_only", [])) for compare in found),
+        "list_only": sum(len(compare.get("list_only", [])) for compare in found),
+    }
+
+
+def cards() -> list[dict]:
+    """Every flow with its last run and the MDBList comparison of that run (dashboard)."""
+    database = db.get()
+    result = []
+    for row in database.query("SELECT * FROM flows ORDER BY name COLLATE NOCASE, id"):
+        flow = view(_flow(row), with_graph=False)
+        last = database.one("SELECT stats FROM flow_runs WHERE flow_id=? ORDER BY id DESC LIMIT 1", (flow["id"],))
+        stats = db.loads(last["stats"], {}) if last else {}
+        result.append({**flow, "compare": compare_summary(stats or {})})
+    return result
+
+
+def recent_adds(limit: int = 16) -> list[dict]:
+    """Titles live runs added to Radarr or Sonarr, newest first, each once (dashboard)."""
+    rows = db.get().query(
+        "SELECT t.media_id, r.id AS run_id, r.flow_id, f.name AS flow_name, "
+        "COALESCE(r.finished_at, r.started_at) AS at FROM flow_trace t "
+        "JOIN flow_runs r ON r.id=t.run_id JOIN flows f ON f.id=r.flow_id "
+        "WHERE t.port='added' AND r.dry_run=0 ORDER BY r.id DESC, t.rowid DESC LIMIT ?", (limit * 3,))
+    seen: set[int] = set()
+    picked = []
+    for row in rows:
+        if row["media_id"] in seen:
+            continue
+        seen.add(row["media_id"])
+        picked.append(row)
+        if len(picked) >= limit:
+            break
+    media = _media([row["media_id"] for row in picked])
+    in_plex = media_store.in_plex(list(media))
+    return [{
+        "media": media[row["media_id"]],
+        "service": "radarr" if media[row["media_id"]]["kind"] == "movie" else "sonarr",
+        "flow_id": row["flow_id"],
+        "flow_name": row["flow_name"],
+        "run_id": row["run_id"],
+        "at": row["at"],
+        "plex_key": in_plex.get(row["media_id"]),
+    } for row in picked if row["media_id"] in media]
+
+
 def failed_count() -> int:
     """Flows whose last run failed (dashboard)."""
     return db.get().scalar(

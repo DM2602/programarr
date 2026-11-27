@@ -1,7 +1,7 @@
 """What flows need from Radarr and Sonarr: profiles, root folders, tags and exclusions, adding titles,
 and TVDB IDs that TMDB does not know.
 
-Titles that are already there stay as they are: profile, folder, monitoring and tags. Tags only go on
+Titles that already exist stay as they are: profile, folder, monitoring and tags. Tags only go on
 with a new title.
 """
 from __future__ import annotations

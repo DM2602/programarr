@@ -15,7 +15,7 @@ import { RunCounts } from "./Lists";
 
 const FILTERS: { key: string; label: string; test: (entry: Entry) => boolean }[] = [
   { key: "all", label: "All", test: () => true },
-  { key: "open", label: "To check", test: isOpen },
+  { key: "open", label: "Unresolved", test: isOpen },
   { key: "matched", label: "Matched", test: (entry) => entry.status === "matched" },
   { key: "excluded", label: "Excluded", test: (entry) => entry.status === "excluded" },
 ];
@@ -105,7 +105,7 @@ export function RunPage() {
                 </section>
               ))
             ) : (
-              <Empty title="Nothing here" />
+              <Empty title="No matches" />
             )}
           </div>
         </>

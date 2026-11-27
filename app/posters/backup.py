@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import time
 import uuid
 from pathlib import Path
 
@@ -74,6 +75,7 @@ def _store(folder: Path, name: str, sha1: str, ext: str, write) -> bool:
     for old in _copies(folder, name):
         if old != target:
             old.unlink(missing_ok=True)
+    forget_stats()
     return True
 
 
@@ -108,6 +110,8 @@ def drop(item: dict, kind: str, season: int | None) -> int:
     copies = _copies(folder, slot_name(kind, season))
     for path in copies:
         path.unlink(missing_ok=True)
+    if copies:
+        forget_stats()
     return len(copies)
 
 
@@ -123,7 +127,7 @@ def run() -> dict:
     saved = failed = 0
     for index, row in enumerate(rows):
         if index % 50 == 0:
-            jobs.progress(index, len(rows), "Backing up posters …")
+            jobs.progress(index, len(rows), "Backing up posters…")
         item = {key: row[key] for key in ("type", "library_key", "tmdb_id", "tvdb_id", "imdb_id", "title")}
         item["key"] = row["item_key"]
         try:
@@ -135,7 +139,17 @@ def run() -> dict:
     return {"saved": saved, "checked": len(rows), "failed": failed}
 
 
-def stats() -> dict:
+_stats: dict = {"at": 0.0, "value": None}
+
+
+def forget_stats() -> None:
+    _stats.update(at=0.0, value=None)
+
+
+def stats(max_age: float = 0) -> dict:
+    """Files and bytes in the backup; max_age reuses a count that young (seconds)."""
+    if max_age and _stats["value"] is not None and time.time() - _stats["at"] < max_age:
+        return dict(_stats["value"])
     count = size = 0
     base = root()
     if base.is_dir():
@@ -143,6 +157,7 @@ def stats() -> dict:
             if path.is_file() and not path.name.startswith("."):
                 count += 1
                 size += path.stat().st_size
+    _stats.update(at=time.time(), value={"files": count, "bytes": size})
     return {"files": count, "bytes": size}
 
 
@@ -191,5 +206,5 @@ async def restore(item_key: str, slots: list[str] | None = None) -> list[str]:
             outcomes = await apply.apply(item_key, group, "backup", mode)
             restored += [o.slot_id for o in outcomes if o.ok]
     if restored:
-        event("info", "backup", f"{item['title']}: {len(restored)} poster(s) restored from the backup", item_key)
+        event("info", "backup", f"{item['title']}: {len(restored)} poster(s) restored from backup", item_key)
     return restored

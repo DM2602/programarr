@@ -10,8 +10,8 @@ from . import db
 DISCORD_EVENTS = {
     "auto": "Poster set automatically (new title)",
     "season": "New season: poster set from the linked set",
-    "waiting": "New season is waiting for its set",
-    "review": "Something needs your review",
+    "waiting": "New season pending (no poster in the set yet)",
+    "review": "New item in Review",
     "set_changed": "Linked set changed",
     "detect": "Match existing finished",
     "flow": "Flow added titles to Radarr or Sonarr",

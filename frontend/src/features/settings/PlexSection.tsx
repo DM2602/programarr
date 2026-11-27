@@ -43,7 +43,7 @@ function Libraries({ view }: { view: View }) {
   };
 
   return (
-    <SettingsSection title="Libraries" description="Titles that are in a library at the first sync count as existing and stay as they are.">
+    <SettingsSection title="Libraries" description="Titles in a library at the first sync are left as they are.">
       <div className="py-4" id="libraries">
         {libraries.length ? (
           <div className="space-y-2">

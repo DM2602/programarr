@@ -191,9 +191,9 @@ export function RunCounts({ run }: { run: RunBrief }) {
       <span>
         <span className="font-semibold text-gray-200">{run.matched}</span> of {run.total} matched
       </span>
-      {open > 0 && <Badge tone="yellow">{open} to check</Badge>}
+      {open > 0 && <Badge tone="yellow">{open} unresolved</Badge>}
       {run.excluded > 0 && <Badge tone="gray">{run.excluded} excluded</Badge>}
-      {run.status === "partial" && <Badge tone="gray">Notes</Badge>}
+      {run.status === "partial" && <Badge tone="gray">Warnings</Badge>}
     </span>
   );
 }

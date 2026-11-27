@@ -41,7 +41,7 @@ const RULES: Record<string, string> = {
   title: "Same title, no year to compare",
   "alt-title": "Matches an alternative title on TMDB",
   id: "Matched by ID",
-  fixed: "Set by you",
+  fixed: "Manual",
 };
 
 export const POSTER_FALLBACK = "/img/tmdb/none";
@@ -62,9 +62,9 @@ export function matchKey(text: string | null | undefined): string {
 }
 
 export function StatusBadge({ entry }: { entry: Entry }) {
-  if (entry.status === "uncertain") return <Badge tone="yellow">To check</Badge>;
+  if (entry.status === "uncertain") return <Badge tone="yellow">Uncertain</Badge>;
   if (entry.status === "failed") return <Badge tone="red">{entry.method === "error" ? "Error" : "Not found"}</Badge>;
-  if (entry.status === "excluded") return <Badge tone="gray">{entry.method === "ignored" ? "Ignored" : "Excluded"}</Badge>;
+  if (entry.status === "excluded") return <Badge tone="gray">{entry.method === "ignored" ? "Skipped" : "Excluded"}</Badge>;
   return null;
 }
 
@@ -161,7 +161,7 @@ export function SourceStats({ entry }: { entry: Entry }) {
         </Chip>
       )}
       {extra.original === true && (
-        <Chip icon={<SparklesIcon className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />} title="Original of the platform">
+        <Chip icon={<SparklesIcon className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />} title="Platform original">
           Original
         </Chip>
       )}
@@ -187,7 +187,7 @@ export function Rank({ value, change }: { value: number | null | undefined; chan
         {-change}
       </span>
     );
-  else if (change === 0) move = <MinusIcon className="h-3 w-3 text-gray-600" aria-label="Same place" />;
+  else if (change === 0) move = <MinusIcon className="h-3 w-3 text-gray-600" aria-label="No change" />;
   return (
     <div className="flex w-7 shrink-0 flex-col items-center gap-0.5 pt-1">
       <span className="text-lg leading-none font-bold text-gray-300 tabular-nums">{value ?? ""}</span>
@@ -228,7 +228,7 @@ function scoreTone(score: number): string {
 
 function ruleOf(entry: Entry): string {
   if (entry.status === "failed") return entry.error ?? "Not found on TMDB";
-  if (entry.status === "uncertain") return entry.error === "Several titles fit" ? "Several titles fit" : "Only similar titles on TMDB";
+  if (entry.status === "uncertain") return entry.method === "similar" ? "Only similar titles on TMDB" : "Several matches";
   return RULES[entry.method ?? ""] ?? entry.method ?? "";
 }
 
@@ -348,11 +348,11 @@ function MatchDetails({ entry, onFix, close }: { entry: Entry; onFix: (entry: En
             variant="ghost"
             onClick={async () => {
               close();
-              await run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/reset", { params: { path: { entry_id: entry.id } } })), "Matching again…");
+              await run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/reset", { params: { path: { entry_id: entry.id } } })), "Rematching…");
             }}
             data-action="reset"
           >
-            Back to automatic
+            Reset match
           </Button>
         )}
         <Button size="sm" onClick={() => { close(); onFix(entry); }}>
@@ -382,7 +382,7 @@ export function ScorePill({ entry, onFix }: { entry: Entry; onFix: (entry: Entry
 
 // -- actions -------------------------------------------------------------------------------------
 
-/** Change, exclude, fix, ignore or undo, depending on the entry's state. */
+/** Change, exclude, fix, skip or undo, depending on the entry's state. */
 export function EntryActions({ entry, onFix }: { entry: Entry; onFix: (entry: Entry) => void }) {
   const run = useRunJob();
   const dialogs = useDialogs();
@@ -402,15 +402,15 @@ export function EntryActions({ entry, onFix }: { entry: Entry; onFix: (entry: En
   if (entry.status === "excluded") {
     if (entry.method === "ignored") {
       return (
-        <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/reset", path)), "Matching again…")}>
+        <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/reset", path)), "Rematching…")}>
           Undo
         </Button>
       );
     }
     const mediaId = entry.media?.id;
     return mediaId ? (
-      <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.DELETE("/api/exclusions/media/{media_id}", { params: { path: { media_id: mediaId } } })), "Including…")}>
-        Include
+      <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.DELETE("/api/exclusions/media/{media_id}", { params: { path: { media_id: mediaId } } })), "Removing exclusion…")}>
+        Remove exclusion
       </Button>
     ) : null;
   }
@@ -420,8 +420,8 @@ export function EntryActions({ entry, onFix }: { entry: Entry; onFix: (entry: En
         <Button size="sm" variant="primary" onClick={() => onFix(entry)} data-action="fix">
           Fix
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/ignore", path)), "Ignoring…")} data-action="ignore">
-          Ignore
+        <Button size="sm" variant="ghost" onClick={() => run(() => unwrap(api.POST("/api/lists/entries/{entry_id}/ignore", path)), "Skipping…")} data-action="skip">
+          Skip
         </Button>
       </>
     );
