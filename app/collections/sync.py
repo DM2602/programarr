@@ -24,6 +24,13 @@ from . import posters, store
 log = logging.getLogger("programarr.collections")
 
 PORTS = ("added", "present", "queued", "missing", "removed", "skipped", "failed")
+CREATE_BATCH = 100  # titles in the request that creates a collection; the rest are added after
+_locks: dict[int, asyncio.Lock] = {}
+
+
+def _lock(collection_id: int) -> asyncio.Lock:
+    """One change at a time per collection: a flow run, the queue after a sync, a poster, visibility."""
+    return _locks.setdefault(collection_id, asyncio.Lock())
 
 
 @dataclass
@@ -84,6 +91,12 @@ async def _members(plex: Plex, collection: dict) -> list[str] | None:
 async def run_output(collection_id: int, titles: list[Title], arr_titles: dict[int, str], list_name: str | None,
                      dry_run: bool) -> Outcome:
     """One collection output in a flow run: the titles' states, and in a live run Plex brought in line."""
+    async with _lock(collection_id):
+        return await _run_output(collection_id, titles, arr_titles, list_name, dry_run)
+
+
+async def _run_output(collection_id: int, titles: list[Title], arr_titles: dict[int, str], list_name: str | None,
+                      dry_run: bool) -> Outcome:
     outcome = Outcome()
     collection = store.get(collection_id)
     lib = store.library(collection["library_key"]) if collection else None
@@ -172,7 +185,7 @@ async def run_output(collection_id: int, titles: list[Title], arr_titles: dict[i
               row["queued_at"], row["expires_at"], row["first_at"]) for media_id, row in rows.items()])
         conn.execute("UPDATE collections SET title=? WHERE id=?", (outcome.title, collection_id))
     try:
-        await push(collection_id)
+        await _push(collection_id)
     except PlexError as exc:
         store.update(collection_id, {"error": str(exc)})
         outcome.notes.append(f"{outcome.title}: {exc}")
@@ -230,6 +243,11 @@ async def _reorder(plex: Plex, rating_key: str, order: list[str]) -> int:
 
 async def push(collection_id: int) -> dict:
     """Bring the Plex collection in line with the stored titles: create, add, take out, name, order, show."""
+    async with _lock(collection_id):
+        return await _push(collection_id)
+
+
+async def _push(collection_id: int) -> dict:
     collection = store.get(collection_id)
     lib = store.library(collection["library_key"]) if collection else None
     if collection is None or lib is None:
@@ -261,7 +279,9 @@ async def push(collection_id: int) -> dict:
     created = False
     if not plex_key:
         plex_key = await plex.create_collection(lib["key"], TYPE_MOVIE if lib["type"] == "movie" else TYPE_SHOW,
-                                                title, wanted)
+                                                title, wanted[:CREATE_BATCH])
+        if len(wanted) > CREATE_BATCH:
+            await plex.add_to_collection(plex_key, wanted[CREATE_BATCH:])
         created = True
         values.update(sort_applied=None, visibility_applied=None, poster_applied=None)
         collection.update(sort_applied=None, visibility_applied=None, poster_applied=None)
@@ -300,31 +320,33 @@ async def push(collection_id: int) -> dict:
 
 async def apply_visibility(collection_id: int) -> None:
     """New visibility flags right away, if the collection is in Plex already."""
-    collection = store.get(collection_id)
-    if not collection or not collection["plex_key"]:
-        return
-    await Plex.from_settings().set_visibility(collection["plex_library"] or collection["library_key"],
-                                              collection["plex_key"], bool(collection["show_recommended"]),
-                                              bool(collection["show_home"]), bool(collection["show_shared"]))
-    store.update(collection_id, {"visibility_applied":
-                                 f"{collection['show_recommended']},{collection['show_home']},{collection['show_shared']}"})
+    async with _lock(collection_id):
+        collection = store.get(collection_id)
+        if not collection or not collection["plex_key"]:
+            return
+        await Plex.from_settings().set_visibility(collection["plex_library"] or collection["library_key"],
+                                                  collection["plex_key"], bool(collection["show_recommended"]),
+                                                  bool(collection["show_home"]), bool(collection["show_shared"]))
+        flags = f"{collection['show_recommended']},{collection['show_home']},{collection['show_shared']}"
+        store.update(collection_id, {"visibility_applied": flags})
 
 
 async def set_poster(collection_id: int, ref: dict) -> dict:
     """A poster from the picker (ThePosterDB, an upload or a link): kept here and uploaded to Plex."""
-    collection = store.get(collection_id)
-    if collection is None:
-        return {"ok": False, "message": "Collection not found"}
     image = ImageRef.from_dict(ref)
     data, _ = await sources.fetch(image)
-    name = await asyncio.to_thread(posters.save, collection_id, data)
-    store.update(collection_id, {"poster": name, "poster_source": image.source, "poster_applied": None})
-    title = collection["title"] or collection["name_template"]
-    if not collection["plex_key"]:
-        return {"ok": True, "message": "Poster saved, Plex gets it with the collection"}
-    await Plex.from_settings().upload_poster(collection["plex_key"], posters.read({**collection, "poster": name}) or b"",
-                                             posters.content_type(name))
-    store.update(collection_id, {"poster_applied": collection["plex_key"]})
+    async with _lock(collection_id):
+        collection = store.get(collection_id)
+        if collection is None:
+            return {"ok": False, "message": "Collection not found"}
+        name = await asyncio.to_thread(posters.save, collection_id, data)
+        store.update(collection_id, {"poster": name, "poster_source": image.source, "poster_applied": None})
+        title = collection["title"] or collection["name_template"]
+        if not collection["plex_key"]:
+            return {"ok": True, "message": "Poster saved, Plex gets it with the collection"}
+        await Plex.from_settings().upload_poster(collection["plex_key"], posters.read({**collection, "poster": name}) or b"",
+                                                 posters.content_type(name))
+        store.update(collection_id, {"poster_applied": collection["plex_key"]})
     event("info", "collections", f"Poster set: {title}")
     return {"ok": True, "message": "Poster set"}
 
@@ -338,9 +360,36 @@ def _live(collection: dict) -> bool:
     return db.get().scalar("SELECT dry_run FROM flows WHERE id=?", (collection["flow_id"],), 1) == 0
 
 
+def _arrivals(collection_id: int, library_key: str, mirror: bool, now: int) -> tuple[list[dict], int]:
+    """Queued or missing titles of one collection that Plex has now; queued ones past their time leave."""
+    database = db.get()
+    rows = database.query(
+        "SELECT ci.*, m.title AS media_title, m.year AS media_year FROM collection_items ci "
+        "JOIN media_cache m ON m.id=ci.media_id WHERE ci.collection_id=? AND ci.state IN ('queued','missing') "
+        "ORDER BY ci.position", (collection_id,))
+    found = media_store.in_plex([row["media_id"] for row in rows], library_key)
+    arrived, expired = [], 0
+    for row in rows:
+        if row["media_id"] in found:
+            database.execute(
+                "UPDATE collection_items SET state='in_plex', item_key=?, service=NULL, queued_at=NULL, "
+                "expires_at=NULL WHERE collection_id=? AND media_id=?",
+                (found[row["media_id"]], collection_id, row["media_id"]))
+            arrived.append(row)
+        elif row["state"] == "queued" and row["expires_at"] and row["expires_at"] < now:
+            if mirror:
+                database.execute("UPDATE collection_items SET state='missing', service=NULL WHERE collection_id=? "
+                                 "AND media_id=?", (collection_id, row["media_id"]))
+            else:
+                database.execute("DELETE FROM collection_items WHERE collection_id=? AND media_id=?",
+                                 (collection_id, row["media_id"]))
+            expired += 1
+    return arrived, expired
+
+
 async def process_queue() -> dict:
-    """After a sync: queued titles that reached Plex go into their collection; old ones leave the queue.
-    Titles Plex no longer has are listed as missing."""
+    """After a sync: titles that reached Plex go into their collection (queued ones, and missing ones that
+    came another way); queued titles past their time leave the queue. Titles Plex no longer has are missing."""
     database = db.get()
     now = db.now()
     result = {"arrived": 0, "expired": 0}
@@ -350,46 +399,28 @@ async def process_queue() -> dict:
     for row in gone:
         database.execute("UPDATE collection_items SET state='missing', item_key=NULL WHERE collection_id=? AND media_id=?",
                          (row["collection_id"], row["media_id"]))
-    queued = database.query(
-        "SELECT ci.*, m.title AS media_title, m.year AS media_year FROM collection_items ci "
-        "JOIN media_cache m ON m.id=ci.media_id WHERE ci.state='queued' ORDER BY ci.collection_id, ci.position")
-    by_collection: dict[int, list[dict]] = {}
-    for row in queued:
-        by_collection.setdefault(row["collection_id"], []).append(row)
-    for collection_id, rows in by_collection.items():
-        collection = store.get(collection_id)
-        if collection is None:
-            continue
-        found = media_store.in_plex([row["media_id"] for row in rows], collection["library_key"])
-        arrived = []
-        for row in rows:
-            if row["media_id"] in found:
-                database.execute(
-                    "UPDATE collection_items SET state='in_plex', item_key=?, service=NULL, queued_at=NULL, "
-                    "expires_at=NULL WHERE collection_id=? AND media_id=?",
-                    (found[row["media_id"]], collection_id, row["media_id"]))
-                arrived.append(row)
-            elif row["expires_at"] and row["expires_at"] < now:
-                if collection["sync_mode"] == "mirror":
-                    database.execute("UPDATE collection_items SET state='missing', service=NULL WHERE collection_id=? "
-                                     "AND media_id=?", (collection_id, row["media_id"]))
-                else:
-                    database.execute("DELETE FROM collection_items WHERE collection_id=? AND media_id=?",
-                                     (collection_id, row["media_id"]))
-                result["expired"] += 1
-        if not arrived or not _live(collection):
-            continue
-        title = collection["title"] or store.resolve(collection["name_template"], None)
-        try:
-            await push(collection_id)
-        except PlexError as exc:
-            store.update(collection_id, {"error": str(exc)})
-            event("error", "collections", f"{title}: {exc}")
-            continue
+    waiting = [row["collection_id"] for row in database.query(
+        "SELECT DISTINCT collection_id FROM collection_items WHERE state IN ('queued','missing') ORDER BY collection_id")]
+    for collection_id in waiting:
+        async with _lock(collection_id):
+            collection = store.get(collection_id)
+            if collection is None:
+                continue
+            arrived, expired = _arrivals(collection_id, collection["library_key"], collection["sync_mode"] == "mirror", now)
+            result["expired"] += expired
+            if not arrived or not _live(collection):
+                continue
+            title = collection["title"] or store.resolve(collection["name_template"], None)
+            try:
+                await _push(collection_id)
+            except PlexError as exc:
+                store.update(collection_id, {"error": str(exc)})
+                event("error", "collections", f"{title}: {exc}")
+                continue
         result["arrived"] += len(arrived)
         names = [f"{row['media_title']} ({row['media_year']})" if row["media_year"] else row["media_title"]
                  for row in arrived]
-        event("info", "collections", f"{title}: {', '.join(names)} added from the queue")
+        event("info", "collections", f"{title}: {', '.join(names)} added")
         await notify.send("collection", f"Added to {title}", ", ".join(names), path=f"/collections/{collection_id}")
     return result
 
@@ -463,15 +494,17 @@ async def delete_others(keys: list[str]) -> dict:
 
 async def delete(collection_id: int, keep_in_plex: bool = False) -> bool:
     """Remove a collection that is no longer in a flow: from Plex too, unless it should stay there."""
-    collection = store.get(collection_id)
-    if collection is None:
-        return False
-    if collection["plex_key"] and not keep_in_plex:
-        try:
-            await Plex.from_settings().delete_collection(collection["plex_key"])
-        except PlexError as exc:
-            if exc.status != 404:
-                raise
-    posters.remove(collection)
-    db.get().execute("DELETE FROM collections WHERE id=?", (collection_id,))
+    async with _lock(collection_id):
+        collection = store.get(collection_id)
+        if collection is None:
+            return False
+        if collection["plex_key"] and not keep_in_plex:
+            try:
+                await Plex.from_settings().delete_collection(collection["plex_key"])
+            except PlexError as exc:
+                if exc.status != 404:
+                    raise
+        posters.remove(collection)
+        db.get().execute("DELETE FROM collections WHERE id=?", (collection_id,))
+    _locks.pop(collection_id, None)
     return True

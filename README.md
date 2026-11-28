@@ -101,8 +101,8 @@ library» reads every title of a library, so filters build genre, decade, rating
 
 Titles Radarr or Sonarr has but Plex not yet wait in Collections › Queue, by default 30 days (Settings ›
 Services). After each sync with Plex (on schedule or after a webhook), titles that arrived go into their
-collection, in their place, and Discord says so. Collection outputs run after Radarr and Sonarr, so
-titles a flow just added are queued right away.
+collection, in their place, and Discord says so; so do missing titles that came another way. Collection
+outputs run after Radarr and Sonarr, so titles a flow just added are queued right away.
 
 Collections › Collections shows the managed collections with their titles. There each one can be shown
 in the library's Recommended, on the own Home and on friends' Home (Plex' Manage Recommendations) and

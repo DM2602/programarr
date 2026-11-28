@@ -154,12 +154,18 @@ async def test_dry_run_then_live_run_and_the_queue(plex_world):
     assert [row["media"]["title"] for row in titles["rows"]] == ["Guarding Stars", "The Grinch"]
     assert titles["rows"][0]["outcomes"][0]["port_label"] == "Removed"
 
+    # A missing title that reaches Plex another way goes in after the next sync as well.
+    world.plex.add_movie("Heartland", 2026, "1003")
+    summary = await tasks.sync_and_process()
+    assert summary["queue"] == {"arrived": 1, "expired": 0}
+    assert world.plex.collection_titles(made["ratingKey"]) == ["Heartland", "Steps"]
+
     # Append keeps what is in the collection; nothing left in the list deletes nothing.
     graph_ = trending({"sync": "append"})
     store.update(flow_id, graph=graph_)
     world.tmdb.charts["/trending/movie/week"] = ["movie:1001"]
     await engine.run(flow_id)
-    assert world.plex.collection_titles(made["ratingKey"]) == ["Guarding Stars", "Steps"]
+    assert world.plex.collection_titles(made["ratingKey"]) == ["Guarding Stars", "Heartland", "Steps"]
 
     # Removed from the flow: the collection stays in Plex, listed as no longer in a flow.
     store.update(flow_id, graph={"nodes": [graph_["nodes"][0]], "edges": []})
