@@ -14,8 +14,9 @@ DISCORD_EVENTS = {
     "review": "New item in Review",
     "set_changed": "Linked set changed",
     "detect": "Match existing finished",
-    "flow": "Flow added titles to Radarr or Sonarr",
-    "flow_dry": "Dry run found titles to add",
+    "flow": "Flow made changes (Radarr, Sonarr, collections)",
+    "flow_dry": "Dry run found changes",
+    "collection": "Queued title added to its collection",
     "error": "Errors (service unreachable, write or flow failed)",
 }
 
@@ -76,6 +77,8 @@ DEFAULTS: dict[str, Any] = {
     "sonarr_url": "",
     "sonarr_external_url": "",
     "sonarr_key": "",
+    # Collections
+    "queue_days": 30,  # titles in Radarr or Sonarr wait this long for Plex, 0 = no limit
     # Automation. Off until switched on: Litfass keeps writing posters during the parallel run.
     "automation": False,
     "designers": [],

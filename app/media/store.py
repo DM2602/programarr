@@ -120,18 +120,20 @@ async def by_external(source: str, value: str | int, kind: str | None) -> int | 
     return None
 
 
-def in_plex(media_ids: list[int]) -> dict[int, str]:
-    """Which of these titles Plex already has: media id -> Plex item key (matched by TMDB, TVDB or IMDb id)."""
+def in_plex(media_ids: list[int], library_key: str | None = None) -> dict[int, str]:
+    """Which of these titles Plex already has: media id -> Plex item key (matched by TMDB, TVDB or IMDb id),
+    in any library or in the one given."""
     if not media_ids:
         return {}
     marks = ",".join("?" for _ in media_ids)
+    library = "AND i.library_key=? " if library_key else ""
     rows = db.get().query(
-        f"""SELECT m.id, MIN(i.key) AS item_key FROM media_cache m JOIN items i ON i.gone=0 AND i.type=m.kind AND (
-              (m.tmdb_id IS NOT NULL AND i.tmdb_id=CAST(m.tmdb_id AS TEXT))
-           OR (m.tvdb_id IS NOT NULL AND i.tvdb_id=CAST(m.tvdb_id AS TEXT))
-           OR (m.imdb_id IS NOT NULL AND i.imdb_id=m.imdb_id))
+        f"""SELECT m.id, MIN(i.key) AS item_key FROM media_cache m JOIN items i ON i.gone=0 {library}AND i.type=m.kind
+           AND ((m.tmdb_id IS NOT NULL AND i.tmdb_id=CAST(m.tmdb_id AS TEXT))
+             OR (m.tvdb_id IS NOT NULL AND i.tvdb_id=CAST(m.tvdb_id AS TEXT))
+             OR (m.imdb_id IS NOT NULL AND i.imdb_id=m.imdb_id))
            WHERE m.id IN ({marks}) GROUP BY m.id""",
-        list(media_ids),
+        [library_key, *media_ids] if library_key else list(media_ids),
     )
     return {row["id"]: row["item_key"] for row in rows}
 

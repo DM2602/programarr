@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -206,6 +206,47 @@ CREATE TABLE IF NOT EXISTS arr_exclusions (
 """
 
 
+# Phase 4: Plex collections built by flow outputs, with their titles. A title Radarr or Sonarr has but Plex
+# not yet stays queued until it arrives (or the queue time runs out).
+SCHEMA_V5 = """
+CREATE TABLE IF NOT EXISTS collections (
+  id INTEGER PRIMARY KEY,
+  flow_id INTEGER REFERENCES flows(id) ON DELETE SET NULL,
+  node_id TEXT,
+  in_flow INTEGER NOT NULL DEFAULT 1,  -- 0: its node or flow is gone, the collection stays in Plex
+  library_key TEXT NOT NULL,
+  name_template TEXT NOT NULL,
+  sync_mode TEXT NOT NULL DEFAULT 'mirror' CHECK (sync_mode IN ('mirror','append')),
+  item_order TEXT NOT NULL DEFAULT 'list' CHECK (item_order IN ('list','release','alpha')),
+  max_items INTEGER NOT NULL DEFAULT 0,  -- 0 = no limit
+  plex_key TEXT, plex_library TEXT, title TEXT,  -- the collection as it stands in Plex
+  sort_applied TEXT,  -- the collection order last set in Plex
+  show_recommended INTEGER NOT NULL DEFAULT 0,
+  show_home INTEGER NOT NULL DEFAULT 0,
+  show_shared INTEGER NOT NULL DEFAULT 0,
+  visibility_applied TEXT,  -- the flags last written, e.g. '1,1,0'
+  poster TEXT,  -- file under /data/collections, NULL = the picture Plex makes
+  poster_source TEXT,  -- where it came from, for the page
+  poster_applied TEXT,  -- the Plex key it was uploaded to
+  created_at INTEGER, synced_at INTEGER, error TEXT,
+  UNIQUE (flow_id, node_id)
+);
+
+CREATE TABLE IF NOT EXISTS collection_items (
+  collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  media_id INTEGER NOT NULL REFERENCES media_cache(id),
+  position INTEGER,
+  state TEXT NOT NULL CHECK (state IN ('in_plex','queued','missing')),
+  item_key TEXT,  -- Plex rating key while in Plex
+  service TEXT,  -- radarr | sonarr while queued
+  queued_at INTEGER, expires_at INTEGER,
+  first_at INTEGER,  -- first in the flow's result
+  PRIMARY KEY (collection_id, media_id)
+);
+CREATE INDEX IF NOT EXISTS collection_items_state ON collection_items (state, collection_id);
+"""
+
+
 class Database:
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -243,6 +284,8 @@ class Database:
                 script += SCHEMA_V3
             if current < 4:
                 script += SCHEMA_V4
+            if current < 5:
+                script += SCHEMA_V5
             # executescript commits on its own, so the whole migration is one script.
             self.conn.executescript(f"BEGIN;\n{script}\nPRAGMA user_version={SCHEMA_VERSION};\nCOMMIT;")
 

@@ -1,14 +1,18 @@
 """Jobs the scheduler and the UI start."""
 from __future__ import annotations
 
+import logging
 import time
 
 from . import apply, auto, backup, binding, catalog, detect, library, paths, reviews, status, views
 from .. import cache, config, db, jobs, notify, settings
+from ..collections import sync as collection_sync
 from .apply import Assignment
 from ..plex import Plex, PlexError
 from .sources.base import ImageRef, PosterSet, SourceError, parse_slot_id
 from ..util import event, prune_events
+
+log = logging.getLogger("programarr.tasks")
 
 PLEX_FILE_KINDS = {"movies": ("movie",), "all": ("movie", "show", "season")}
 ID_COLUMNS = ("tmdb_id", "tvdb_id", "imdb_id")
@@ -123,6 +127,11 @@ async def sync_and_process(full_scan: bool = False) -> dict:
         summary["status"] = await status.refresh_stale()
     except Exception as exc:  # noqa: BLE001 - only a hint for "Complete"
         event("warning", "status", f"Show status: {exc}")
+    try:
+        summary["queue"] = await collection_sync.process_queue()
+    except Exception as exc:  # noqa: BLE001 - the queue waits for the next sync
+        log.exception("Queue")
+        event("error", "collections", f"Queue: {exc}")
     return summary
 
 

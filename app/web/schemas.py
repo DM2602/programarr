@@ -590,6 +590,7 @@ class SettingsValues(Model):
     sonarr_url: str
     sonarr_external_url: str
     sonarr_key: bool
+    queue_days: int
     automation: bool
     designers: list[Designer]
     use_mediux_follows: bool
@@ -979,6 +980,16 @@ class FlowProblem(Model):
     message: str
 
 
+class CollectionTotals(Model):
+    """What the collection outputs of a run changed."""
+    outputs: int
+    added: int
+    removed: int
+    queued: int
+    missing: int
+    failed: int
+
+
 class FlowRunBrief(Model):
     id: int
     flow_id: int
@@ -996,6 +1007,7 @@ class FlowRunBrief(Model):
     present: int
     skipped: int
     failed: int
+    collections: CollectionTotals | None = None
 
 
 class FlowView(Model):

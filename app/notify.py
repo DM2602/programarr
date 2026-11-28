@@ -26,6 +26,7 @@ COLORS = {
     "error": 0xD0533F,
     "flow": 0x6366F1,
     "flow_dry": 0x8A8F98,
+    "collection": 0x3FA36B,
     "test": 0x8A8F98,
 }
 

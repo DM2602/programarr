@@ -84,7 +84,7 @@ def test_graph_checks(world):
     assert checked.configs["radarr"]["limit"] == 20 and checked.configs["sonarr"]["monitor"] == "all"
 
     empty = graph.check({"nodes": [], "edges": []})
-    assert [p.message for p in empty.problems] == ["Add a source", "Add Radarr or Sonarr"]
+    assert [p.message for p in empty.problems] == ["Add a source", "Add an output"]
 
     broken = top10(radarr={"root_folder": "", "tags": ["Top 10!"]})
     broken["nodes"].append({"id": "x", "type": "nope"})
@@ -276,8 +276,8 @@ async def test_dry_run_reads_but_writes_nothing(lists):
     assert detail["nodes"][1]["facts"] == []
     assert detail["sources"][0]["label"] == "Netflix Switzerland – Movies, TV Shows"
     titles = store.run_titles(result["run"], "present")
-    assert titles["counts"] == {"all": 17, "added": 9, "tagged": 0, "present": 2, "skipped": 5, "failed": 0,
-                                "filtered": 1}
+    assert titles["counts"] == {"all": 17, "added": 9, "tagged": 0, "queued": 0, "removed": 0, "present": 2,
+                                "missing": 0, "skipped": 5, "failed": 0, "filtered": 1}
     assert [row["media"]["title"] for row in titles["rows"]] == ["Lupin", "The Grinch"]
     lupin = titles["rows"][0]
     # The path names the list a title came from, not just the source.
@@ -468,7 +468,7 @@ def test_api(lists, client):  # noqa: F811
 
     created = client.post("/api/flows", json={"name": "  Netflix   CH ", "schedule": "every:6h"}).json()
     assert created["name"] == "Netflix CH" and created["dry_run"] is True and created["schedule_text"] == "Every 6 hours"
-    assert [p["message"] for p in created["problems"]] == ["Add a source", "Add Radarr or Sonarr"]
+    assert [p["message"] for p in created["problems"]] == ["Add a source", "Add an output"]
     flow_id = created["id"]
     assert client.post(f"/api/flows/{flow_id}/run", json={}).json()["detail"] == "Fix the flow first: Add a source"
     assert client.put(f"/api/flows/{flow_id}", json={"dry_run": False}).status_code == 400

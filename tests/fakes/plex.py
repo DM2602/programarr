@@ -1,4 +1,4 @@
-"""A small Plex Media Server: libraries, items, seasons, posters, locks and refresh.
+"""A small Plex Media Server: libraries, items, seasons, posters, locks, refresh and collections.
 
 Refresh reads poster files from the media folder with Plex' own naming rules
 (written independently of Litfass' rules), so the tests check that Litfass names
@@ -36,6 +36,8 @@ class FakePlex:
         self.refreshes: list[str] = []
         self.unlocks: list[str] = []
         self.selects: list[tuple[str, str]] = []
+        self.collections: dict[str, dict] = {}
+        self.collection_calls: list[str] = []  # writes to collections, e.g. "move 1001 after 1002"
         self.up = True
         self.read_local_on_refresh = True
         (self.media_root / "movies").mkdir(parents=True, exist_ok=True)
@@ -142,6 +144,44 @@ class FakePlex:
 
     def remove_item(self, key: str) -> None:
         self.items.pop(key, None)
+        for collection in self.collections.values():
+            if key in collection["items"]:
+                collection["items"].remove(key)
+
+    def add_collection(self, section: str, title: str, item_keys: list[str], smart: bool = False,
+                       labels: tuple[str, ...] = ()) -> str:
+        """A collection made elsewhere (by Kometa or by hand)."""
+        key = self._key()
+        self.collections[key] = {"ratingKey": key, "section": section, "title": title, "items": list(item_keys),
+                                 "smart": smart, "labels": list(labels), "sort": 0, "hub": None, "poster": None,
+                                 "updatedAt": int(time.time())}
+        return key
+
+    def collection_titles(self, key: str) -> list[str]:
+        return [self.items[item]["title"] for item in self.collections[key]["items"] if item in self.items]
+
+    def find_collection(self, title: str) -> dict | None:
+        return next((c for c in self.collections.values() if c["title"] == title), None)
+
+    def _collection_json(self, collection: dict) -> dict:
+        section = self.sections[collection["section"]]
+        thumb = (f"/library/metadata/{collection['ratingKey']}/thumb/{collection['updatedAt']}" if collection["poster"]
+                 else f"/library/collections/{collection['ratingKey']}/composite/{collection['updatedAt']}")
+        return {
+            "ratingKey": collection["ratingKey"], "key": f"/library/collections/{collection['ratingKey']}/children",
+            "type": "collection", "subtype": section["type"], "title": collection["title"],
+            "librarySectionID": int(collection["section"]), "childCount": str(len(collection["items"])),
+            "smart": "1" if collection["smart"] else "0", "thumb": thumb, "updatedAt": collection["updatedAt"],
+            "collectionSort": str(collection["sort"]),
+            "Label": [{"tag": label} for label in collection["labels"]],
+        }
+
+    def _uri_keys(self, uri: str) -> list[str] | None:
+        match = re.fullmatch(r"server://(?P<machine>[^/]+)/com\.plexapp\.plugins\.library/library/metadata/(?P<keys>[\d,]+)",
+                             uri or "")
+        if not match or match.group("machine") != "abc123":
+            return None
+        return match.group("keys").split(",")
 
     def season_key(self, show_key: str, number: int) -> str | None:
         for key, season in self.seasons.items():
@@ -325,6 +365,14 @@ class FakePlex:
         @app.put("/library/sections/{section}/all")
         async def section_edit(section: str, request: Request):
             key = request.query_params.get("id")
+            if request.query_params.get("type") == "18":
+                collection = plex.collections.get(key)
+                if collection is None or collection["section"] != section:
+                    return Response(status_code=404)
+                if "title.value" in request.query_params:
+                    collection["title"] = request.query_params["title.value"]
+                    plex.collection_calls.append(f"title {key}")
+                return Response(status_code=200)
             obj = plex.items.get(key) or plex.seasons.get(key)
             if obj is None:
                 return Response(status_code=404)
@@ -346,7 +394,143 @@ class FakePlex:
                 return container(Metadata=[body])
             if key in plex.seasons:
                 return container(Metadata=[plex._season_json(key, True)])
+            if key in plex.collections:
+                return container(Metadata=[plex._collection_json(plex.collections[key])])
             return Response(status_code=404)
+
+        @app.post("/library/metadata/{key}/posters")
+        async def upload_poster(key: str, request: Request):
+            body = await request.body()
+            if key in plex.collections:
+                plex.collections[key]["poster"] = body
+                plex.collections[key]["updatedAt"] += 1
+                plex.collection_calls.append(f"poster {key}")
+                return Response(status_code=200)
+            if key in plex.items or key in plex.seasons:
+                plex.upload(key, body)
+                return Response(status_code=200)
+            return Response(status_code=404)
+
+        # -- collections ----------------------------------------------------------
+        @app.get("/library/sections/{section}/collections")
+        async def section_collections(section: str):
+            if section not in plex.sections:
+                return Response(status_code=404)
+            rows = [plex._collection_json(c) for c in plex.collections.values() if c["section"] == section]
+            return container(size=len(rows), Metadata=rows)
+
+        @app.post("/library/collections")
+        async def create_collection(request: Request):
+            params = request.query_params
+            section = params.get("sectionId", "")
+            keys = plex._uri_keys(params.get("uri", ""))
+            if section not in plex.sections or not keys or not params.get("title") or params.get("smart") != "0":
+                return Response(status_code=400)
+            wanted = 1 if plex.sections[section]["type"] == "movie" else 2
+            if params.get("type") != str(wanted):
+                return Response(status_code=400)
+            key = plex.add_collection(section, params["title"], [k for k in keys if k in plex.items])
+            plex.collection_calls.append(f"create {key}")
+            return container(size=1, Metadata=[plex._collection_json(plex.collections[key])])
+
+        @app.get("/library/collections/{key}/children")
+        async def collection_children(key: str):
+            collection = plex.collections.get(key)
+            if collection is None:
+                return Response(status_code=404)
+            rows = []
+            for item_key in collection["items"]:
+                item = plex.items.get(item_key)
+                if item:
+                    rows.append(plex._movie_json(item) if item["type"] == "movie" else plex._show_json(item))
+            return container(size=len(rows), Metadata=rows)
+
+        @app.put("/library/collections/{key}/items")
+        async def collection_add(key: str, request: Request):
+            collection = plex.collections.get(key)
+            keys = plex._uri_keys(request.query_params.get("uri", ""))
+            if collection is None or not keys:
+                return Response(status_code=404 if collection is None else 400)
+            for item_key in keys:
+                if item_key in plex.items and item_key not in collection["items"]:
+                    collection["items"].append(item_key)
+            plex.collection_calls.append(f"add {key} {','.join(keys)}")
+            return Response(status_code=200)
+
+        @app.delete("/library/collections/{key}/items/{item_key}")
+        async def collection_remove(key: str, item_key: str):
+            collection = plex.collections.get(key)
+            if collection is None or item_key not in collection["items"]:
+                return Response(status_code=404)
+            collection["items"].remove(item_key)
+            plex.collection_calls.append(f"remove {key} {item_key}")
+            if not collection["items"]:
+                del plex.collections[key]  # Plex keeps no empty collections
+            return Response(status_code=200)
+
+        @app.put("/library/collections/{key}/items/{item_key}/move")
+        async def collection_move(key: str, item_key: str, request: Request):
+            collection = plex.collections.get(key)
+            after = request.query_params.get("after")
+            if collection is None or item_key not in collection["items"] or after and after not in collection["items"]:
+                return Response(status_code=404)
+            collection["items"].remove(item_key)
+            collection["items"].insert(collection["items"].index(after) + 1 if after else 0, item_key)
+            plex.collection_calls.append(f"move {item_key} after {after or '-'}")
+            return Response(status_code=200)
+
+        @app.put("/library/collections/{key}/prefs")
+        async def collection_prefs(key: str, request: Request):
+            collection = plex.collections.get(key)
+            if collection is None:
+                return Response(status_code=404)
+            if "collectionSort" in request.query_params:
+                collection["sort"] = int(request.query_params["collectionSort"])
+                plex.collection_calls.append(f"sort {key} {collection['sort']}")
+            return Response(status_code=200)
+
+        @app.delete("/library/collections/{key}")
+        async def collection_delete(key: str):
+            if plex.collections.pop(key, None) is None:
+                return Response(status_code=404)
+            plex.collection_calls.append(f"delete {key}")
+            return Response(status_code=200)
+
+        @app.get("/library/collections/{key}/composite/{stamp}")
+        async def composite(key: str, stamp: str):
+            return Response(poster_for(f"plex-collection-{key}", thumb=True), media_type="image/jpeg")
+
+        def hub_flags(params) -> dict:
+            return {name: params.get(name) == "1"
+                    for name in ("promotedToRecommended", "promotedToOwnHome", "promotedToSharedHome")}
+
+        @app.get("/hubs/sections/{section}/manage")
+        async def manage(section: str, request: Request):
+            collection = plex.collections.get(request.query_params.get("metadataItemId", ""))
+            if collection is None or collection["hub"] is None:
+                return container(size=0)
+            identifier = f"custom.collection.{section}.{collection['ratingKey']}"
+            return container(size=1, Hub=[{"identifier": identifier, "title": collection["title"],
+                                           **{name: int(value) for name, value in collection["hub"].items()}}])
+
+        @app.post("/hubs/sections/{section}/manage")
+        async def manage_create(section: str, request: Request):
+            collection = plex.collections.get(request.query_params.get("metadataItemId", ""))
+            if collection is None or collection["section"] != section or collection["hub"] is not None:
+                return Response(status_code=400)
+            collection["hub"] = hub_flags(request.query_params)
+            plex.collection_calls.append(f"hub {collection['ratingKey']}")
+            return Response(status_code=200)
+
+        @app.put("/hubs/sections/{section}/manage/{identifier}")
+        async def manage_update(section: str, identifier: str, request: Request):
+            key = identifier.rsplit(".", 1)[-1]
+            collection = plex.collections.get(key)
+            if collection is None or collection["hub"] is None:
+                return Response(status_code=404)
+            collection["hub"] = hub_flags(request.query_params)
+            plex.collection_calls.append(f"hub {key}")
+            return Response(status_code=200)
 
         @app.get("/library/metadata/{key}/allLeaves")
         async def leaves(key: str):
