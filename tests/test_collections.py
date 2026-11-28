@@ -288,16 +288,20 @@ async def test_visibility_poster_and_other_collections(plex_world):
     await sync.push(collection["id"])  # nothing changed: nothing is sent again
     assert world.plex.collection_calls[calls:] == []
 
-    # Collections from Kometa or made by hand are listed apart and can be deleted; ours cannot.
+    # Collections from Kometa or made by hand are listed apart and can be deleted; ours cannot, and neither
+    # can the franchises Plex makes itself (it would make them again).
     grinch = next(key for key, item in world.plex.items.items() if item["title"] == "The Grinch")
     kometa = world.plex.add_collection("1", "Kometa Christmas", [grinch], labels=("Kometa",))
     smart = world.plex.add_collection("1", "Unwatched", [], smart=True)
+    franchise = world.plex.add_collection("1", "Der Grinch Filmreihe", [grinch], automatic=True)
     others = await sync.others()
-    assert [(row["title"], row["count"], row["smart"], row["labels"]) for row in others] == [
-        ("Kometa Christmas", 1, False, ["Kometa"]), ("Unwatched", 0, True, [])]
-    result = await sync.delete_others([kometa, made["ratingKey"], smart])
+    assert [(row["title"], row["count"], row["smart"], row["automatic"], row["labels"]) for row in others] == [
+        ("Kometa Christmas", 1, False, False, ["Kometa"]), ("Unwatched", 0, True, False, []),
+        ("Der Grinch Filmreihe", 1, False, True, [])]
+    assert others[2]["thumb"].startswith(f"/library/metadata/{franchise}/thumb/")  # TMDB's poster
+    result = await sync.delete_others([kometa, made["ratingKey"], smart, franchise, "999999"])
     assert result == {"deleted": 2, "failed": 0, "message": None}
-    assert list(world.plex.collections) == [made["ratingKey"]]
+    assert list(world.plex.collections) == [made["ratingKey"], franchise]
 
 
 async def test_collection_deleted_in_plex_is_made_again(plex_world):
@@ -379,16 +383,22 @@ def test_api(plex_world, client):  # noqa: F811
     assert job["status"] == "done" and made["poster"] == poster_for("mine")
     assert client.post(f"/api/collections/{row['id']}/poster", json={"token": "forged"}).status_code == 400
 
-    # Other collections, and deleting them
+    # Other collections, and deleting them; Plex' franchises are marked and stay
     grinch = next(key for key, item in world.plex.items.items() if item["title"] == "The Grinch")
     kometa = world.plex.add_collection("1", "Christmas", [grinch], labels=("Kometa",))
+    franchise = world.plex.add_collection("1", "Der Grinch Filmreihe", [grinch], automatic=True)
     other = client.get("/api/collections/other").json()
-    assert [(c["title"], c["library"], c["count"]) for c in other["collections"]] == [("Christmas", "Filme", 1)]
-    assert other["collections"][0]["image"].startswith("/img/plex?path=")
-    assert client.get(other["collections"][0]["image"]).headers["content-type"] == "image/jpeg"
+    assert [(c["title"], c["library"], c["count"], c["automatic"]) for c in other["collections"]] == [
+        ("Christmas", "Filme", 1, False), ("Der Grinch Filmreihe", "Filme", 1, True)]
+    image = other["collections"][0]["image"]
+    assert image.startswith("/img/plex?path=%2Flibrary%2Fcollections%2F") and "composite" in image
+    world.plex.transcode_composites = False  # Plex' transcoder fails: the composite is read whole
+    assert client.get(image).headers["content-type"] == "image/jpeg"
+    world.plex.transcode_composites = True
     assert client.get("/img/plex", params={"path": "/library/sections/1/refresh"}).headers["content-type"] == "image/svg+xml"
-    job = wait_job(client, client.post("/api/collections/other/delete", json={"keys": [kometa, made["ratingKey"]]}).json()["job"])
-    assert job["result"]["deleted"] == 1 and kometa not in world.plex.collections
+    job = wait_job(client, client.post("/api/collections/other/delete",
+                                       json={"keys": [kometa, made["ratingKey"], franchise]}).json()["job"])
+    assert job["result"]["deleted"] == 1 and kometa not in world.plex.collections and franchise in world.plex.collections
 
     # A collection still in its flow cannot be deleted; once its output is gone it can.
     assert client.delete(f"/api/collections/{row['id']}").status_code == 409

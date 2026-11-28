@@ -107,9 +107,11 @@ outputs run after Radarr and Sonarr, so titles a flow just added are queued righ
 Collections › Collections shows the managed collections with their titles. There each one can be shown
 in the library's Recommended, on the own Home and on friends' Home (Plex' Manage Recommendations) and
 get a poster from ThePosterDB's collection section, an upload or a link. Removing the output from its
-flow leaves the collection in Plex; it can then be deleted or kept. The tab Other lists the collections
-Programarr did not make (Kometa, made by hand) with preview, labels and title count, to delete them in
-bulk once a flow replaces them.
+flow leaves the collection in Plex; it can then be deleted or kept. The tab Franchises lists the
+collections Plex makes itself from TMDB's movie collections (Harry Potter, Dune; library setting Minimum
+automatic collection size); Programarr leaves them as they are, since Plex would make them again. The
+tab Other lists the remaining collections Programarr did not make (Kometa, made by hand) with preview,
+labels and title count, to delete them in bulk once a flow replaces them.
 
 ### Dashboard
 

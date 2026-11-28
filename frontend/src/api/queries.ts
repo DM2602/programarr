@@ -282,8 +282,9 @@ export function useCollection(id: number) {
   });
 }
 
+/** Collections in Plex that Programarr did not make: Plex' franchises and the others. */
 export function useOtherCollections(enabled: boolean) {
-  return useQuery({ queryKey: ["collections-other"], queryFn: () => unwrap(api.GET("/api/collections/other")), enabled });
+  return useQuery({ queryKey: ["collections-other"], queryFn: () => unwrap(api.GET("/api/collections/other")), enabled, staleTime: 60_000 });
 }
 
 export function useQueue() {

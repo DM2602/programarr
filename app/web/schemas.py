@@ -1296,6 +1296,7 @@ class OtherCollection(Model):
     library: str
     count: int
     smart: bool
+    automatic: bool  # made by Plex from TMDB's movie collections (franchises)
     image: str
     updated_at: int | None = None
     labels: list[str]

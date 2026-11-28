@@ -170,7 +170,7 @@ async def build_flows(world) -> None:
 
 async def build_collections(world) -> None:
     """Live flows that keep collections: TMDB trending in list order with a queue, genres from the movie
-    library; Kometa's collections next to them."""
+    library; Plex' franchises and Kometa's collections next to them."""
     from app.collections import store as collections
     from app.collections import sync
     from app.flows import engine, store
@@ -220,6 +220,10 @@ async def build_collections(world) -> None:
     plex.add_collection("1", "IMDb Top 250", [keys["Dune"], keys["Oppenheimer"], keys["Arrival"]], labels=("Kometa",))
     plex.add_collection("1", "Unwatched", [], smart=True)
     plex.add_collection("2", "Apple TV+", [keys["Severance"], keys["Slow Horses"]], labels=("Kometa",))
+    # Franchises Plex makes itself from TMDB's movie collections
+    plex.add_collection("1", "Dune Filmreihe", [keys["Dune"], keys["Dune: Part Two"]], automatic=True)
+    plex.add_collection("1", "Der Herr der Ringe Filmreihe",
+                        [keys["Der Herr der Ringe: Die Gefährten"]], automatic=True)
     for name, designers in (("Science Fiction", ("DIIIVOY", "MrBunker")), ("Family", ("fwlolx",))):
         page = tpdb.add_item(name, None, "collection")
         for designer in designers:

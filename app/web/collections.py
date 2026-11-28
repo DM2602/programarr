@@ -109,7 +109,8 @@ async def collections():
 
 @router.get("/collections/other", response_model=OtherCollections)
 async def other_collections():
-    """Collections in the selected libraries that Programarr did not make (Kometa, made by hand)."""
+    """Collections in the selected libraries that Programarr did not make: Plex' franchises (automatic),
+    Kometa's and those made by hand."""
     try:
         found = await sync.others()
     except PlexError as exc:
@@ -121,6 +122,7 @@ async def other_collections():
 
 @router.post("/collections/other/delete", response_model=JobStarted)
 async def delete_other_collections(body: KeysBody):
+    """Only collections made by hand or by tools; Programarr's own and Plex' franchises stay."""
     keys = [str(key) for key in body.keys if str(key).strip()]
     if not keys:
         raise HTTPException(400, "Choose at least one collection")

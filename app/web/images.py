@@ -28,7 +28,7 @@ PLACEHOLDER = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" w
 
 HEADERS = {"Cache-Control": "private, max-age=86400"}
 # Plex images the pages may ask for: posters and composites of titles and collections, nothing else.
-_PLEX_IMAGE = re.compile(r"^/library/(?:metadata|collections)/\d+/(?:thumb|composite)/\d+$")
+_PLEX_IMAGE = re.compile(r"^/library/(?:metadata|collections)/\d+/(?:thumb|composite)(?:/\d+)?$")
 
 
 def plex_image_url(path: str | None) -> str:
@@ -150,15 +150,21 @@ async def archive_image(history_id: int):
 
 
 async def _plex_thumb(path: str) -> Response:
+    """A Plex poster or composite through Plex' photo transcoder, else read whole and made small here."""
     key = f"plexthumb:{path}"
     data = cache.image_get(key)
     if data is None:
+        plex = Plex.from_settings()
         try:
-            data, _ = await Plex.from_settings().thumb(path)
+            data, _ = await plex.thumb(path)
         except PlexError:
-            return placeholder()
+            data = None
         if not data or _kind(data) == "application/octet-stream":
-            return placeholder()
+            try:
+                whole, _ = await plex.image(path)
+                data = await asyncio.to_thread(imaging.thumbnail, whole, 420)
+            except (PlexError, imaging.ImageError):
+                return placeholder()
         cache.image_put(key, data)
     return Response(data, media_type=_kind(data), headers=HEADERS)
 

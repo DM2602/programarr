@@ -3681,7 +3681,7 @@
           "collections"
         ],
         "summary": "Other Collections",
-        "description": "Collections in the selected libraries that Programarr did not make (Kometa, made by hand).",
+        "description": "Collections in the selected libraries that Programarr did not make: Plex' franchises (automatic),\nKometa's and those made by hand.",
         "operationId": "other_collections_api_collections_other_get",
         "responses": {
           "200": {
@@ -3703,6 +3703,7 @@
           "collections"
         ],
         "summary": "Delete Other Collections",
+        "description": "Only collections made by hand or by tools; Programarr's own and Plex' franchises stay.",
         "operationId": "delete_other_collections_api_collections_other_delete_post",
         "requestBody": {
           "content": {
@@ -10095,6 +10096,10 @@
             "type": "boolean",
             "title": "Smart"
           },
+          "automatic": {
+            "type": "boolean",
+            "title": "Automatic"
+          },
           "image": {
             "type": "string",
             "title": "Image"
@@ -10126,6 +10131,7 @@
           "library",
           "count",
           "smart",
+          "automatic",
           "image",
           "updated_at",
           "labels"

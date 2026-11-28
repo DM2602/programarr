@@ -24,8 +24,8 @@ sys.path.insert(0, str(ROOT))
 PORT = 8795
 BASE = f"http://127.0.0.1:{PORT}"
 MAIN_PAGES = ("/", "/library", "/review", "/pending", "/match", "/history", "/lists", "/lists/matches",
-              "/lists/exclusions", "/flows", "/flows/history", "/collections", "/collections?tab=other",
-              "/collections/queue", "/logs", "/settings/plex", "/settings/lists", "/settings/services")
+              "/lists/exclusions", "/flows", "/flows/history", "/collections", "/collections?tab=franchises",
+              "/collections?tab=other", "/collections/queue", "/logs", "/settings/plex", "/settings/lists", "/settings/services")
 
 
 def png(color: tuple[int, int, int]) -> bytes:
@@ -618,16 +618,22 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         steps.ok("Collection poster from ThePosterDB's collection section", page)
 
         # 30
+        goto(page, "/collections?tab=franchises")
+        page.wait_for_selector(".other-collection")
+        names = page.locator(".other-collection").evaluate_all("els => els.map(e => e.dataset.other)")
+        assert names == ["Dune Filmreihe", "Der Herr der Ringe Filmreihe"], names
+        assert page.locator(".other-collection input[type=checkbox]").count() == 0  # Plex' own: nothing to delete
         goto(page, "/collections?tab=other")
         page.wait_for_selector(".other-collection")
         assert page.locator(".other-collection").count() == 4
+        assert page.locator(".other-collection[data-other='Dune Filmreihe']").count() == 0
         page.check(".other-collection[data-other='Christmas Movies'] input[type=checkbox]")
         page.click("[data-action=delete-collections]")
         page.click("[role=dialog] button[type=submit]")
         wait_for(lambda: world.plex.find_collection("Christmas Movies") is None, what="Kometa collection deleted")
         wait_for(lambda: page.locator(".other-collection").count() == 3, what="list without it")
         assert world.plex.find_collection("IMDb Top 250") is not None
-        steps.ok("Other collections: a Kometa collection deleted in Plex", page)
+        steps.ok("Plex' franchises apart; other collections: a Kometa collection deleted in Plex", page)
 
         # 31
         goto(page, "/collections/queue")

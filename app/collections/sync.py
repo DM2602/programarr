@@ -25,6 +25,7 @@ log = logging.getLogger("programarr.collections")
 
 PORTS = ("added", "present", "queued", "missing", "removed", "skipped", "failed")
 CREATE_BATCH = 100  # titles in the request that creates a collection; the rest are added after
+AUTOMATIC_GUID = "plex://collection/"
 _locks: dict[int, asyncio.Lock] = {}
 
 
@@ -446,8 +447,15 @@ def _flag(value) -> bool:
     return value in (True, 1, "1", "true")
 
 
+def automatic(meta: dict) -> bool:
+    """A collection Plex makes itself from TMDB's movie collections (franchises like Harry Potter): the Plex
+    Movie agent gives it a plex://collection/ guid, collections made by hand or by tools get collection://."""
+    return str(meta.get("guid") or "").startswith(AUTOMATIC_GUID)
+
+
 async def others() -> list[dict]:
-    """Collections in the selected libraries that Programarr did not make (Kometa, made by hand)."""
+    """Collections in the selected libraries that Programarr did not make: Plex' own franchises (automatic),
+    Kometa's and those made by hand."""
     from ..posters import library as poster_library
 
     plex = Plex.from_settings()
@@ -465,7 +473,10 @@ async def others() -> list[dict]:
                 "library": lib["title"],
                 "count": int(meta.get("childCount") or 0),
                 "smart": _flag(meta.get("smart")),
-                "thumb": meta.get("thumb") or meta.get("composite") or "",
+                "automatic": automatic(meta),
+                # Without a poster of its own Plex shows a composite of the first titles.
+                "thumb": meta.get("thumb") or meta.get("composite")
+                or (f"/library/collections/{key}/composite/{meta.get('updatedAt')}" if meta.get("updatedAt") else ""),
                 "updated_at": meta.get("updatedAt"),
                 "labels": [label.get("tag") for label in meta.get("Label", []) or [] if label.get("tag")],
             })
@@ -473,11 +484,12 @@ async def others() -> list[dict]:
 
 
 async def delete_others(keys: list[str]) -> dict:
-    """Delete collections Programarr did not make; its own ones are refused."""
+    """Delete collections Programarr did not make. Its own ones are refused, and so are Plex' franchises:
+    Plex would make them again (turn off Minimum automatic collection size in the library instead)."""
     plex = Plex.from_settings()
-    managed = store.managed_keys()
+    allowed = {row["key"] for row in await others() if not row["automatic"]}
     deleted, failed = 0, []
-    wanted = [key for key in dict.fromkeys(str(key) for key in keys) if key and key not in managed]
+    wanted = [key for key in dict.fromkeys(str(key) for key in keys) if key in allowed]
     for index, key in enumerate(wanted):
         jobs.progress(index, len(wanted), "Deleting collections…")
         try:

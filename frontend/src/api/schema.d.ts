@@ -1499,7 +1499,8 @@ export interface paths {
         };
         /**
          * Other Collections
-         * @description Collections in the selected libraries that Programarr did not make (Kometa, made by hand).
+         * @description Collections in the selected libraries that Programarr did not make: Plex' franchises (automatic),
+         *     Kometa's and those made by hand.
          */
         get: operations["other_collections_api_collections_other_get"];
         put?: never;
@@ -1519,7 +1520,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete Other Collections */
+        /**
+         * Delete Other Collections
+         * @description Only collections made by hand or by tools; Programarr's own and Plex' franchises stay.
+         */
         post: operations["delete_other_collections_api_collections_other_delete_post"];
         delete?: never;
         options?: never;
@@ -3545,6 +3549,8 @@ export interface components {
             count: number;
             /** Smart */
             smart: boolean;
+            /** Automatic */
+            automatic: boolean;
             /** Image */
             image: string;
             /** Updated At */

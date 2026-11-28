@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+import uuid
 from pathlib import Path
 from urllib.parse import quote
 
@@ -38,6 +39,7 @@ class FakePlex:
         self.selects: list[tuple[str, str]] = []
         self.collections: dict[str, dict] = {}
         self.collection_calls: list[str] = []  # writes to collections, e.g. "move 1001 after 1002"
+        self.transcode_composites = True  # False: the photo transcoder fails for composites
         self.up = True
         self.read_local_on_refresh = True
         (self.media_root / "movies").mkdir(parents=True, exist_ok=True)
@@ -149,11 +151,15 @@ class FakePlex:
                 collection["items"].remove(key)
 
     def add_collection(self, section: str, title: str, item_keys: list[str], smart: bool = False,
-                       labels: tuple[str, ...] = ()) -> str:
-        """A collection made elsewhere (by Kometa or by hand)."""
+                       labels: tuple[str, ...] = (), automatic: bool = False) -> str:
+        """A collection made elsewhere: by Kometa or by hand, or by Plex itself from TMDB's movie collections
+        (automatic: a plex://collection/ guid and the poster from TMDB)."""
         key = self._key()
+        guid = (f"plex://collection/{hashlib.md5(title.encode()).hexdigest()[:24]}" if automatic
+                else f"collection://{uuid.uuid4()}")
         self.collections[key] = {"ratingKey": key, "section": section, "title": title, "items": list(item_keys),
-                                 "smart": smart, "labels": list(labels), "sort": 0, "hub": None, "poster": None,
+                                 "smart": smart, "labels": list(labels), "sort": 0, "hub": None,
+                                 "poster": poster_for(f"tmdb-{title}") if automatic else None, "guid": guid,
                                  "updatedAt": int(time.time())}
         return key
 
@@ -169,6 +175,7 @@ class FakePlex:
                  else f"/library/collections/{collection['ratingKey']}/composite/{collection['updatedAt']}")
         return {
             "ratingKey": collection["ratingKey"], "key": f"/library/collections/{collection['ratingKey']}/children",
+            "guid": collection["guid"],
             "type": "collection", "subtype": section["type"], "title": collection["title"],
             "librarySectionID": int(collection["section"]), "childCount": str(len(collection["items"])),
             "smart": "1" if collection["smart"] else "0", "thumb": thumb, "updatedAt": collection["updatedAt"],
@@ -498,7 +505,7 @@ class FakePlex:
 
         @app.get("/library/collections/{key}/composite/{stamp}")
         async def composite(key: str, stamp: str):
-            return Response(poster_for(f"plex-collection-{key}", thumb=True), media_type="image/jpeg")
+            return Response(poster_for(f"plex-collection-{key}"), media_type="image/jpeg")
 
         def hub_flags(params) -> dict:
             return {name: params.get(name) == "1"
@@ -582,6 +589,8 @@ class FakePlex:
         @app.get("/photo/:/transcode")
         async def transcode(request: Request):
             url = request.query_params.get("url", "")
+            if "/composite/" in url and not plex.transcode_composites:
+                return Response(status_code=500)
             match = re.match(r"/library/metadata/(\d+)/file", url)
             if match:
                 obj = plex.items.get(match.group(1)) or plex.seasons.get(match.group(1))
