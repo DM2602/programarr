@@ -61,6 +61,8 @@ def _facts(counts: dict) -> dict:
         "backup_files": stored["files"] if stored else None,
         "backup_bytes": stored["bytes"] if stored else None,
         "exclusions": len(exclusion_sync.exclusions()),
+        "collections": database.scalar("SELECT COUNT(*) FROM collections", (), 0),
+        "queued": collection_store.counts()["queued"],
     }
 
 

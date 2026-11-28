@@ -8927,6 +8927,17 @@
               }
             ],
             "title": "Present"
+          },
+          "deleted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted"
           }
         },
         "additionalProperties": true,
@@ -8960,7 +8971,8 @@
           "dry_run",
           "added",
           "tagged",
-          "present"
+          "present",
+          "deleted"
         ],
         "title": "JobResult",
         "description": "Result fields of the different job kinds; each kind fills a few of them."
@@ -9080,6 +9092,16 @@
           "exclusions": {
             "type": "integer",
             "title": "Exclusions"
+          },
+          "collections": {
+            "type": "integer",
+            "title": "Collections",
+            "default": 0
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued",
+            "default": 0
           }
         },
         "type": "object",
@@ -9091,7 +9113,9 @@
           "files",
           "backup_files",
           "backup_bytes",
-          "exclusions"
+          "exclusions",
+          "collections",
+          "queued"
         ],
         "title": "LibraryFacts"
       },
@@ -11401,6 +11425,17 @@
                 "type": "null"
               }
             ]
+          },
+          "collection_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Id"
           }
         },
         "type": "object",
@@ -11416,7 +11451,8 @@
           "entries",
           "run",
           "error",
-          "compare"
+          "compare",
+          "collection_id"
         ],
         "title": "RunNode"
       },
@@ -12602,6 +12638,17 @@
               }
             ],
             "title": "Dynamic"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
           }
         },
         "type": "object",
@@ -12618,7 +12665,8 @@
           "max",
           "when",
           "step",
-          "dynamic"
+          "dynamic",
+          "hint"
         ],
         "title": "SourceField"
       },
@@ -12853,6 +12901,11 @@
             "type": "string",
             "title": "Node"
           },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": ""
+          },
           "label": {
             "type": "string",
             "title": "Label"
@@ -12884,6 +12937,7 @@
         "type": "object",
         "required": [
           "node",
+          "type",
           "label",
           "category",
           "port",

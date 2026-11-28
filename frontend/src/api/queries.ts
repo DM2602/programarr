@@ -268,3 +268,46 @@ export function useScheduleCheck(value: string, enabled: boolean) {
     staleTime: 30_000,
   });
 }
+
+// -- collections -------------------------------------------------------------------------
+export function useCollections() {
+  return useQuery({ queryKey: ["collections"], queryFn: () => unwrap(api.GET("/api/collections")) });
+}
+
+export function useCollection(id: number) {
+  return useQuery({
+    queryKey: ["collection", id],
+    queryFn: () => unwrap(api.GET("/api/collections/{collection_id}", { params: { path: { collection_id: id } } })),
+    enabled: id > 0,
+  });
+}
+
+export function useOtherCollections(enabled: boolean) {
+  return useQuery({ queryKey: ["collections-other"], queryFn: () => unwrap(api.GET("/api/collections/other")), enabled });
+}
+
+export function useQueue() {
+  return useQuery({ queryKey: ["queue"], queryFn: () => unwrap(api.GET("/api/queue")) });
+}
+
+export function usePlexLibraries(enabled: boolean) {
+  return useQuery({ queryKey: ["plex-libraries"], queryFn: () => unwrap(api.GET("/api/plex/libraries")), enabled, staleTime: 60_000 });
+}
+
+export function useCollectionTpdb(id: number, q: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["collection-tpdb", id, q],
+    queryFn: () => unwrap(api.GET("/api/collections/{collection_id}/tpdb", { params: { path: { collection_id: id }, query: { q } } })),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useCollectionTpdbPosters(id: number, url: string | null) {
+  return useQuery({
+    queryKey: ["collection-tpdb-posters", url],
+    queryFn: () => unwrap(api.GET("/api/collections/{collection_id}/tpdb/posters", { params: { path: { collection_id: id }, query: { url: url ?? "" } } })),
+    enabled: !!url,
+    staleTime: 5 * 60_000,
+  });
+}

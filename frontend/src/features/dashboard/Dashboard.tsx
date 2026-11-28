@@ -6,6 +6,7 @@ import {
   InboxStackIcon,
   LinkIcon,
   QueueListIcon,
+  RectangleStackIcon,
   ShareIcon,
 } from "@heroicons/react/24/outline";
 import type { ComponentType, ReactNode } from "react";
@@ -219,7 +220,13 @@ function FlowCard({ flow }: { flow: Schemas["FlowCard"] }) {
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 flex shrink-0 gap-1">
           {flow.outputs.length ? (
-            flow.outputs.map((output) => (SERVICE_ICONS[output] ? <BrandIcon key={output} icon={SERVICE_ICONS[output]} className="h-5 w-5" /> : null))
+            flow.outputs.map((output) =>
+              SERVICE_ICONS[output] ? (
+                <BrandIcon key={output} icon={SERVICE_ICONS[output]} className="h-5 w-5" />
+              ) : output === "Plex collection" ? (
+                <RectangleStackIcon key={output} className="h-5 w-5 text-amber-400" aria-label="Plex collection" />
+              ) : null,
+            )
           ) : (
             <ShareIcon className="h-5 w-5 text-gray-500" aria-hidden="true" />
           )}
@@ -322,6 +329,8 @@ function LibraryCard({ facts }: { facts: Overview["facts"] }) {
         <FactRow label="Poster files" value={facts.files} />
         <FactRow label="Backup" value={backup} to="/settings/files" />
         <FactRow label="Exclusions" value={facts.exclusions} to="/lists/exclusions" />
+        <FactRow label="Collections" value={facts.collections} to="/collections" />
+        {facts.queued > 0 && <FactRow label="Queued for collections" value={facts.queued} to="/collections/queue" />}
       </dl>
     </Card>
   );

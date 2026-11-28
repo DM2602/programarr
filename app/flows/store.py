@@ -253,6 +253,7 @@ def run_detail(run_id: int) -> dict | None:
             "run": info.get("run"),
             "error": info.get("error"),
             "compare": compare,
+            "collection_id": (info.get("collection") or {}).get("id"),
         })
     sources = database.query("SELECT * FROM parser_runs WHERE flow_run_id=? ORDER BY id", (run_id,))
     previous = database.scalar("SELECT id FROM flow_runs WHERE flow_id=? AND id<? ORDER BY id DESC LIMIT 1",
@@ -322,7 +323,8 @@ def run_titles(run_id: int, show: str = "all", q: str = "", page: int = 1) -> di
 
     def step_view(step: dict) -> dict:
         info = infos.get(step["node_id"]) or {}
-        return {"node": step["node_id"], "label": info.get("name") or info.get("label", step["node_id"]),
+        return {"node": step["node_id"], "type": info.get("type", ""),
+                "label": info.get("name") or info.get("label", step["node_id"]),
                 "category": info.get("category", ""), "port": step["port"],
                 "port_label": _port_label(info, step["port"]), "detail": step["detail"] or ""}
 

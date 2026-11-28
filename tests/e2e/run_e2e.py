@@ -24,8 +24,8 @@ sys.path.insert(0, str(ROOT))
 PORT = 8795
 BASE = f"http://127.0.0.1:{PORT}"
 MAIN_PAGES = ("/", "/library", "/review", "/pending", "/match", "/history", "/lists", "/lists/matches",
-              "/lists/exclusions", "/flows", "/flows/history", "/logs", "/settings/plex", "/settings/lists",
-              "/settings/services")
+              "/lists/exclusions", "/flows", "/flows/history", "/collections", "/collections?tab=other",
+              "/collections/queue", "/logs", "/settings/plex", "/settings/lists", "/settings/services")
 
 
 def png(color: tuple[int, int, int]) -> bytes:
@@ -443,7 +443,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         top10 = db.get().one("SELECT id, version FROM flows WHERE name='Netflix Switzerland'")
         goto(page, "/flows")
         page.wait_for_selector(".flow-row")
-        assert page.locator(".flow-row").count() == 2
+        assert page.locator(".flow-row").count() == 4
         row = page.locator(f".flow-row[data-flow='{top10['id']}']")
         assert " ".join(row.locator("[data-total=added]").inner_text().split()) == "10 to add"
         row.locator(f"a[href='/flows/{top10['id']}']").click()
@@ -536,7 +536,7 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         # 26
         goto(page, "/flows/history")
         page.wait_for_selector(".history-run")
-        assert page.locator(".history-run").count() == 3
+        assert page.locator(".history-run").count() == 5
         page.select_option("select", label="TMDB to Radarr")
         page.wait_for_selector("text=No runs yet")
         steps.ok("Flow history lists the runs, filtered by flow", page)
@@ -585,6 +585,62 @@ def run_browser(world, keep: bool, shots: Path | None) -> int:
         steps.ok("Genre filter with two outputs: each goes to its own Radarr output", page)
 
         # 28
+        trending = db.get().one("SELECT * FROM collections WHERE name_template='Trending {month}'")
+        goto(page, "/collections")
+        page.wait_for_selector(".collection-card")
+        names = page.locator(".collection-card").evaluate_all("els => els.map(e => e.dataset.collection)")
+        assert names == ["Family", "Science Fiction", "Top 10 Netflix Switzerland", trending["title"]], names
+        page.locator(f".collection-card[data-collection='{trending['title']}']").click()
+        page.wait_for_selector(".collection-title")
+        assert page.locator(".collection-title").evaluate_all("els => els.map(e => e.dataset.title)") == [
+            "Dune: Part Two", "Oppenheimer", "The Grinch"]
+        made = world.plex.collections[trending["plex_key"]]
+        assert world.plex.collection_titles(trending["plex_key"]) == ["Dune: Part Two", "Oppenheimer", "The Grinch"]
+        assert made["hub"]["promotedToOwnHome"] and not made["hub"]["promotedToSharedHome"]
+        page.click("[data-visibility=show_shared] label")
+        wait_for(lambda: made["hub"]["promotedToSharedHome"], what="shown on friends' Home")
+        page.click("[data-tab=queued]")
+        page.wait_for_selector(".collection-title[data-state=queued][data-title='Woodwalkers 2']")
+        steps.ok("Collections: kept by flows in list order, shown on friends' Home, a title queued", page)
+
+        # 29
+        scifi = db.get().one("SELECT * FROM collections WHERE name_template='Science Fiction'")
+        goto(page, f"/collections/{scifi['id']}")
+        page.click("[data-action=change-poster]")
+        page.wait_for_selector(".picker[data-open] .image-choice")
+        assert page.locator(".picker .image-choice").count() == 2  # one ThePosterDB page found: its posters
+        page.locator(".picker .image-choice").first.click()
+        page.click(".picker [data-action=apply-image]")
+        page.wait_for_selector(".picker", state="detached")
+        wait_for(lambda: world.plex.collections[scifi["plex_key"]]["poster"] is not None, what="poster in Plex")
+        wait_for(lambda: db.get().scalar("SELECT poster_source FROM collections WHERE id=?", (scifi["id"],)) == "tpdb",
+                 what="poster saved")
+        steps.ok("Collection poster from ThePosterDB's collection section", page)
+
+        # 30
+        goto(page, "/collections?tab=other")
+        page.wait_for_selector(".other-collection")
+        assert page.locator(".other-collection").count() == 4
+        page.check(".other-collection[data-other='Christmas Movies'] input[type=checkbox]")
+        page.click("[data-action=delete-collections]")
+        page.click("[role=dialog] button[type=submit]")
+        wait_for(lambda: world.plex.find_collection("Christmas Movies") is None, what="Kometa collection deleted")
+        wait_for(lambda: page.locator(".other-collection").count() == 3, what="list without it")
+        assert world.plex.find_collection("IMDb Top 250") is not None
+        steps.ok("Other collections: a Kometa collection deleted in Plex", page)
+
+        # 31
+        goto(page, "/collections/queue")
+        page.wait_for_selector(".queue-entry")
+        count = page.locator(".queue-entry").count()
+        assert count == 5, count  # Woodwalkers 2 for Trending, four Netflix movies Radarr has
+        page.locator(".queue-entry", has_text=trending["title"]).locator("[data-action=unqueue]").click()
+        wait_for(lambda: page.locator(".queue-entry").count() == count - 1, what="one fewer in the queue")
+        assert db.get().scalar("SELECT state FROM collection_items WHERE collection_id=? AND state != 'in_plex'",
+                               (trending["id"],)) == "missing"
+        steps.ok("Queue: a title taken out", page)
+
+        # 32
         visited: set[str] = set()
         for path in MAIN_PAGES:
             goto(page, path)

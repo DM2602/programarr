@@ -147,7 +147,7 @@ function StepCard({ id, data, selected }: NodeProps<StepNode>) {
         <ul className="space-y-0.5 border-t border-gray-700 px-3 py-1.5 text-xs text-gray-300">
           {counts.ports.map((port) => (
             <li key={port.key} className="flex justify-between gap-2" data-outcome={port.key}>
-              <span>{outcomeLabel(port.key, decor.dry)}</span>
+              <span>{outcomeLabel(port.key, decor.dry, data.type)}</span>
               <span className="font-semibold tabular-nums text-gray-100">{port.count}</span>
             </li>
           ))}

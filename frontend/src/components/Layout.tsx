@@ -7,11 +7,13 @@ import {
   Cog6ToothIcon,
   DocumentTextIcon,
   HomeIcon,
+  InboxArrowDownIcon,
   InboxStackIcon,
   LinkIcon,
   MagnifyingGlassIcon,
   NoSymbolIcon,
   QueueListIcon,
+  RectangleStackIcon,
   ShareIcon,
   Squares2X2Icon,
   TableCellsIcon,
@@ -73,6 +75,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     { to: "/flows", label: "Flows", icon: ShareIcon, end: true },
     { to: "/flows/history", label: "Flow history", icon: ClipboardDocumentListIcon },
   ];
+  const collections: NavItem[] = [
+    { to: "/collections", label: "Collections", icon: RectangleStackIcon, end: true },
+    { to: "/collections/queue", label: "Queue", icon: InboxArrowDownIcon, count: counts?.queue },
+  ];
   const system: NavItem[] = [
     { to: "/logs", label: "Logs", icon: DocumentTextIcon },
     { to: "/settings", label: "Settings", icon: Cog6ToothIcon },
@@ -97,6 +103,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
         <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Flows</p>
         {flows.map((item) => (
+          <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
+        ))}
+        <p className="mt-5 mb-1 px-3 text-sm font-semibold text-gray-500">Collections</p>
+        {collections.map((item) => (
           <NavEntry key={item.to} item={item} onNavigate={onNavigate} />
         ))}
         <div className="mt-auto pt-6">

@@ -159,6 +159,8 @@ async def run_output(collection_id: int, titles: list[Title], arr_titles: dict[i
             skipped = outcome.verdicts.get(media_id)
             outcome.put(media_id, "removed", skipped.detail if skipped else "No longer in the result")
     if dry_run:
+        if not collection["plex_key"]:
+            store.update(collection_id, {"title": outcome.title})  # the name to show until it is in Plex
         return outcome
     database = db.get()
     with database.transaction() as conn:

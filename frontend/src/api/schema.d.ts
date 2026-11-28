@@ -3192,6 +3192,8 @@ export interface components {
             tagged: number | null;
             /** Present */
             present: number | null;
+            /** Deleted */
+            deleted: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -3237,6 +3239,16 @@ export interface components {
             backup_bytes: number | null;
             /** Exclusions */
             exclusions: number;
+            /**
+             * Collections
+             * @default 0
+             */
+            collections: number;
+            /**
+             * Queued
+             * @default 0
+             */
+            queued: number;
         };
         /** LibraryPage */
         LibraryPage: {
@@ -3930,6 +3942,8 @@ export interface components {
             /** Error */
             error: string | null;
             compare: components["schemas"]["CompareView"] | null;
+            /** Collection Id */
+            collection_id: number | null;
         };
         /** RunsPage */
         RunsPage: {
@@ -4349,6 +4363,8 @@ export interface components {
             step: number | null;
             /** Dynamic */
             dynamic: string | null;
+            /** Hint */
+            hint: string | null;
         };
         /** Status */
         Status: {
@@ -4435,6 +4451,11 @@ export interface components {
         TraceStep: {
             /** Node */
             node: string;
+            /**
+             * Type
+             * @default
+             */
+            type: string;
             /** Label */
             label: string;
             /** Category */

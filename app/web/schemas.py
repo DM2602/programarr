@@ -69,6 +69,7 @@ class JobResult(BaseModel):
     added: int | None = None
     tagged: int | None = None
     present: int | None = None
+    deleted: int | None = None
 
 
 class JobBrief(Model):
@@ -159,6 +160,8 @@ class LibraryFacts(Model):
     backup_files: int | None = None  # None: backup off
     backup_bytes: int | None = None
     exclusions: int
+    collections: int = 0  # kept by flows
+    queued: int = 0
 
 
 class Overview(Model):
@@ -720,6 +723,7 @@ class SourceField(Model):
     when: dict[str, list[str]] | None = None
     step: float | None = None
     dynamic: str | None = None
+    hint: str | None = None
 
 
 class ListSource(Model):
@@ -1107,6 +1111,7 @@ class RunNode(Model):
     run: int | None = None
     error: str | None = None
     compare: CompareView | None = None
+    collection_id: int | None = None  # a collection output: its collection
 
 
 class FlowRunDetail(FlowRunBrief):
@@ -1127,6 +1132,7 @@ class FlowRunsPage(Model):
 
 class TraceStep(Model):
     node: str
+    type: str = ""
     label: str
     category: str
     port: str | None = None

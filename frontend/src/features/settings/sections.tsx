@@ -211,6 +211,9 @@ export function ServicesSection({ view }: { view: View }) {
     <SettingsForm form={form}>
       <ArrSettings form={form} service="radarr" label="Radarr" port={7878} />
       <ArrSettings form={form} service="sonarr" label="Sonarr" port={8989} />
+      <SettingsSection title="Collections">
+        <NumberField form={form} name="queue_days" label="Keep titles queued for" hint="Days, 0 = no limit" min={0} max={3650} />
+      </SettingsSection>
     </SettingsForm>
   );
 }

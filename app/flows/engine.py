@@ -288,7 +288,8 @@ async def _collections(flow_id: int, checked: graphs.Checked, nodes: dict[str, d
         for media_id, verdict in outcome.verdicts.items():
             trace[(media_id, node_id)] = (verdict.port, verdict.detail)
         notes.extend(outcome.notes)
-        info["summary"], info["facts"] = outcome.title, node_type.facts(config)
+        info["summary"] = info["name"] = outcome.title  # a title's path names the collection
+        info["facts"] = [fact for fact in node_type.facts(config) if fact["label"] != "Name"]
         info["out"] = {port: count for port, count in outcome.counts.items() if count}
         info["collection"] = {"id": collection["id"], "title": outcome.title}
         for port, count in outcome.counts.items():

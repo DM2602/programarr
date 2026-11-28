@@ -1,12 +1,13 @@
 # Programarr
 
-Self-hosted companion for Plex: posters now, content flows, collections and the home screen later.
-Plex stays the source of truth. Posters are written as files next to the media ("Use local assets"),
-nothing is uploaded to or locked in Plex.
+Self-hosted companion for Plex: posters, content flows and collections now, the home screen later.
+Plex stays the source of truth. Posters of titles are written as files next to the media ("Use local
+assets"), nothing is uploaded to or locked in Plex; collections have no folder, their posters are uploaded.
 
-Status: phase 3. Posters (formerly Litfass), list sources (FlixPatrol, MDBList, TMDB, Trakt) matched
-to TMDB with a match log, corrections and exclusions, and flows that hand list titles to Radarr and
-Sonarr. Collections and the home screen follow in phase 4.
+Status: phase 4a. Posters (formerly Litfass), list sources (FlixPatrol, MDBList, TMDB, Trakt) matched
+to TMDB with a match log, corrections and exclusions, flows that hand list titles to Radarr and Sonarr,
+and collections kept by flows (replacing Kometa's list, genre, decade and award collections). Order on
+the home screen, time rules and rotation follow in phase 4b.
 
 ## Run with Docker
 
@@ -23,6 +24,7 @@ Open `http://<host>:8796` and follow the setup on the dashboard:
 4. Dashboard: Finish and sync
 5. Optional, for lists: Settings › Lists (MDBList API key for ratings, Trakt client ID), TMDB key under Sources
 6. Optional, for flows: Settings › Services (Radarr and Sonarr address and API key)
+7. Optional, for collections: a TMDB key (Sources) for genre, decade and rating filters
 
 In Plex, turn on "Use local assets" for each library (Advanced).
 
@@ -71,8 +73,9 @@ pending until the next sync.
 
 ### Flows
 
-Flows › Flows connects sources, filters (rating, release, genre, country, language, list position,
-seasons, movie or show, in Plex) and Radarr or Sonarr in an editor. A filter sends a title to Match or
+Flows › Flows connects sources (lists, a Plex library), filters (rating, release, genre, country,
+language, list position, seasons, movie or show, in Plex) and outputs (Radarr, Sonarr, Plex collections)
+in an editor. A filter sends a title to Match or
 No match; rating, release, genre, country, language, list position and season filters can have
 several outputs (e.g. one per genre or rating tier), each with its own rule. A title matching several
 outputs goes to the first or to all of them (Use first, Use all on the filter). Radarr and Sonarr add new titles with the
@@ -87,11 +90,32 @@ e.g. the import lists in Radarr and Sonarr, until the flow gives the same result
 on an interval (`every:6h`) or by cron (`0 6 * * *`, container time zone). Runs are kept 60 days
 (Settings › Lists), the last run of every flow stays.
 
+### Collections
+
+A flow output «Plex collection» keeps a collection in one library with the titles that reach it. Its name
+can carry the list's name, the month and the year (`Top 10 {list}`, `Trending {month}`). Mirror takes out
+what dropped out of the result, Append only adds. Order: list order (the list's positions, kept with
+as few moves as possible), release date or title; optionally at most N titles. The source «Plex
+library» reads every title of a library, so filters build genre, decade, rating or award collections
+(awards come from MDBList or Trakt lists). Dry runs show what would change and write nothing to Plex.
+
+Titles Radarr or Sonarr has but Plex not yet wait in Collections › Queue, by default 30 days (Settings ›
+Services). After each sync with Plex (on schedule or after a webhook), titles that arrived go into their
+collection, in their place, and Discord says so. Collection outputs run after Radarr and Sonarr, so
+titles a flow just added are queued right away.
+
+Collections › Collections shows the managed collections with their titles. There each one can be shown
+in the library's Recommended, on the own Home and on friends' Home (Plex' Manage Recommendations) and
+get a poster from ThePosterDB's collection section, an upload or a link. Removing the output from its
+flow leaves the collection in Plex; it can then be deleted or kept. The tab Other lists the collections
+Programarr did not make (Kometa, made by hand) with preview, labels and title count, to delete them in
+bulk once a flow replaces them.
+
 ### Dashboard
 
 To do (Review, pending seasons, posters Plex does not show, unresolved matches, failed flows), recently
 set posters, every flow with its last run and MDBList comparison, titles added by live runs, library
-facts, the schedule of the regular jobs and recent jobs.
+facts (collections and queue included), the schedule of the regular jobs and recent jobs.
 
 ### Data
 

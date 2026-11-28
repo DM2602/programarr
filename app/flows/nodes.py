@@ -698,7 +698,8 @@ class CollectionOutput(NodeType):
     ports: ClassVar[list[Port]] = []
     fields: ClassVar[list[Field]] = [
         Field("library", "Library", "select", default="", dynamic="plex.libraries"),
-        Field("name", "Name", "text", default="", placeholder="Top 10 {list}"),
+        Field("name", "Name", "text", default="", placeholder="Top 10 {list}",
+              hint="Placeholders: {list}, {month}, {year}"),
         Field("sync", "Sync", "select", options=[("mirror", "Mirror"), ("append", "Append")], default="mirror"),
         Field("order", "Order", "select", options=[("list", "List order"), ("release", "Release date"),
                                                    ("alpha", "Title")], default="list"),
@@ -726,7 +727,8 @@ class CollectionOutput(NodeType):
         lib = _library(config.get("library"))
         sync = dict(self.fields[2].options).get(config.get("sync"), "Mirror")
         order = dict(self.fields[3].options).get(config.get("order"), "List order")
-        facts = [{"label": "Library", "value": lib["title"] if lib else "None"},
+        facts = [{"label": "Name", "value": config.get("name") or ""},
+                 {"label": "Library", "value": lib["title"] if lib else "None"},
                  {"label": "Sync", "value": sync}, {"label": "Order", "value": order}]
         if config.get("limit"):
             facts.append({"label": "Max", "value": str(config["limit"])})
