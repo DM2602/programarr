@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS flow_trace (
   media_id INTEGER NOT NULL REFERENCES media_cache(id),
   node_id TEXT NOT NULL,
   port TEXT,  -- sources: out; filters: rule ids, match, no_match or a switch port; outputs: added, present, skipped, failed (tagged in older runs)
-  detail TEXT,  -- e.g. 'IMDb 7.1 < 7.5' or what Radarr answered
+  detail TEXT,  -- e.g. 'IMDb 7.1 < 7.5' or Radarr's response
   PRIMARY KEY (run_id, media_id, node_id)
 );
 CREATE INDEX IF NOT EXISTS flow_trace_node ON flow_trace (run_id, node_id, port);

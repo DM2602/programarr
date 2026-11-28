@@ -138,11 +138,11 @@ async def _graphql(query: str, variables: dict | None = None) -> dict:
     if response.status_code in (401, 403):
         raise SourceError("MediUX rejects the token")
     if response.status_code >= 400:
-        raise SourceError(f"MediUX answered {response.status_code}")
+        raise SourceError(f"MediUX returned {response.status_code}")
     try:
         payload = response.json()
     except ValueError as exc:
-        raise SourceError("Unexpected answer from MediUX") from exc
+        raise SourceError("Unexpected response from MediUX") from exc
     errors = payload.get("errors") or []
     data = payload.get("data") or {}
     if errors and not any(data.values() if isinstance(data, dict) else []):
@@ -167,7 +167,7 @@ async def test(token: str | None = None) -> str:
     if response.status_code in (401, 403):
         raise SourceError("MediUX rejects the token")
     if response.status_code >= 400:
-        raise SourceError(f"MediUX answered {response.status_code}")
+        raise SourceError(f"MediUX returned {response.status_code}")
     try:
         data = response.json().get("data", {})
     except ValueError:

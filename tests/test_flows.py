@@ -370,7 +370,7 @@ async def test_live_run_adds_once_and_never_tags_afterwards(lists):
     movies = trace(second["run"], "radarr")
     assert movies["Guarding Stars"] == ("present", "")
     assert movies["The Grinch"] == ("present", "")
-    assert movies["Heartland"] == ("failed", "Radarr does not know /movie/lookup/tmdb")  # not in its lookup
+    assert movies["Heartland"] == ("failed", "Radarr cannot find /movie/lookup/tmdb")  # not in its lookup
     assert lists.radarr.writes == writes and second["outcome"] == "partial"
 
     # The Discord summary lists the added titles; a dry run sends nothing unless switched on.

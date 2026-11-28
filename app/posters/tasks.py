@@ -258,7 +258,7 @@ async def keep_plex_for_review(review_id: int) -> dict:
     database = db.get()
     review = database.one("SELECT * FROM reviews WHERE id=? AND status='open'", (review_id,))
     if not review:
-        raise SourceError("This review is already done")
+        raise SourceError("This review is already closed")
     item = database.one("SELECT * FROM items WHERE key=?", (review["item_key"],))
     if not item:
         raise SourceError("Title not found")

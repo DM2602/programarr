@@ -268,7 +268,7 @@ async def force_local(item_key: str, slot: str, plex: Plex | None = None) -> str
         raise SourceError("Title not found")
     rating_key, plex_type = _plex_target(item, slot)
     if not rating_key:
-        raise SourceError("Plex does not know this season")
+        raise SourceError("Plex cannot find this season")
     await plex.refresh(item_key)
     await asyncio.sleep(2)
     posters = await plex.posters(rating_key)

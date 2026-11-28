@@ -53,15 +53,15 @@ class Plex:
             async with self._client(timeout) as client:
                 response = await client.request(method, f"{self.url}{path}", params=params)
         except httpx.TimeoutException as exc:
-            raise PlexError(f"Plex does not answer ({self.url})") from exc
+            raise PlexError(f"Plex is not responding ({self.url})") from exc
         except httpx.HTTPError as exc:
             raise PlexError(f"Cannot reach Plex ({self.url}): {exc.__class__.__name__}") from exc
         if response.status_code == 401:
             raise PlexError("Plex rejects the token (401)")
         if response.status_code == 404:
-            raise PlexError(f"Plex does not know {path} (404)")
+            raise PlexError(f"Plex cannot find {path} (404)")
         if response.status_code >= 400:
-            raise PlexError(f"Plex answered {response.status_code} for {path}")
+            raise PlexError(f"Plex returned {response.status_code} for {path}")
         return response
 
     async def _get(self, path: str, params: dict | None = None, timeout: float = 60.0) -> dict:
@@ -69,7 +69,7 @@ class Plex:
         try:
             return response.json().get("MediaContainer", {})
         except ValueError as exc:
-            raise PlexError(f"Unexpected answer from Plex for {path}") from exc
+            raise PlexError(f"Unexpected response from Plex for {path}") from exc
 
     # -- reading ---------------------------------------------------------
     async def identity(self) -> dict:

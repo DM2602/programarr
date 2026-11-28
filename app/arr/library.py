@@ -1,5 +1,5 @@
 """What flows need from Radarr and Sonarr: profiles, root folders, tags and exclusions, adding titles,
-and TVDB IDs that TMDB does not know.
+and TVDB IDs that TMDB does not have.
 
 Titles that already exist stay as they are: profile, folder, monitoring and tags. Tags only go on
 with a new title.
@@ -171,7 +171,7 @@ async def add_series(media: dict, config: dict, tag_ids: list[int]) -> dict:
     found = next((row for row in rows or [] if isinstance(row, dict)
                   and str(row.get("tvdbId")) == str(media["tvdb_id"])), None)
     if found is None:
-        raise ArrError(f"{label('sonarr')} does not find TVDB {media['tvdb_id']}")
+        raise ArrError(f"{label('sonarr')} cannot find TVDB {media['tvdb_id']}")
     body = dict(found)
     body.pop("id", None)
     monitor = config["monitor"]

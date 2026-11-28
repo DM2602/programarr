@@ -46,7 +46,7 @@ async def request(method: str, path: str, params: dict | None = None, body: dict
     if response.status_code == 404:
         return None
     if response.status_code >= 400:
-        raise MdblistError(_message(response) or f"MDBList answered {response.status_code}", response.status_code)
+        raise MdblistError(_message(response) or f"MDBList returned {response.status_code}", response.status_code)
     try:
         return response.json()
     except ValueError as exc:

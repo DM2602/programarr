@@ -121,7 +121,7 @@ async def fetch_public(url: str, allow_private: bool = False, max_redirects: int
                     current = urljoin(current, location)
                     continue
                 if response.status_code >= 400:
-                    raise FetchError(f"Server answered {response.status_code}")
+                    raise FetchError(f"Server returned {response.status_code}")
                 data = await read_limited(response)
                 return data, response.headers.get("content-type", "")
     raise FetchError("Too many redirects")

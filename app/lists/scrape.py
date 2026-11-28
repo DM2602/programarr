@@ -43,7 +43,7 @@ async def page(url: str, delay: float, name: str) -> str:
     if status == 404:
         raise NotFound(f"{name}: page not found ({urlsplit(url).path})")
     if status >= 400:
-        raise SourceError(f"{name} answered {status}")
+        raise SourceError(f"{name} returned {status}")
     return text
 
 

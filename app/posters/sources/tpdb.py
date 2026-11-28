@@ -146,7 +146,7 @@ async def get_page(url: str) -> tuple[str, str]:
             if response.status_code == 404:
                 raise SourceError("Page not found on ThePosterDB (404)")
             if response.status_code >= 400:
-                raise SourceError(f"ThePosterDB answered {response.status_code}")
+                raise SourceError(f"ThePosterDB returned {response.status_code}")
             _save_cookies(client.cookies)
             return text, str(response.url)
 
