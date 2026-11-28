@@ -1473,6 +1473,199 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collections */
+        get: operations["collections_api_collections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/other": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Other Collections
+         * @description Collections in the selected libraries that Programarr did not make (Kometa, made by hand).
+         */
+        get: operations["other_collections_api_collections_other_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/other/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete Other Collections */
+        post: operations["delete_other_collections_api_collections_other_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collection */
+        get: operations["collection_api_collections__collection_id__get"];
+        /**
+         * Update Collection
+         * @description Where Plex shows the collection: Recommended in the library, on the own Home, on friends' Home.
+         */
+        put: operations["update_collection_api_collections__collection_id__put"];
+        post?: never;
+        /**
+         * Delete Collection
+         * @description Only collections whose output is no longer in a flow; keep leaves the collection in Plex.
+         */
+        delete: operations["delete_collection_api_collections__collection_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/tpdb": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tpdb Search
+         * @description Collection pages on ThePosterDB for a name.
+         */
+        get: operations["tpdb_search_api_collections__collection_id__tpdb_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/tpdb/posters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tpdb Posters */
+        get: operations["tpdb_posters_api_collections__collection_id__tpdb_posters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/poster": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Poster
+         * @description A poster from the picker: ThePosterDB, an upload or a link (the token from /api/upload or /api/fetch-url).
+         */
+        post: operations["set_poster_api_collections__collection_id__poster_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Queue
+         * @description Titles in Radarr or Sonarr waiting for Plex, with the collection they go into.
+         */
+        get: operations["queue_api_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/queue/{collection_id}/{media_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unqueue */
+        delete: operations["unqueue_api_queue__collection_id___media_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plex/libraries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plex Libraries
+         * @description The libraries under Settings › Plex, for the flow editor.
+         */
+        get: operations["plex_libraries_api_plex_libraries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/hooks/sonarr": {
         parameters: {
             query?: never;
@@ -1567,6 +1760,43 @@ export interface paths {
         };
         /** Archive Image */
         get: operations["archive_image_img_archive__history_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/img/plex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plex Image */
+        get: operations["plex_image_img_plex_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/img/collection/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Collection Image
+         * @description The collection's own poster, else what Plex shows (its composite of the first titles).
+         */
+        get: operations["collection_image_img_collection__collection_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1798,6 +2028,185 @@ export interface components {
             /** Message */
             message: string | null;
         };
+        /** CollectionBrief */
+        CollectionBrief: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Name Template */
+            name_template: string;
+            /** Library Key */
+            library_key: string;
+            /** Library */
+            library: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "movie" | "show";
+            /** Flow Id */
+            flow_id: number | null;
+            /** Flow Name */
+            flow_name: string | null;
+            /** In Flow */
+            in_flow: boolean;
+            /** Live */
+            live: boolean;
+            /**
+             * Sync Mode
+             * @enum {string}
+             */
+            sync_mode: "mirror" | "append";
+            /**
+             * Item Order
+             * @enum {string}
+             */
+            item_order: "list" | "release" | "alpha";
+            /** Max Items */
+            max_items: number;
+            /** Plex Key */
+            plex_key: string | null;
+            /** Show Recommended */
+            show_recommended: boolean;
+            /** Show Home */
+            show_home: boolean;
+            /** Show Shared */
+            show_shared: boolean;
+            /** Image */
+            image: string;
+            /** Poster Source */
+            poster_source: string | null;
+            /** Synced At */
+            synced_at: number | null;
+            /** Error */
+            error: string | null;
+            counts: components["schemas"]["CollectionCounts"];
+        };
+        /** CollectionCounts */
+        CollectionCounts: {
+            /** In Plex */
+            in_plex: number;
+            /** Queued */
+            queued: number;
+            /** Missing */
+            missing: number;
+        };
+        /** CollectionDetail */
+        CollectionDetail: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Name Template */
+            name_template: string;
+            /** Library Key */
+            library_key: string;
+            /** Library */
+            library: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "movie" | "show";
+            /** Flow Id */
+            flow_id: number | null;
+            /** Flow Name */
+            flow_name: string | null;
+            /** In Flow */
+            in_flow: boolean;
+            /** Live */
+            live: boolean;
+            /**
+             * Sync Mode
+             * @enum {string}
+             */
+            sync_mode: "mirror" | "append";
+            /**
+             * Item Order
+             * @enum {string}
+             */
+            item_order: "list" | "release" | "alpha";
+            /** Max Items */
+            max_items: number;
+            /** Plex Key */
+            plex_key: string | null;
+            /** Show Recommended */
+            show_recommended: boolean;
+            /** Show Home */
+            show_home: boolean;
+            /** Show Shared */
+            show_shared: boolean;
+            /** Image */
+            image: string;
+            /** Poster Source */
+            poster_source: string | null;
+            /** Synced At */
+            synced_at: number | null;
+            /** Error */
+            error: string | null;
+            counts: components["schemas"]["CollectionCounts"];
+            /** Titles */
+            titles: components["schemas"]["CollectionTitle"][];
+        };
+        /** CollectionImages */
+        CollectionImages: {
+            /** Images */
+            images: components["schemas"]["ImageView"][];
+            /** Error */
+            error: string | null;
+        };
+        /** CollectionTitle */
+        CollectionTitle: {
+            media: components["schemas"]["MediaView"];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "in_plex" | "queued" | "missing";
+            /** Position */
+            position: number | null;
+            /** Service */
+            service: ("radarr" | "sonarr") | null;
+            /** Item Key */
+            item_key: string | null;
+            /** Queued At */
+            queued_at: number | null;
+            /** Expires At */
+            expires_at: number | null;
+        };
+        /**
+         * CollectionTotals
+         * @description What the collection outputs of a run changed.
+         */
+        CollectionTotals: {
+            /** Outputs */
+            outputs: number;
+            /** Added */
+            added: number;
+            /** Removed */
+            removed: number;
+            /** Queued */
+            queued: number;
+            /** Missing */
+            missing: number;
+            /** Failed */
+            failed: number;
+        };
+        /** CollectionUpdate */
+        CollectionUpdate: {
+            /** Show Recommended */
+            show_recommended?: boolean | null;
+            /** Show Home */
+            show_home?: boolean | null;
+            /** Show Shared */
+            show_shared?: boolean | null;
+        };
+        /** CollectionsPage */
+        CollectionsPage: {
+            /** Collections */
+            collections: components["schemas"]["CollectionBrief"][];
+        };
         /** CompareList */
         CompareList: {
             /** Ref */
@@ -1880,6 +2289,11 @@ export interface components {
              * @default 0
              */
             match_open: number;
+            /**
+             * Queue
+             * @default 0
+             */
+            queue: number;
         };
         /** CurrentPoster */
         CurrentPoster: {
@@ -2325,6 +2739,7 @@ export interface components {
             skipped: number;
             /** Failed */
             failed: number;
+            collections: components["schemas"]["CollectionTotals"] | null;
         };
         /** FlowRunDetail */
         FlowRunDetail: {
@@ -2366,6 +2781,7 @@ export interface components {
             skipped: number;
             /** Failed */
             failed: number;
+            collections: components["schemas"]["CollectionTotals"] | null;
             /** Notes */
             notes: string[];
             /** Current */
@@ -2784,6 +3200,11 @@ export interface components {
             /** Job */
             job: number;
         };
+        /** KeysBody */
+        KeysBody: {
+            /** Keys */
+            keys: string[];
+        };
         /** KindCount */
         KindCount: {
             /** Key */
@@ -3098,6 +3519,34 @@ export interface components {
             /** Images */
             images: components["schemas"]["ImageView"][];
         };
+        /** OtherCollection */
+        OtherCollection: {
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+            /** Library Key */
+            library_key: string;
+            /** Library */
+            library: string;
+            /** Count */
+            count: number;
+            /** Smart */
+            smart: boolean;
+            /** Image */
+            image: string;
+            /** Updated At */
+            updated_at: number | null;
+            /** Labels */
+            labels: string[];
+        };
+        /** OtherCollections */
+        OtherCollections: {
+            /** Collections */
+            collections: components["schemas"]["OtherCollection"][];
+            /** Error */
+            error: string | null;
+        };
         /** Outcome */
         Outcome: {
             /** Slot */
@@ -3224,6 +3673,20 @@ export interface components {
             /** Source Label */
             source_label: string | null;
         };
+        /** PlexLibraries */
+        PlexLibraries: {
+            /** Libraries */
+            libraries: components["schemas"]["PlexLibrary"][];
+        };
+        /** PlexLibrary */
+        PlexLibrary: {
+            /** Key */
+            key: string;
+            /** Title */
+            title: string;
+            /** Type */
+            type: string;
+        };
         /** PortCount */
         PortCount: {
             /** Key */
@@ -3249,6 +3712,27 @@ export interface components {
         ProblemsPage: {
             /** Rows */
             rows: components["schemas"]["EntryView"][];
+        };
+        /** QueueEntry */
+        QueueEntry: {
+            /** Collection Id */
+            collection_id: number;
+            /** Collection */
+            collection: string;
+            media: components["schemas"]["MediaView"];
+            /** Service */
+            service: ("radarr" | "sonarr") | null;
+            /** Queued At */
+            queued_at: number | null;
+            /** Expires At */
+            expires_at: number | null;
+        };
+        /** QueuePage */
+        QueuePage: {
+            /** Entries */
+            entries: components["schemas"]["QueueEntry"][];
+            /** Days */
+            days: number;
         };
         /** RecentCard */
         RecentCard: {
@@ -3704,6 +4188,8 @@ export interface components {
             sonarr_external_url: string;
             /** Sonarr Key */
             sonarr_key: boolean;
+            /** Queue Days */
+            queue_days: number;
             /** Automation */
             automation: boolean;
             /** Designers */
@@ -3919,6 +4405,24 @@ export interface components {
         TokenBody: {
             /** Token */
             token: string;
+        };
+        /** TpdbResult */
+        TpdbResult: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Year */
+            year: number | null;
+            /** Url */
+            url: string;
+        };
+        /** TpdbResults */
+        TpdbResults: {
+            /** Results */
+            results: components["schemas"]["TpdbResult"][];
+            /** Error */
+            error: string | null;
         };
         /** TpdbSaved */
         TpdbSaved: {
@@ -6602,6 +7106,351 @@ export interface operations {
             };
         };
     };
+    collections_api_collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionsPage"];
+                };
+            };
+        };
+    };
+    other_collections_api_collections_other_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtherCollections"];
+                };
+            };
+        };
+    };
+    delete_other_collections_api_collections_other_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeysBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collection_api_collections__collection_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_collection_api_collections__collection_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_collection_api_collections__collection_id__delete: {
+        parameters: {
+            query?: {
+                keep?: boolean;
+            };
+            header?: never;
+            path: {
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tpdb_search_api_collections__collection_id__tpdb_get: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path: {
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TpdbResults"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tpdb_posters_api_collections__collection_id__tpdb_posters_get: {
+        parameters: {
+            query: {
+                url: string;
+            };
+            header?: never;
+            path: {
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionImages"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_poster_api_collections__collection_id__poster_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    queue_api_queue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuePage"];
+                };
+            };
+        };
+    };
+    unqueue_api_queue__collection_id___media_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: number;
+                media_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ok"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plex_libraries_api_plex_libraries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlexLibraries"];
+                };
+            };
+        };
+    };
     sonarr_api_hooks_sonarr_post: {
         parameters: {
             query?: {
@@ -6767,6 +7616,68 @@ export interface operations {
             header?: never;
             path: {
                 history_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plex_image_img_plex_get: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collection_image_img_collection__collection_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: number;
             };
             cookie?: never;
         };

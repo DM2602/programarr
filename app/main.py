@@ -15,7 +15,7 @@ from . import config, db, jobs, settings
 from .flows import store as flow_store
 from .lists import runs
 from .posters import refsign
-from .web import auth, flows, hooks, images, lists, posters, system
+from .web import auth, collections, flows, hooks, images, lists, posters, system
 
 DIST_DIR = Path(__file__).resolve().parent / "web" / "dist"
 
@@ -117,6 +117,7 @@ def create_app() -> FastAPI:
     app.include_router(posters.router)
     app.include_router(lists.router)
     app.include_router(flows.router)
+    app.include_router(collections.router)
     app.include_router(hooks.router)
     app.include_router(images.router)
 

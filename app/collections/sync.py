@@ -7,6 +7,7 @@ go in. A dry run reads Plex but writes nothing.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 
@@ -15,6 +16,8 @@ from ..arr import library as arr_library
 from ..flows.nodes import Title, Verdict
 from ..media import store as media_store
 from ..plex import COLLECTION_SORT, TYPE_MOVIE, TYPE_SHOW, Plex, PlexError
+from ..posters import sources
+from ..posters.sources.base import ImageRef
 from ..util import event
 from . import posters, store
 
@@ -303,6 +306,25 @@ async def apply_visibility(collection_id: int) -> None:
                                               bool(collection["show_home"]), bool(collection["show_shared"]))
     store.update(collection_id, {"visibility_applied":
                                  f"{collection['show_recommended']},{collection['show_home']},{collection['show_shared']}"})
+
+
+async def set_poster(collection_id: int, ref: dict) -> dict:
+    """A poster from the picker (ThePosterDB, an upload or a link): kept here and uploaded to Plex."""
+    collection = store.get(collection_id)
+    if collection is None:
+        return {"ok": False, "message": "Collection not found"}
+    image = ImageRef.from_dict(ref)
+    data, _ = await sources.fetch(image)
+    name = await asyncio.to_thread(posters.save, collection_id, data)
+    store.update(collection_id, {"poster": name, "poster_source": image.source, "poster_applied": None})
+    title = collection["title"] or collection["name_template"]
+    if not collection["plex_key"]:
+        return {"ok": True, "message": "Poster saved, Plex gets it with the collection"}
+    await Plex.from_settings().upload_poster(collection["plex_key"], posters.read({**collection, "poster": name}) or b"",
+                                             posters.content_type(name))
+    store.update(collection_id, {"poster_applied": collection["plex_key"]})
+    event("info", "collections", f"Poster set: {title}")
+    return {"ok": True, "message": "Poster set"}
 
 
 # -- queue ---------------------------------------------------------------------------------------------

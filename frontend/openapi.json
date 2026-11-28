@@ -3654,6 +3654,486 @@
         }
       }
     },
+    "/api/collections": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Collections",
+        "operationId": "collections_api_collections_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionsPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/other": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Other Collections",
+        "description": "Collections in the selected libraries that Programarr did not make (Kometa, made by hand).",
+        "operationId": "other_collections_api_collections_other_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtherCollections"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/other/delete": {
+      "post": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Delete Other Collections",
+        "operationId": "delete_other_collections_api_collections_other_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeysBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Collection",
+        "operationId": "collection_api_collections__collection_id__get",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Update Collection",
+        "description": "Where Plex shows the collection: Recommended in the library, on the own Home, on friends' Home.",
+        "operationId": "update_collection_api_collections__collection_id__put",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Delete Collection",
+        "description": "Only collections whose output is no longer in a flow; keep leaves the collection in Plex.",
+        "operationId": "delete_collection_api_collections__collection_id__delete",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          },
+          {
+            "name": "keep",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Keep"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}/tpdb": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Tpdb Search",
+        "description": "Collection pages on ThePosterDB for a name.",
+        "operationId": "tpdb_search_api_collections__collection_id__tpdb_get",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TpdbResults"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}/tpdb/posters": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Tpdb Posters",
+        "operationId": "tpdb_posters_api_collections__collection_id__tpdb_posters_get",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Url"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionImages"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}/poster": {
+      "post": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Set Poster",
+        "description": "A poster from the picker: ThePosterDB, an upload or a link (the token from /api/upload or /api/fetch-url).",
+        "operationId": "set_poster_api_collections__collection_id__poster_post",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStarted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/queue": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Queue",
+        "description": "Titles in Radarr or Sonarr waiting for Plex, with the collection they go into.",
+        "operationId": "queue_api_queue_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/queue/{collection_id}/{media_id}": {
+      "delete": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Unqueue",
+        "operationId": "unqueue_api_queue__collection_id___media_id__delete",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          },
+          {
+            "name": "media_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Media Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plex/libraries": {
+      "get": {
+        "tags": [
+          "collections"
+        ],
+        "summary": "Plex Libraries",
+        "description": "The libraries under Settings › Plex, for the flow editor.",
+        "operationId": "plex_libraries_api_plex_libraries_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlexLibraries"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/hooks/sonarr": {
       "post": {
         "summary": "Sonarr",
@@ -3900,6 +4380,82 @@
             "schema": {
               "type": "integer",
               "title": "History Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/img/plex": {
+      "get": {
+        "summary": "Plex Image",
+        "operationId": "plex_image_img_plex_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/img/collection/{collection_id}": {
+      "get": {
+        "summary": "Collection Image",
+        "description": "The collection's own poster, else what Plex shows (its composite of the first titles).",
+        "operationId": "collection_image_img_collection__collection_id__get",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
             }
           }
         ],
@@ -4600,6 +5156,589 @@
         ],
         "title": "Changed"
       },
+      "CollectionBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "name_template": {
+            "type": "string",
+            "title": "Name Template"
+          },
+          "library_key": {
+            "type": "string",
+            "title": "Library Key"
+          },
+          "library": {
+            "type": "string",
+            "title": "Library"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Kind"
+          },
+          "flow_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Name"
+          },
+          "in_flow": {
+            "type": "boolean",
+            "title": "In Flow"
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live"
+          },
+          "sync_mode": {
+            "type": "string",
+            "enum": [
+              "mirror",
+              "append"
+            ],
+            "title": "Sync Mode"
+          },
+          "item_order": {
+            "type": "string",
+            "enum": [
+              "list",
+              "release",
+              "alpha"
+            ],
+            "title": "Item Order"
+          },
+          "max_items": {
+            "type": "integer",
+            "title": "Max Items"
+          },
+          "plex_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plex Key"
+          },
+          "show_recommended": {
+            "type": "boolean",
+            "title": "Show Recommended"
+          },
+          "show_home": {
+            "type": "boolean",
+            "title": "Show Home"
+          },
+          "show_shared": {
+            "type": "boolean",
+            "title": "Show Shared"
+          },
+          "image": {
+            "type": "string",
+            "title": "Image"
+          },
+          "poster_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poster Source"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CollectionCounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "name_template",
+          "library_key",
+          "library",
+          "kind",
+          "flow_id",
+          "flow_name",
+          "in_flow",
+          "live",
+          "sync_mode",
+          "item_order",
+          "max_items",
+          "plex_key",
+          "show_recommended",
+          "show_home",
+          "show_shared",
+          "image",
+          "poster_source",
+          "synced_at",
+          "error",
+          "counts"
+        ],
+        "title": "CollectionBrief"
+      },
+      "CollectionCounts": {
+        "properties": {
+          "in_plex": {
+            "type": "integer",
+            "title": "In Plex"
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued"
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "in_plex",
+          "queued",
+          "missing"
+        ],
+        "title": "CollectionCounts"
+      },
+      "CollectionDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "name_template": {
+            "type": "string",
+            "title": "Name Template"
+          },
+          "library_key": {
+            "type": "string",
+            "title": "Library Key"
+          },
+          "library": {
+            "type": "string",
+            "title": "Library"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "movie",
+              "show"
+            ],
+            "title": "Kind"
+          },
+          "flow_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Id"
+          },
+          "flow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Name"
+          },
+          "in_flow": {
+            "type": "boolean",
+            "title": "In Flow"
+          },
+          "live": {
+            "type": "boolean",
+            "title": "Live"
+          },
+          "sync_mode": {
+            "type": "string",
+            "enum": [
+              "mirror",
+              "append"
+            ],
+            "title": "Sync Mode"
+          },
+          "item_order": {
+            "type": "string",
+            "enum": [
+              "list",
+              "release",
+              "alpha"
+            ],
+            "title": "Item Order"
+          },
+          "max_items": {
+            "type": "integer",
+            "title": "Max Items"
+          },
+          "plex_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plex Key"
+          },
+          "show_recommended": {
+            "type": "boolean",
+            "title": "Show Recommended"
+          },
+          "show_home": {
+            "type": "boolean",
+            "title": "Show Home"
+          },
+          "show_shared": {
+            "type": "boolean",
+            "title": "Show Shared"
+          },
+          "image": {
+            "type": "string",
+            "title": "Image"
+          },
+          "poster_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poster Source"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CollectionCounts"
+          },
+          "titles": {
+            "items": {
+              "$ref": "#/components/schemas/CollectionTitle"
+            },
+            "type": "array",
+            "title": "Titles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "name_template",
+          "library_key",
+          "library",
+          "kind",
+          "flow_id",
+          "flow_name",
+          "in_flow",
+          "live",
+          "sync_mode",
+          "item_order",
+          "max_items",
+          "plex_key",
+          "show_recommended",
+          "show_home",
+          "show_shared",
+          "image",
+          "poster_source",
+          "synced_at",
+          "error",
+          "counts",
+          "titles"
+        ],
+        "title": "CollectionDetail"
+      },
+      "CollectionImages": {
+        "properties": {
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ImageView"
+            },
+            "type": "array",
+            "title": "Images"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "images",
+          "error"
+        ],
+        "title": "CollectionImages"
+      },
+      "CollectionTitle": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaView"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "in_plex",
+              "queued",
+              "missing"
+            ],
+            "title": "State"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "radarr",
+                  "sonarr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
+          },
+          "item_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Key"
+          },
+          "queued_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queued At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "state",
+          "position",
+          "service",
+          "item_key",
+          "queued_at",
+          "expires_at"
+        ],
+        "title": "CollectionTitle"
+      },
+      "CollectionTotals": {
+        "properties": {
+          "outputs": {
+            "type": "integer",
+            "title": "Outputs"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed"
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued"
+          },
+          "missing": {
+            "type": "integer",
+            "title": "Missing"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outputs",
+          "added",
+          "removed",
+          "queued",
+          "missing",
+          "failed"
+        ],
+        "title": "CollectionTotals",
+        "description": "What the collection outputs of a run changed."
+      },
+      "CollectionUpdate": {
+        "properties": {
+          "show_recommended": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Recommended"
+          },
+          "show_home": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Home"
+          },
+          "show_shared": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Shared"
+          }
+        },
+        "type": "object",
+        "title": "CollectionUpdate"
+      },
+      "CollectionsPage": {
+        "properties": {
+          "collections": {
+            "items": {
+              "$ref": "#/components/schemas/CollectionBrief"
+            },
+            "type": "array",
+            "title": "Collections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "collections"
+        ],
+        "title": "CollectionsPage"
+      },
       "CompareList": {
         "properties": {
           "ref": {
@@ -4807,6 +5946,11 @@
             "type": "integer",
             "title": "Match Open",
             "default": 0
+          },
+          "queue": {
+            "type": "integer",
+            "title": "Queue",
+            "default": 0
           }
         },
         "type": "object",
@@ -4818,7 +5962,8 @@
           "shows",
           "linked",
           "jobs",
-          "match_open"
+          "match_open",
+          "queue"
         ],
         "title": "Counts"
       },
@@ -6114,6 +7259,16 @@
           "failed": {
             "type": "integer",
             "title": "Failed"
+          },
+          "collections": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionTotals"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -6133,7 +7288,8 @@
           "tagged",
           "present",
           "skipped",
-          "failed"
+          "failed",
+          "collections"
         ],
         "title": "FlowRunBrief"
       },
@@ -6234,6 +7390,16 @@
             "type": "integer",
             "title": "Failed"
           },
+          "collections": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CollectionTotals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "notes": {
             "items": {
               "type": "string"
@@ -6300,6 +7466,7 @@
           "present",
           "skipped",
           "failed",
+          "collections",
           "notes",
           "current",
           "nodes",
@@ -7811,6 +8978,22 @@
         ],
         "title": "JobStarted"
       },
+      "KeysBody": {
+        "properties": {
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keys"
+        ],
+        "title": "KeysBody"
+      },
       "KindCount": {
         "properties": {
           "key": {
@@ -8862,6 +10045,97 @@
         ],
         "title": "OnlineSource"
       },
+      "OtherCollection": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "library_key": {
+            "type": "string",
+            "title": "Library Key"
+          },
+          "library": {
+            "type": "string",
+            "title": "Library"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "smart": {
+            "type": "boolean",
+            "title": "Smart"
+          },
+          "image": {
+            "type": "string",
+            "title": "Image"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Labels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "library_key",
+          "library",
+          "count",
+          "smart",
+          "image",
+          "updated_at",
+          "labels"
+        ],
+        "title": "OtherCollection"
+      },
+      "OtherCollections": {
+        "properties": {
+          "collections": {
+            "items": {
+              "$ref": "#/components/schemas/OtherCollection"
+            },
+            "type": "array",
+            "title": "Collections"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "collections",
+          "error"
+        ],
+        "title": "OtherCollections"
+      },
       "Outcome": {
         "properties": {
           "slot": {
@@ -9293,6 +10567,45 @@
         ],
         "title": "PendingRow"
       },
+      "PlexLibraries": {
+        "properties": {
+          "libraries": {
+            "items": {
+              "$ref": "#/components/schemas/PlexLibrary"
+            },
+            "type": "array",
+            "title": "Libraries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "libraries"
+        ],
+        "title": "PlexLibraries"
+      },
+      "PlexLibrary": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "type"
+        ],
+        "title": "PlexLibrary"
+      },
       "PortCount": {
         "properties": {
           "key": {
@@ -9350,6 +10663,89 @@
           "rows"
         ],
         "title": "ProblemsPage"
+      },
+      "QueueEntry": {
+        "properties": {
+          "collection_id": {
+            "type": "integer",
+            "title": "Collection Id"
+          },
+          "collection": {
+            "type": "string",
+            "title": "Collection"
+          },
+          "media": {
+            "$ref": "#/components/schemas/MediaView"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "radarr",
+                  "sonarr"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service"
+          },
+          "queued_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queued At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "collection_id",
+          "collection",
+          "media",
+          "service",
+          "queued_at",
+          "expires_at"
+        ],
+        "title": "QueueEntry"
+      },
+      "QueuePage": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/QueueEntry"
+            },
+            "type": "array",
+            "title": "Entries"
+          },
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entries",
+          "days"
+        ],
+        "title": "QueuePage"
       },
       "RecentCard": {
         "properties": {
@@ -10631,6 +12027,10 @@
             "type": "boolean",
             "title": "Sonarr Key"
           },
+          "queue_days": {
+            "type": "integer",
+            "title": "Queue Days"
+          },
           "automation": {
             "type": "boolean",
             "title": "Automation"
@@ -10767,6 +12167,7 @@
           "sonarr_url",
           "sonarr_external_url",
           "sonarr_key",
+          "queue_days",
           "automation",
           "designers",
           "use_mediux_follows",
@@ -11364,6 +12765,69 @@
           "token"
         ],
         "title": "TokenBody"
+      },
+      "TpdbResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "year",
+          "url"
+        ],
+        "title": "TpdbResult"
+      },
+      "TpdbResults": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TpdbResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "error"
+        ],
+        "title": "TpdbResults"
       },
       "TpdbSaved": {
         "properties": {

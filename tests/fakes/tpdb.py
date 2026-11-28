@@ -32,8 +32,10 @@ class FakeTpdb:
 
     # -- data ------------------------------------------------------------------
     def add_item(self, title: str, year: int | None, kind: str) -> str:
+        """A movie, show or collection page (collections have no year)."""
         item_id = self._id()
-        self.items[item_id] = {"title": f"{title} ({year if year else 'N/A'})", "type": kind, "posters": []}
+        name = title if kind == "collection" else f"{title} ({year if year else 'N/A'})"
+        self.items[item_id] = {"title": name, "type": kind, "posters": []}
         return item_id
 
     def add_poster(self, item_id: str, label: str, uploader: str, set_id: str | None, kind: str = "show") -> str:
@@ -77,7 +79,7 @@ class FakeTpdb:
             count = len(self.sets[poster["set"]]["posters"])
             set_link = f'<a class="badge set_poster_count" href="{self.base}/set/{poster["set"]}">{count}</a>'
         download = f"{self.base}/api/assets/{poster_id}/download" if logged_in else f"{self.base}/login"
-        type_title = "Movie" if item["type"] == "movie" else "Show"
+        type_title = {"movie": "Movie", "collection": "Collection"}.get(item["type"], "Show")
         return f'''<div class="col-6 col-lg-2 p-1"><div class="hovereffect rounded-poster">
   <picture><source srcset="{self.base}/prod/public/images/posters/optimized/x/{poster_id}.webp" type="image/webp"/>
   <img class="w-100 rounded-poster tpdb-poster" src="/images/defaults/missing_poster.jpg"/></picture>
@@ -116,7 +118,7 @@ class FakeTpdb:
         async def search(request: Request):
             term = request.query_params.get("term", "").lower()
             section = request.query_params.get("section", "movies")
-            kind = "movie" if section == "movies" else "show"
+            kind = {"movies": "movie", "shows": "show", "collections": "collection"}.get(section, "movie")
             links = []
             for item_id, item in fake.items.items():
                 if item["type"] == kind and term in item["title"].lower():

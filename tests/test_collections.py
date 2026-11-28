@@ -12,6 +12,7 @@ from app.flows import engine, graph, store
 from app.lists import scrape
 from app.posters import library, tasks
 from tests.fakes.images import poster_for
+from tests.test_web import client, wait_job  # noqa: F401 - fixture and helper
 
 
 @pytest.fixture
@@ -313,3 +314,91 @@ async def test_collection_deleted_in_plex_is_made_again(plex_world):
     world.plex.up = True
     await engine.run(flow_id)
     assert collections.for_node(flow_id, "col")["error"] is None
+
+
+# -- API ---------------------------------------------------------------------------------------------
+
+def test_api(plex_world, client):  # noqa: F811
+    world = plex_world
+    flow_id = client.post("/api/flows", json={"name": "Trending", "graph": trending()}).json()["id"]
+    assert client.get("/api/plex/libraries").json()["libraries"] == [
+        {"key": "1", "title": "Filme", "type": "movie"}, {"key": "2", "title": "Serien", "type": "show"}]
+    client.put(f"/api/flows/{flow_id}", json={"dry_run": False})
+    job = wait_job(client, client.post(f"/api/flows/{flow_id}/run", json={}).json()["job"])
+    assert job["status"] == "done", job
+
+    listing = client.get("/api/collections").json()["collections"]
+    assert len(listing) == 1
+    row = listing[0]
+    assert (row["title"], row["library"], row["kind"], row["flow_name"], row["live"], row["in_flow"]) == (
+        f"Trending {month()}", "Filme", "movie", "Trending", True, True)
+    assert row["counts"] == {"in_plex": 2, "queued": 1, "missing": 0}
+    assert client.get(row["image"]).headers["content-type"] == "image/jpeg"  # Plex' composite
+    assert client.get("/api/status").json()["counts"]["queue"] == 1
+
+    detail = client.get(f"/api/collections/{row['id']}").json()
+    assert [(t["media"]["title"], t["state"]) for t in detail["titles"]] == [
+        ("Guarding Stars", "in_plex"), ("The Grinch", "in_plex"), ("Steps", "queued")]
+    shown = client.put(f"/api/collections/{row['id']}", json={"show_home": True}).json()
+    assert shown["show_home"] is True and shown["show_recommended"] is False
+    made = world.plex.find_collection(f"Trending {month()}")
+    assert made["hub"]["promotedToOwnHome"] is True
+
+    queue = client.get("/api/queue").json()
+    assert queue["days"] == 30 and [(e["media"]["title"], e["service"]) for e in queue["entries"]] == [("Steps", "radarr")]
+    entry = queue["entries"][0]
+    assert client.delete(f"/api/queue/{entry['collection_id']}/{entry['media']['id']}").json()["ok"]
+    assert client.get("/api/queue").json()["entries"] == []
+    assert client.delete(f"/api/queue/{entry['collection_id']}/{entry['media']['id']}").status_code == 404
+
+    # A poster from ThePosterDB's collection section
+    page = world.tpdb.add_item("Trending Movies", None, "collection")
+    poster = world.tpdb.add_poster(page, "Trending Movies", "DIIIVOY", None, kind="collection")
+    results = client.get(f"/api/collections/{row['id']}/tpdb", params={"q": "trending"}).json()
+    assert [(r["title"], r["year"]) for r in results["results"]] == [("Trending Movies", None)]
+    images = client.get(f"/api/collections/{row['id']}/tpdb/posters", params={"url": results["results"][0]["url"]}).json()
+    assert [image["designer"] for image in images["images"]] == ["DIIIVOY"]
+    assert client.get(images["images"][0]["thumb"]).status_code == 200
+    job = wait_job(client, client.post(f"/api/collections/{row['id']}/poster",
+                                       json={"token": images["images"][0]["token"]}).json()["job"])
+    assert job["status"] == "done" and job["result"]["message"] == "Poster set", job
+    assert made["poster"] == poster_for(world.tpdb.image_name(poster), "Trending Movies"[-8:])  # the full image
+    after = client.get(f"/api/collections/{row['id']}").json()
+    assert after["poster_source"] == "tpdb" and after["image"] != row["image"]
+    assert client.get(after["image"]).headers["content-type"] == "image/jpeg"
+    # An upload works the same way
+    upload = client.post("/api/upload", params={"kind": "collection"},
+                         files={"file": ("poster.png", poster_for("mine"), "image/jpeg")}).json()
+    job = wait_job(client, client.post(f"/api/collections/{row['id']}/poster", json={"token": upload["token"]}).json()["job"])
+    assert job["status"] == "done" and made["poster"] == poster_for("mine")
+    assert client.post(f"/api/collections/{row['id']}/poster", json={"token": "forged"}).status_code == 400
+
+    # Other collections, and deleting them
+    grinch = next(key for key, item in world.plex.items.items() if item["title"] == "The Grinch")
+    kometa = world.plex.add_collection("1", "Christmas", [grinch], labels=("Kometa",))
+    other = client.get("/api/collections/other").json()
+    assert [(c["title"], c["library"], c["count"]) for c in other["collections"]] == [("Christmas", "Filme", 1)]
+    assert other["collections"][0]["image"].startswith("/img/plex?path=")
+    assert client.get(other["collections"][0]["image"]).headers["content-type"] == "image/jpeg"
+    assert client.get("/img/plex", params={"path": "/library/sections/1/refresh"}).headers["content-type"] == "image/svg+xml"
+    job = wait_job(client, client.post("/api/collections/other/delete", json={"keys": [kometa, made["ratingKey"]]}).json()["job"])
+    assert job["result"]["deleted"] == 1 and kometa not in world.plex.collections
+
+    # A collection still in its flow cannot be deleted; once its output is gone it can.
+    assert client.delete(f"/api/collections/{row['id']}").status_code == 409
+    flow = client.get(f"/api/flows/{flow_id}").json()
+    graph_ = {"nodes": [node for node in flow["graph"]["nodes"] if node["type"] != "collection"], "edges": []}
+    client.put(f"/api/flows/{flow_id}", json={"graph": graph_})
+    gone = client.get("/api/collections").json()["collections"][0]
+    assert gone["in_flow"] is False and gone["live"] is False
+    assert client.delete(f"/api/collections/{row['id']}", params={"keep": True}).json()["message"] == "Removed from Programarr"
+    assert world.plex.find_collection(f"Trending {month()}") is not None  # kept in Plex
+    assert client.get("/api/collections").json()["collections"] == []
+
+
+def test_settings_and_events(world, client):  # noqa: F811
+    view = client.get("/api/settings").json()
+    assert view["values"]["queue_days"] == 30
+    assert "collection" in {event["key"] for event in view["discord_events"]}
+    client.post("/api/settings", json={"queue_days": "7"})
+    assert settings.get("queue_days") == 7 and collections.queue_days() == 7
