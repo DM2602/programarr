@@ -32,7 +32,7 @@ async def login(request: Request, body: LoginBody):
         return _state(request)
     if not hmac.compare_digest(body.password.encode(), config.APP_PASSWORD.encode()):
         await asyncio.sleep(0.6)  # slows down guessing
-        raise HTTPException(401, "Wrong password")
+        raise HTTPException(401, "Incorrect password")
     request.session["auth"] = "ok"
     return _state(request)
 

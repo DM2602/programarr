@@ -44,6 +44,7 @@ class Field:
     when: dict[str, list[str]] | None = None  # shown only when another field has one of these values
     step: float | None = None
     dynamic: str | None = None  # options or suggestions the web app loads, e.g. radarr.profiles
+    hint: str | None = None  # a short line under the field
 
     def as_dict(self) -> dict:
         return {
@@ -60,6 +61,7 @@ class Field:
             "when": self.when,
             "step": self.step,
             "dynamic": self.dynamic,
+            "hint": self.hint,
         }
 
     def shown(self, values: dict) -> bool:

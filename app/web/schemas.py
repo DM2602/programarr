@@ -69,6 +69,7 @@ class JobResult(BaseModel):
     added: int | None = None
     tagged: int | None = None
     present: int | None = None
+    deleted: int | None = None
 
 
 class JobBrief(Model):
@@ -97,6 +98,7 @@ class Counts(Model):
     linked: int
     jobs: int
     match_open: int = 0
+    queue: int = 0
 
 
 class Status(Model):
@@ -158,6 +160,8 @@ class LibraryFacts(Model):
     backup_files: int | None = None  # None: backup off
     backup_bytes: int | None = None
     exclusions: int
+    collections: int = 0  # kept by flows
+    queued: int = 0
 
 
 class Overview(Model):
@@ -590,6 +594,7 @@ class SettingsValues(Model):
     sonarr_url: str
     sonarr_external_url: str
     sonarr_key: bool
+    queue_days: int
     automation: bool
     designers: list[Designer]
     use_mediux_follows: bool
@@ -718,6 +723,7 @@ class SourceField(Model):
     when: dict[str, list[str]] | None = None
     step: float | None = None
     dynamic: str | None = None
+    hint: str | None = None
 
 
 class ListSource(Model):
@@ -979,6 +985,16 @@ class FlowProblem(Model):
     message: str
 
 
+class CollectionTotals(Model):
+    """What the collection outputs of a run changed."""
+    outputs: int
+    added: int
+    removed: int
+    queued: int
+    missing: int
+    failed: int
+
+
 class FlowRunBrief(Model):
     id: int
     flow_id: int
@@ -996,6 +1012,7 @@ class FlowRunBrief(Model):
     present: int
     skipped: int
     failed: int
+    collections: CollectionTotals | None = None
 
 
 class FlowView(Model):
@@ -1094,6 +1111,7 @@ class RunNode(Model):
     run: int | None = None
     error: str | None = None
     compare: CompareView | None = None
+    collection_id: int | None = None  # a collection output: its collection
 
 
 class FlowRunDetail(FlowRunBrief):
@@ -1114,6 +1132,7 @@ class FlowRunsPage(Model):
 
 class TraceStep(Model):
     node: str
+    type: str = ""
     label: str
     category: str
     port: str | None = None
@@ -1209,3 +1228,129 @@ class FlowAdd(Model):
 
 
 Overview.model_rebuild()
+
+
+# -- collections -------------------------------------------------------------------
+CollectionState = Literal["in_plex", "queued", "missing"]
+
+
+class CollectionCounts(Model):
+    in_plex: int
+    queued: int
+    missing: int
+
+
+class CollectionBrief(Model):
+    id: int
+    title: str  # as in Plex, or the name before the first run
+    name_template: str
+    library_key: str
+    library: str
+    kind: MediaKind
+    flow_id: int | None = None
+    flow_name: str | None = None
+    in_flow: bool  # False: its output was removed, the collection stays in Plex
+    live: bool  # its flow is live: Plex follows the runs
+    sync_mode: Literal["mirror", "append"]
+    item_order: Literal["list", "release", "alpha"]
+    max_items: int
+    plex_key: str | None = None
+    show_recommended: bool
+    show_home: bool
+    show_shared: bool
+    image: str
+    poster_source: str | None = None
+    synced_at: int | None = None
+    error: str | None = None
+    counts: CollectionCounts
+
+
+class CollectionsPage(Model):
+    collections: list[CollectionBrief]
+
+
+class CollectionTitle(Model):
+    media: MediaView
+    state: CollectionState
+    position: int | None = None
+    service: Literal["radarr", "sonarr"] | None = None
+    item_key: str | None = None
+    queued_at: int | None = None
+    expires_at: int | None = None
+
+
+class CollectionDetail(CollectionBrief):
+    titles: list[CollectionTitle]
+
+
+class CollectionUpdate(Body):
+    show_recommended: bool | None = None
+    show_home: bool | None = None
+    show_shared: bool | None = None
+
+
+class OtherCollection(Model):
+    key: str
+    title: str
+    library_key: str
+    library: str
+    count: int
+    smart: bool
+    automatic: bool  # made by Plex from TMDB's movie collections (franchises)
+    image: str
+    updated_at: int | None = None
+    labels: list[str]
+
+
+class OtherCollections(Model):
+    collections: list[OtherCollection]
+    error: str | None = None
+
+
+class KeysBody(Body):
+    keys: list[str]
+
+
+class TokenBody(Body):
+    token: str
+
+
+class TpdbResult(Model):
+    id: str
+    title: str
+    year: int | None = None
+    url: str
+
+
+class TpdbResults(Model):
+    results: list[TpdbResult]
+    error: str | None = None
+
+
+class CollectionImages(Model):
+    images: list[ImageView]
+    error: str | None = None
+
+
+class QueueEntry(Model):
+    collection_id: int
+    collection: str
+    media: MediaView
+    service: Literal["radarr", "sonarr"] | None = None
+    queued_at: int | None = None
+    expires_at: int | None = None
+
+
+class QueuePage(Model):
+    entries: list[QueueEntry]
+    days: int
+
+
+class PlexLibrary(Model):
+    key: str
+    title: str
+    type: str
+
+
+class PlexLibraries(Model):
+    libraries: list[PlexLibrary]

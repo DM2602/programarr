@@ -45,7 +45,7 @@ async def get(path: str, params: dict | None = None, client_id: str | None = Non
     if response.status_code == 429:
         raise SourceError("Trakt asks to slow down, try again later")
     if response.status_code >= 400:
-        raise SourceError(f"Trakt answered {response.status_code}")
+        raise SourceError(f"Trakt returned {response.status_code}")
     try:
         return response.json()
     except ValueError as exc:

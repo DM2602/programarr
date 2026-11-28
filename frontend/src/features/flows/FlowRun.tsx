@@ -11,14 +11,14 @@ import { Badge, Card, Empty, Loading, Notice, PageHeader, Section } from "../../
 import { plural, timeAgo } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
 import { KindIcon, POSTER_FALLBACK, Ratings, type Media } from "../lists/common";
-import { ModeBadge, NodeIcon, OUTCOME_TONES, OutputFacts, outcomeCount, outcomeLabel, RunStatus, triggerLabel, type FlowRunDetail, type RunNode } from "./common";
+import { COLLECTION_TYPE, ModeBadge, NodeIcon, OUTCOME_TONES, OutputFacts, outcomeCount, outcomeLabel, RunStatus, triggerLabel, type FlowRunDetail, type RunNode } from "./common";
 
 type Step = Schemas["TraceStep"];
 type Row = Schemas["FlowTitle"];
 
 function stepText(step: Step, dry: boolean): string {
   if (step.category === "source") return step.port ? `${step.label} ${step.detail}`.trim() : `${step.label}: ${step.detail}`;
-  if (step.category === "output") return `${step.label}: ${outcomeLabel(step.port ?? "", dry)}`;
+  if (step.category === "output") return `${step.label}: ${outcomeLabel(step.port ?? "", dry, step.type)}`;
   const detail = step.detail && step.detail !== step.port_label ? ` (${step.detail})` : "";
   return `${step.label}: ${step.port_label}${detail}`;
 }
@@ -40,10 +40,18 @@ function OutputCard({ node, dry, onShow }: { node: RunNode; dry: boolean; onShow
   const compare = node.compare;
   return (
     <Card className="output-card p-4">
-      <div className="flex items-center gap-2" data-output={node.id}>
+      <div className="flex min-w-0 items-center gap-2" data-output={node.id}>
         <NodeIcon type={node.type} category="output" className="h-5 w-5" />
-        <h3 className="font-semibold text-gray-100">{node.label}</h3>
-        {!node.facts.length && <span className="truncate text-xs text-gray-400">{node.summary}</span>}
+        {node.collection_id ? (
+          <h3 className="min-w-0 truncate font-semibold text-gray-100">
+            <Link to={`/collections/${node.collection_id}`} className="hover:underline">
+              {node.summary}
+            </Link>
+          </h3>
+        ) : (
+          <h3 className="font-semibold text-gray-100">{node.label}</h3>
+        )}
+        {!node.facts.length && !node.collection_id && <span className="truncate text-xs text-gray-400">{node.summary}</span>}
       </div>
       {node.facts.length > 0 && <OutputFacts facts={node.facts} />}
       {node.error && <p className="mt-2 text-sm text-red-300">{node.error}</p>}
@@ -53,7 +61,7 @@ function OutputCard({ node, dry, onShow }: { node: RunNode; dry: boolean; onShow
             <li key={port.key}>
               <button type="button" onClick={() => onShow(port.key)} className="rounded-full" data-outcome={port.key}>
                 <Badge tone={OUTCOME_TONES[port.key] ?? "gray"}>
-                  {port.count} {outcomeCount(port.key, dry)}
+                  {port.count} {outcomeCount(port.key, dry, node.type)}
                 </Badge>
               </button>
             </li>
@@ -137,7 +145,7 @@ function NodeList({ nodes, dry }: { nodes: RunNode[]; dry: boolean }) {
                 </span>
                 {node.ports.map((port) => (
                   <span key={port.key}>
-                    {node.category === "output" ? outcomeLabel(port.key, dry) : port.label}{" "}
+                    {node.category === "output" ? outcomeLabel(port.key, dry, node.type) : port.label}{" "}
                     <span className="font-semibold text-gray-100">{port.count}</span>
                   </span>
                 ))}
@@ -176,7 +184,7 @@ function TitleRow({ row, dry }: { row: Row; dry: boolean }) {
             {row.outcomes.map((step) => (
               <li key={step.node} className="flex flex-wrap items-center gap-2 text-xs text-gray-300" data-outcome={step.port}>
                 <Badge tone={OUTCOME_TONES[step.port ?? ""] ?? "gray"}>
-                  {step.label}: {outcomeLabel(step.port ?? "", dry)}
+                  {step.label}: {outcomeLabel(step.port ?? "", dry, step.type)}
                 </Badge>
                 {step.detail && <span className="text-gray-400">{step.detail}</span>}
               </li>
@@ -188,11 +196,15 @@ function TitleRow({ row, dry }: { row: Row; dry: boolean }) {
   );
 }
 
-const SHOW: { key: string; label: (dry: boolean) => string }[] = [
+// "present" is "Already exists" in Radarr or Sonarr, "In the collection" for a flow with only collections.
+const SHOW: { key: string; label: (dry: boolean, collectionsOnly: boolean) => string }[] = [
   { key: "all", label: () => "All" },
   { key: "added", label: (dry) => outcomeLabel("added", dry) },
   { key: "tagged", label: (dry) => outcomeLabel("tagged", dry) },
-  { key: "present", label: () => "Already exists" },
+  { key: "queued", label: (dry) => outcomeLabel("queued", dry) },
+  { key: "removed", label: (dry) => outcomeLabel("removed", dry) },
+  { key: "present", label: (dry, collectionsOnly) => outcomeLabel("present", dry, collectionsOnly ? COLLECTION_TYPE : undefined) },
+  { key: "missing", label: (dry) => outcomeLabel("missing", dry) },
   { key: "skipped", label: () => "Skipped" },
   { key: "failed", label: () => "Failed" },
   { key: "filtered", label: () => "Filtered out" },
@@ -205,6 +217,8 @@ function Titles({ run, show, setShow }: { run: FlowRunDetail; show: string; setS
   const titles = useFlowRunTitles(run.id, { show, q: query, page }, run.status !== "running");
   useEffect(() => setPage(1), [show]);
   const counts = titles.data?.counts ?? {};
+  const outputs = run.nodes.filter((node) => node.category === "output");
+  const collectionsOnly = outputs.length > 0 && outputs.every((node) => node.type === COLLECTION_TYPE);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setQuery(q);
@@ -217,7 +231,7 @@ function Titles({ run, show, setShow }: { run: FlowRunDetail; show: string; setS
           label="Titles"
           items={SHOW.filter((entry) => entry.key === "all" || entry.key === show || counts[entry.key]).map((entry) => ({
             key: entry.key,
-            label: entry.label(run.dry_run),
+            label: entry.label(run.dry_run, collectionsOnly),
             active: entry.key === show,
             count: counts[entry.key],
             onClick: () => {

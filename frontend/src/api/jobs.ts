@@ -89,6 +89,10 @@ export function jobMessage(job: Job): string {
       return r.message || "Preview done";
     case "flow":
       return r.message || "Flow done";
+    case "collections_delete": {
+      const text = `${plural(r.deleted ?? 0, "collection", "collections")} deleted`;
+      return r.failed ? `${text}, ${r.failed} failed: ${r.message}` : text;
+    }
     case "rescan":
     case "rescan_one":
       return `${plural(r.scanned ?? 0, "folder", "folders")} checked`;

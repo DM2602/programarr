@@ -27,7 +27,7 @@ class SourceError(Exception):
 class ImageRef:
     source: str
     image_id: str
-    kind: str  # movie | show | season
+    kind: str  # movie | show | season | collection
     season: int | None = None
     url: str = ""
     thumb_url: str = ""

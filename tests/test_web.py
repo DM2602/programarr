@@ -213,7 +213,7 @@ def test_password_protects_data_but_not_the_shell_or_hooks(world, client):
     token = settings.get("hook_token")
     assert client.post(f"/api/hooks/sonarr?token={token}", json={"eventType": "Test"}).status_code == 200
     bad = client.post("/api/auth/login", json={"password": "wrong"})
-    assert bad.status_code == 401 and bad.json()["detail"] == "Wrong password"
+    assert bad.status_code == 401 and bad.json()["detail"] == "Incorrect password"
     good = client.post("/api/auth/login", json={"password": "secret"})
     assert good.status_code == 200 and good.json()["signed_in"] is True
     assert client.get("/api/status").status_code == 200

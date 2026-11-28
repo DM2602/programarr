@@ -24,7 +24,7 @@ _pending_until = 0.0
 def _check(token: str | None) -> None:
     expected = settings.get("hook_token")
     if not token or not hmac.compare_digest(token, expected):
-        raise HTTPException(403, "Missing or wrong token")
+        raise HTTPException(403, "Missing or invalid token")
 
 
 def _schedule(reason: str) -> bool:

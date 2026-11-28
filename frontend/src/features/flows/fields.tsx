@@ -1,6 +1,6 @@
 import { XMarkIcon } from "@heroicons/react/20/solid";
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
-import { useArrOptions, useMdblistLists } from "../../api/queries";
+import { useArrOptions, useMdblistLists, usePlexLibraries } from "../../api/queries";
 import type { NodeField } from "./common";
 
 type Values = Record<string, unknown>;
@@ -69,13 +69,19 @@ export function visible(field: NodeField, values: Values): boolean {
   return Object.entries(field.when).every(([key, allowed]) => allowed.includes(String(values[key] ?? "")));
 }
 
-/** Options or suggestions a field loads from Radarr, Sonarr or MDBList. */
+/** Options or suggestions a field loads from Radarr, Sonarr, MDBList or the Plex libraries. */
 function useDynamic(dynamic: string | null | undefined): { options: Option[]; loading: boolean; error: string | null } {
   const [service, what] = (dynamic ?? "").split(".");
   const arr = service === "radarr" || service === "sonarr" ? service : null;
   const options = useArrOptions(arr ?? "radarr", !!arr);
   const lists = useMdblistLists(dynamic === "mdblist.lists");
+  const libraries = usePlexLibraries(dynamic === "plex.libraries");
   return useMemo(() => {
+    if (dynamic === "plex.libraries") {
+      const list = (libraries.data?.libraries ?? []).map((row) => ({ value: row.key, label: row.title }));
+      const error = libraries.error?.message ?? (libraries.data && !list.length ? "No libraries selected (Settings › Plex)" : null);
+      return { options: list, loading: libraries.isPending, error };
+    }
     if (arr) {
       const data = options.data;
       const error = options.error?.message ?? data?.error ?? (data && !data.configured ? "Not set up" : null);
@@ -90,7 +96,7 @@ function useDynamic(dynamic: string | null | undefined): { options: Option[]; lo
       return { options: list, loading: lists.isPending && lists.fetchStatus !== "idle", error: null };
     }
     return { options: [], loading: false, error: null };
-  }, [arr, what, dynamic, options.data, options.error, options.isPending, lists.data, lists.isPending, lists.fetchStatus]);
+  }, [arr, what, dynamic, options.data, options.error, options.isPending, lists.data, lists.isPending, lists.fetchStatus, libraries.data, libraries.error, libraries.isPending]);
 }
 
 function Label({ htmlFor, children }: { htmlFor?: string; children: string }) {
@@ -299,6 +305,7 @@ export function ConfigField({ field, value, onChange }: { field: NodeField; valu
           ))}
         </datalist>
       )}
+      {field.hint && <p className="mt-1 text-xs text-gray-400">{field.hint}</p>}
     </div>
   );
 }

@@ -29,7 +29,7 @@ async def _get(path: str, key: str | None = None) -> dict | None:
     if response.status_code in (401, 403):
         raise SourceError("fanart.tv rejects the key")
     if response.status_code >= 400:
-        raise SourceError(f"fanart.tv answered {response.status_code}")
+        raise SourceError(f"fanart.tv returned {response.status_code}")
     try:
         return response.json()
     except ValueError:
@@ -40,7 +40,7 @@ async def test(key: str | None = None) -> str:
     # The Matrix: a movie fanart.tv certainly knows.
     data = await _get("/movies/603", key=key)
     if data is None:
-        raise SourceError("Unexpected answer from fanart.tv")
+        raise SourceError("Unexpected response from fanart.tv")
     return "Key is valid"
 
 

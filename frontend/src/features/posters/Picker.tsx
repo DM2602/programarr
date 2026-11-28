@@ -1,16 +1,15 @@
 import { CheckIcon } from "@heroicons/react/20/solid";
-import { ArrowTopRightOnSquareIcon, PhotoIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowTopRightOnSquareIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
-import { createPortal } from "react-dom";
+import { useId, useLayoutEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { api, errorText, unwrap, uploadImage, type Schemas } from "../../api/client";
 import { useRunJob } from "../../api/jobs";
 import { useItem, useOnlineImages, usePlexImages, useSets } from "../../api/queries";
 import { Button, ExternalButton } from "../../components/Button";
 import { Tabs } from "../../components/Controls";
+import { Drawer, useDrawer } from "../../components/Drawer";
 import { useToast } from "../../components/Toasts";
 import { Badge, Empty, Loading, Notice } from "../../components/ui";
-import { useFocusTrap } from "../../components/useFocusTrap";
 import { ZoomImage } from "../../components/ZoomImage";
 import { hostOf, imageCaption } from "../../lib/format";
 import { Coverage } from "./Coverage";
@@ -20,7 +19,7 @@ type Slot = Schemas["SlotView"];
 type Image = Schemas["ImageView"];
 type SetView = Schemas["SetView"];
 type Tab = "sets" | "plex" | "online" | "link" | "file";
-type Chosen = { image: Image; context: string };
+export type Chosen = { image: Image; context: string };
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "sets", label: "Sets" },
@@ -35,7 +34,7 @@ function matchesSlot(slot: Slot, image: Image): boolean {
   return image.kind === slot.kind;
 }
 
-function ImageChoice({ image, caption, context, chosen, onChoose, match = false, current = false, width = "w-28", showCaption = true }: {
+export function ImageChoice({ image, caption, context, chosen, onChoose, match = false, current = false, width = "w-28", showCaption = true }: {
   image: Image;
   caption?: string;
   context: string;
@@ -333,7 +332,8 @@ function OnlineTab({ detail, slot, chosen, onChoose }: { detail: Detail; slot: S
   );
 }
 
-function LinkTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null; onChoose: (choice: Chosen) => void }) {
+/** An image from an address; kind and season say what it is for (a collection, a season…). */
+export function LinkTab({ kind, season = null, chosen, onChoose }: { kind: string; season?: number | null; chosen: Chosen | null; onChoose: (choice: Chosen) => void }) {
   const [url, setUrl] = useState("");
   const [state, setState] = useState<{ busy: boolean; error: string | null; image: Image | null }>({ busy: false, error: null, image: null });
   const id = useId();
@@ -343,7 +343,7 @@ function LinkTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null
     if (!value) return;
     setState({ busy: true, error: null, image: null });
     try {
-      const image = await unwrap(api.POST("/api/fetch-url", { body: { url: value, kind: slot.kind, season: slot.season } }));
+      const image = await unwrap(api.POST("/api/fetch-url", { body: { url: value, kind, season } }));
       setState({ busy: false, error: null, image });
       onChoose({ image, context: `Image from ${hostOf(value)}` });
     } catch (error) {
@@ -371,14 +371,14 @@ function LinkTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null
   );
 }
 
-function FileTab({ slot, chosen, onChoose }: { slot: Slot; chosen: Chosen | null; onChoose: (choice: Chosen) => void }) {
+export function FileTab({ kind, season = null, chosen, onChoose }: { kind: string; season?: number | null; chosen: Chosen | null; onChoose: (choice: Chosen) => void }) {
   const [state, setState] = useState<{ busy: boolean; error: string | null; image: Image | null; name: string }>({ busy: false, error: null, image: null, name: "" });
   const [over, setOver] = useState(false);
   const send = async (file: File | undefined) => {
     if (!file) return;
     setState({ busy: true, error: null, image: null, name: file.name });
     try {
-      const image = await uploadImage(file, slot.kind, slot.season);
+      const image = await uploadImage(file, kind, season);
       setState({ busy: false, error: null, image, name: file.name });
       onChoose({ image, context: file.name });
     } catch (error) {
@@ -424,28 +424,36 @@ export function PickerDrawer({ itemKey, slotId, onClose }: { itemKey: string; sl
   return data ? <Picker detail={data} slotId={slotId} onClose={onClose} /> : null;
 }
 
+/** The chosen image and the button that applies it, at the foot of a picker. */
+export function ChosenFooter({ chosen, label, onApply }: { chosen: Chosen | null; label: string; onApply: () => void }) {
+  return (
+    <>
+      <div className="chosen flex min-w-0 flex-1 items-center gap-3" aria-live="polite">
+        {chosen ? (
+          <>
+            <img src={chosen.image.thumb} alt="" className="h-14 w-10 shrink-0 rounded object-cover ring-1 ring-gray-600" />
+            <span className="truncate text-sm text-gray-300">{chosen.context}</span>
+          </>
+        ) : (
+          <span className="text-sm text-gray-500">Nothing selected</span>
+        )}
+      </div>
+      <Button variant="primary" disabled={!chosen} onClick={onApply} data-action="apply-image">
+        {label}
+      </Button>
+    </>
+  );
+}
+
 export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: string; onClose: () => void }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const titleId = useId();
   const run = useRunJob();
-  const [entered, setEntered] = useState(false);
+  const drawer = useDrawer(onClose);
   const [tab, setTab] = useState<Tab>("sets");
   const [chosen, setChosen] = useState<Chosen | null>(null);
   const slot = detail.slots.find((s) => s.id === slotId) ?? detail.slots[0];
   const key = detail.item.key;
   const isShow = detail.item.type === "show";
-
-  const close = () => {
-    setEntered(false);
-    window.setTimeout(onClose, 220);
-  };
-  useFocusTrap(panelRef, true, close);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setEntered(true));
-    panelRef.current?.querySelector<HTMLElement>("[data-close]")?.focus();
-    return () => cancelAnimationFrame(frame);
-  }, []);
+  const close = drawer.close;
 
   if (!slot) return null;
   const heading = slot.kind === "season" ? `${detail.item.title}, ${slot.label}` : detail.item.title;
@@ -471,55 +479,24 @@ export function Picker({ detail, slotId, onClose }: { detail: Detail; slotId: st
     sets: <SetsTab detail={detail} slot={slot} chosen={chosen} onChoose={setChosen} onApplySet={applySet} />,
     plex: <PlexTab detail={detail} slot={slot} chosen={chosen} onChoose={setChosen} />,
     online: <OnlineTab detail={detail} slot={slot} chosen={chosen} onChoose={setChosen} />,
-    link: <LinkTab slot={slot} chosen={chosen} onChoose={setChosen} />,
-    file: <FileTab slot={slot} chosen={chosen} onChoose={setChosen} />,
+    link: <LinkTab kind={slot.kind} season={slot.season} chosen={chosen} onChoose={setChosen} />,
+    file: <FileTab kind={slot.kind} season={slot.season} chosen={chosen} onChoose={setChosen} />,
   }[tab];
 
-  return createPortal(
-    <div className="fixed inset-0 z-50">
-      <div className={`absolute inset-0 bg-gray-900/70 transition-opacity duration-200 ${entered ? "opacity-100" : "opacity-0"}`} onClick={close} aria-hidden="true" />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className={`picker absolute inset-y-0 right-0 flex w-full max-w-2xl flex-col bg-gray-800 shadow-2xl ring-1 ring-gray-700 transition-transform duration-200 ease-out ${
-          entered ? "translate-x-0" : "translate-x-full"
-        }`}
-        data-open={entered || undefined}
-      >
-        <div className="flex items-start justify-between gap-4 px-5 pt-5">
-          <div className="min-w-0">
-            <h2 id={titleId} className="truncate text-lg font-bold text-gray-100">
-              {heading}
-            </h2>
-            {slot.kind !== "season" && isShow && <p className="text-sm text-gray-400">Pick one image or apply the whole set.</p>}
-          </div>
-          <button type="button" data-close onClick={close} className="rounded-md p-1 text-gray-400 hover:bg-gray-700 hover:text-white" aria-label="Close">
-            <XMarkIcon className="h-6 w-6" />
-          </button>
-        </div>
-        <div className="px-5" role="tablist">
+  return (
+    <Drawer
+      drawer={drawer}
+      className="picker"
+      heading={heading}
+      subtitle={slot.kind !== "season" && isShow ? "Pick one image or apply the whole set." : undefined}
+      header={
+        <div role="tablist">
           <Tabs label="Image sources" items={TABS.map((item) => ({ key: item.key, label: item.label, active: tab === item.key, onClick: () => setTab(item.key) }))} />
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{body}</div>
-        <div className="flex items-center gap-3 border-t border-gray-700 bg-gray-800 px-5 py-3">
-          <div className="chosen flex min-w-0 flex-1 items-center gap-3" aria-live="polite">
-            {chosen ? (
-              <>
-                <img src={chosen.image.thumb} alt="" className="h-14 w-10 shrink-0 rounded object-cover ring-1 ring-gray-600" />
-                <span className="truncate text-sm text-gray-300">{chosen.context}</span>
-              </>
-            ) : (
-              <span className="text-sm text-gray-500">Nothing selected</span>
-            )}
-          </div>
-          <Button variant="primary" disabled={!chosen} onClick={apply} data-action="apply-image">
-            {keepFile ? "Keep the file" : `Apply to ${target}`}
-          </Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+      }
+      footer={<ChosenFooter chosen={chosen} label={keepFile ? "Keep the file" : `Apply to ${target}`} onApply={apply} />}
+    >
+      {body}
+    </Drawer>
   );
 }

@@ -8,7 +8,7 @@ import { Button } from "../../components/Button";
 import { useDialogs } from "../../components/Dialogs";
 import { useToast } from "../../components/Toasts";
 import { Badge, Card, Empty, Loading, Notice, PageHeader } from "../../components/ui";
-import { plural, timeAgo, timeUntil } from "../../lib/format";
+import { joinAnd, plural, timeAgo, timeUntil } from "../../lib/format";
 import { useTitle } from "../../lib/useTitle";
 import { ModeBadge, RunStatus, RunTotals, type FlowView } from "./common";
 
@@ -40,7 +40,7 @@ function FlowRow({ flow }: { flow: FlowView }) {
           )}
         </div>
         <p className="mt-1 text-xs text-gray-400">
-          {flow.outputs.length ? flow.outputs.join(" and ") : "No output"}, {flow.schedule_text.toLowerCase()}
+          {flow.outputs.length ? joinAnd(flow.outputs) : "No output"}, {flow.schedule_text.toLowerCase()}
           {flow.next_run_at ? `, next ${timeUntil(flow.next_run_at)}` : ""}
         </p>
       </div>

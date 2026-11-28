@@ -13,12 +13,22 @@ TYPE_MOVIE = 1
 TYPE_SHOW = 2
 TYPE_SEASON = 3
 TYPE_EPISODE = 4
+TYPE_COLLECTION = 18
+
+# Collection order in Plex' advanced settings
+COLLECTION_SORT = {"release": 0, "alpha": 1, "custom": 2}
+
+_machines: dict[str, str] = {}  # server address -> machine identifier
 
 _LEGACY = re.compile(r"com\.plexapp\.agents\.(?P<agent>[a-z]+)://(?P<id>[^/?]+)")
 
 
 class PlexError(Exception):
     """Plex could not be reached or refused the request; the message is for the UI."""
+
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
 
 
 class Plex:
@@ -46,22 +56,25 @@ class Plex:
             },
         )
 
-    async def _request(self, method: str, path: str, params: dict | None = None, timeout: float = 60.0) -> httpx.Response:
+    async def _request(self, method: str, path: str, params: dict | None = None, timeout: float = 60.0,
+                       content: bytes | None = None, content_type: str | None = None) -> httpx.Response:
         if not self.configured:
             raise PlexError("Plex is not set up yet (Settings › Plex)")
+        headers = {"Content-Type": content_type} if content_type else None
         try:
             async with self._client(timeout) as client:
-                response = await client.request(method, f"{self.url}{path}", params=params)
+                response = await client.request(method, f"{self.url}{path}", params=params, content=content,
+                                                headers=headers)
         except httpx.TimeoutException as exc:
-            raise PlexError(f"Plex does not answer ({self.url})") from exc
+            raise PlexError(f"Plex is not responding ({self.url})") from exc
         except httpx.HTTPError as exc:
             raise PlexError(f"Cannot reach Plex ({self.url}): {exc.__class__.__name__}") from exc
         if response.status_code == 401:
             raise PlexError("Plex rejects the token (401)")
         if response.status_code == 404:
-            raise PlexError(f"Plex does not know {path} (404)")
+            raise PlexError(f"Plex cannot find {path} (404)", 404)
         if response.status_code >= 400:
-            raise PlexError(f"Plex answered {response.status_code} for {path}")
+            raise PlexError(f"Plex returned {response.status_code} for {path}", response.status_code)
         return response
 
     async def _get(self, path: str, params: dict | None = None, timeout: float = 60.0) -> dict:
@@ -69,7 +82,7 @@ class Plex:
         try:
             return response.json().get("MediaContainer", {})
         except ValueError as exc:
-            raise PlexError(f"Unexpected answer from Plex for {path}") from exc
+            raise PlexError(f"Unexpected response from Plex for {path}") from exc
 
     # -- reading ---------------------------------------------------------
     async def identity(self) -> dict:
@@ -188,6 +201,101 @@ class Plex:
 
     async def select_poster(self, rating_key: str, poster_key: str) -> None:
         await self._request("PUT", f"/library/metadata/{rating_key}/poster", {"url": poster_key})
+
+    async def upload_poster(self, rating_key: str, data: bytes, content_type: str = "image/jpeg") -> None:
+        """Upload an image as the poster; Plex selects it."""
+        await self._request("POST", f"/library/metadata/{rating_key}/posters", content=data,
+                            content_type=content_type, timeout=120.0)
+
+    # -- collections -------------------------------------------------------
+    async def machine(self) -> str:
+        """The server's machine identifier, needed to name items in collection requests."""
+        if self.url not in _machines:
+            _machines[self.url] = (await self.identity())["machine"]
+        return _machines[self.url]
+
+    async def _uri(self, item_keys: list[str]) -> str:
+        return f"server://{await self.machine()}/com.plexapp.plugins.library/library/metadata/{','.join(item_keys)}"
+
+    async def collections(self, section_key: str) -> list[dict]:
+        data = await self._get(f"/library/sections/{section_key}/collections", {"includeExternalMedia": 0})
+        return data.get("Metadata", []) or []
+
+    async def collection(self, rating_key: str) -> dict | None:
+        """A collection's metadata, or None if Plex no longer has it."""
+        try:
+            data = await self._get(f"/library/metadata/{rating_key}")
+        except PlexError as exc:
+            if exc.status == 404:
+                return None
+            raise
+        meta = data.get("Metadata", [])
+        return meta[0] if meta and meta[0].get("type") == "collection" else None
+
+    async def collection_items(self, rating_key: str) -> list[dict]:
+        """The items in their collection order."""
+        data = await self._get(f"/library/collections/{rating_key}/children", timeout=120.0)
+        return data.get("Metadata", []) or []
+
+    async def create_collection(self, section_key: str, plex_type: int, title: str, item_keys: list[str]) -> str:
+        """A regular collection with these items (Plex needs at least one); returns its rating key."""
+        response = await self._request("POST", "/library/collections", {
+            "type": plex_type, "title": title, "smart": 0, "sectionId": section_key,
+            "uri": await self._uri(item_keys),
+        })
+        try:
+            meta = response.json().get("MediaContainer", {}).get("Metadata", [])
+        except ValueError as exc:
+            raise PlexError("Unexpected response from Plex when creating a collection") from exc
+        if not meta or not meta[0].get("ratingKey"):
+            raise PlexError("Plex did not create the collection")
+        return str(meta[0]["ratingKey"])
+
+    async def add_to_collection(self, rating_key: str, item_keys: list[str]) -> None:
+        for start in range(0, len(item_keys), 100):
+            await self._request("PUT", f"/library/collections/{rating_key}/items",
+                                {"uri": await self._uri(item_keys[start:start + 100])})
+
+    async def remove_from_collection(self, rating_key: str, item_key: str) -> None:
+        await self._request("DELETE", f"/library/collections/{rating_key}/items/{item_key}")
+
+    async def move_in_collection(self, rating_key: str, item_key: str, after: str | None) -> None:
+        """Move an item behind another one, or to the front."""
+        await self._request("PUT", f"/library/collections/{rating_key}/items/{item_key}/move",
+                            {"after": after} if after else None)
+
+    async def collection_settings(self, rating_key: str, **values: int) -> None:
+        """Advanced settings such as collectionSort (see COLLECTION_SORT)."""
+        await self._request("PUT", f"/library/collections/{rating_key}/prefs", values)
+
+    async def edit_title(self, section_key: str, rating_key: str, title: str, plex_type: int = TYPE_COLLECTION) -> None:
+        await self._request("PUT", f"/library/sections/{section_key}/all", {
+            "type": plex_type, "id": rating_key, "title.value": title, "title.locked": 1,
+        })
+
+    async def delete_collection(self, rating_key: str) -> None:
+        await self._request("DELETE", f"/library/collections/{rating_key}")
+
+    async def hub(self, section_key: str, rating_key: str) -> dict | None:
+        """The collection's entry in Manage Recommendations (visibility), or None if it has none yet."""
+        data = await self._get(f"/hubs/sections/{section_key}/manage", {"metadataItemId": rating_key})
+        hubs = data.get("Hub", []) or []
+        return hubs[0] if hubs else None
+
+    async def set_visibility(self, section_key: str, rating_key: str, recommended: bool, home: bool,
+                             shared: bool) -> None:
+        """Show the collection in Recommended, on the own Home and on friends' Home."""
+        flags = {"promotedToRecommended": int(recommended), "promotedToOwnHome": int(home),
+                 "promotedToSharedHome": int(shared)}
+        hub = await self.hub(section_key, rating_key)
+        if hub is None:
+            if not any(flags.values()):
+                return
+            await self._request("POST", f"/hubs/sections/{section_key}/manage",
+                                {"metadataItemId": rating_key, **flags})
+            return
+        identifier = hub.get("identifier") or f"custom.collection.{section_key}.{rating_key}"
+        await self._request("PUT", f"/hubs/sections/{section_key}/manage/{identifier}", flags)
 
 
 def parse_guids(meta: dict) -> dict:

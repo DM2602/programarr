@@ -62,7 +62,7 @@ async def get(path: str, params: dict | None = None) -> dict | None:
     if response.status_code == 401:
         raise TmdbError("TMDB rejects the key")
     if response.status_code >= 400:
-        raise TmdbError(f"TMDB answered {response.status_code}")
+        raise TmdbError(f"TMDB returned {response.status_code}")
     return response.json()
 
 

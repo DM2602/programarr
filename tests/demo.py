@@ -105,6 +105,7 @@ async def build(world) -> None:
         {"seasonNumber": n, "monitored": n != 5, "statistics": {"episodeFileCount": 0, "totalEpisodeCount": 10}}
         for n in (1, 2, 3, 4, 5)])
     await build_flows(world)
+    await build_collections(world)
 
 
 TOP10_FLOW = {
@@ -119,12 +120,15 @@ TOP10_FLOW = {
                     "compare": ["dominik/netflix-ch"]}},
         {"id": "sonarr1", "type": "sonarr", "position": {"x": 870, "y": 260},
          "config": {"quality_profile": 1, "root_folder": "/data/tv", "tags": ["top-10"]}},
+        {"id": "collection1", "type": "collection", "position": {"x": 870, "y": 470},
+         "config": {"library": "1", "name": "Top 10 {list}", "sync": "mirror", "order": "list"}},
     ],
     "edges": [
         {"source": "flixpatrol1", "port": "out", "target": "type1"},
         {"source": "type1", "port": "movie", "target": "rating1"},
         {"source": "rating1", "port": "match", "target": "radarr1"},
         {"source": "type1", "port": "show", "target": "sonarr1"},
+        {"source": "type1", "port": "movie", "target": "collection1"},
     ],
 }
 
@@ -162,6 +166,68 @@ async def build_flows(world) -> None:
                   {"source": "genre1", "port": "action", "target": "radarr1"},
                   {"source": "genre1", "port": "family", "target": "radarr2"}],
     })
+
+
+async def build_collections(world) -> None:
+    """Live flows that keep collections: TMDB trending in list order with a queue, genres from the movie
+    library; Plex' franchises and Kometa's collections next to them."""
+    from app.collections import store as collections
+    from app.collections import sync
+    from app.flows import engine, store
+
+    plex, tpdb, tmdb = world.plex, world.tpdb, world.tmdb
+    for tmdb_id, title, date, genres in ((438631, "Dune", "2021-09-15", (878, 12)),
+                                         (693134, "Dune: Part Two", "2024-02-27", (878, 12)),
+                                         (872585, "Oppenheimer", "2023-07-19", (18, 36)),
+                                         (329865, "Arrival", "2016-11-10", (878, 18)),
+                                         (120, "The Lord of the Rings: The Fellowship of the Ring", "2001-12-18", (12, 14))):
+        tmdb.add_title("movie", tmdb_id, title, date, genres=genres, popularity=40.0)
+    tmdb.charts["/trending/movie/week"] = ["movie:693134", "movie:872585", "movie:1006", "movie:360920", "movie:1001"]
+    trending = store.create("Trending movies", {
+        "nodes": [
+            {"id": "tmdb1", "type": "tmdb", "position": {"x": 0, "y": 80}, "config": {"chart": "trending-movie-week", "limit": 20}},
+            {"id": "collection1", "type": "collection", "position": {"x": 290, "y": 80},
+             "config": {"library": "1", "name": "Trending {month}", "sync": "mirror", "order": "list"}},
+        ],
+        "edges": [{"source": "tmdb1", "port": "out", "target": "collection1"}],
+    }, "every:1d")
+    store.update(trending, dry_run=False)
+    genres = store.create("Genre collections", {
+        "nodes": [
+            {"id": "plex1", "type": "plex_library", "position": {"x": 0, "y": 120}, "config": {"library": "1"}},
+            {"id": "genre1", "type": "genre", "position": {"x": 290, "y": 120}, "config": {"rules": [
+                {"id": "scifi", "mode": "any", "genres": ["science-fiction"]},
+                {"id": "family", "mode": "any", "genres": ["family", "animation"]},
+            ], "each": True}},
+            {"id": "collection1", "type": "collection", "position": {"x": 580, "y": 0},
+             "config": {"library": "1", "name": "Science Fiction", "sync": "mirror", "order": "release"}},
+            {"id": "collection2", "type": "collection", "position": {"x": 580, "y": 240},
+             "config": {"library": "1", "name": "Family", "sync": "mirror", "order": "alpha"}},
+        ],
+        "edges": [{"source": "plex1", "port": "out", "target": "genre1"},
+                  {"source": "genre1", "port": "scifi", "target": "collection1"},
+                  {"source": "genre1", "port": "family", "target": "collection2"}],
+    }, "every:1d")
+    store.update(genres, dry_run=False)
+    await engine.run(trending)
+    await engine.run(genres)
+    shown = collections.for_node(trending, "collection1")
+    collections.update(shown["id"], {"show_home": 1, "show_recommended": 1})
+    await sync.apply_visibility(shown["id"])
+    # Kometa's and hand-made collections; ThePosterDB has posters for the genre names.
+    keys = {item["title"]: key for key, item in plex.items.items()}
+    plex.add_collection("1", "Christmas Movies", [keys["The Grinch"]], labels=("Kometa",))
+    plex.add_collection("1", "IMDb Top 250", [keys["Dune"], keys["Oppenheimer"], keys["Arrival"]], labels=("Kometa",))
+    plex.add_collection("1", "Unwatched", [], smart=True)
+    plex.add_collection("2", "Apple TV+", [keys["Severance"], keys["Slow Horses"]], labels=("Kometa",))
+    # Franchises Plex makes itself from TMDB's movie collections
+    plex.add_collection("1", "Dune Filmreihe", [keys["Dune"], keys["Dune: Part Two"]], automatic=True)
+    plex.add_collection("1", "Der Herr der Ringe Filmreihe",
+                        [keys["Der Herr der Ringe: Die Gefährten"]], automatic=True)
+    for name, designers in (("Science Fiction", ("DIIIVOY", "MrBunker")), ("Family", ("fwlolx",))):
+        page = tpdb.add_item(name, None, "collection")
+        for designer in designers:
+            tpdb.add_poster(page, name, designer, None, kind="collection")
 
 
 async def build_lists(world) -> None:

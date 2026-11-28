@@ -32,7 +32,7 @@ def test_connection_tests(world, client):  # noqa: F811
     wrong = client.post("/api/test/sonarr", json={"value": "nope"}).json()
     assert wrong == {"ok": False, "message": "Sonarr rejects the API key"}
     other = client.post("/api/test/radarr", json={"extra": "http://radarr2.test:7878"}).json()
-    assert other == {"ok": False, "message": "Radarr answered 502"}
+    assert other == {"ok": False, "message": "Radarr returned 502"}
     values = client.get("/api/settings").json()["values"]
     assert values["radarr_key"] is True and values["radarr_external_url"] == "https://radarr.example.ch"
     saved = client.post("/api/settings", json={"sonarr_external_url": "https://sonarr.example.ch/"}).json()

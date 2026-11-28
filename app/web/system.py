@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from .. import arr, config, db, http, jobs, notify, settings
 from ..plex import Plex, PlexError
 from ..posters import backup, library, tasks, views
+from ..collections import store as collection_store
 from ..flows import store as flow_store
 from ..lists import exclusions as exclusion_sync
 from ..lists import runs as list_runs
@@ -32,7 +33,7 @@ async def status():
         "setup_done": settings.get("setup_done"),
         "automation": settings.get("automation"),
         "last_sync": settings.get("last_sync") or 0,
-        "counts": {**views.counts(), "match_open": list_runs.problem_count()},
+        "counts": {**views.counts(), "match_open": list_runs.problem_count(), "queue": collection_store.counts()["queued"]},
         "jobs": running,
     }
 
@@ -60,6 +61,8 @@ def _facts(counts: dict) -> dict:
         "backup_files": stored["files"] if stored else None,
         "backup_bytes": stored["bytes"] if stored else None,
         "exclusions": len(exclusion_sync.exclusions()),
+        "collections": database.scalar("SELECT COUNT(*) FROM collections", (), 0),
+        "queued": collection_store.counts()["queued"],
     }
 
 

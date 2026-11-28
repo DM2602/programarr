@@ -4,15 +4,20 @@ from __future__ import annotations
 import math
 
 from .. import db, settings
+from ..collections import store as collection_store
 from ..lists import runs as list_runs
 from ..media import store as media_store
 from . import graph as graphs
 from . import schedule
-from .nodes import OUTCOMES, TYPES
+from .nodes import COLLECTION_OUTCOMES, OUTCOMES, TYPES
 
 PAGE = 50
-OUTPUT_PORTS = tuple(OUTCOMES)
+ARR_PORTS = tuple(OUTCOMES)  # totals of the Radarr and Sonarr outputs
+# Every outcome of an output, changes first (the order of the titles on the run page)
+OUTPUT_PORTS = ("added", "tagged", "queued", "removed", "present", "missing", "skipped", "failed")
+assert set(OUTPUT_PORTS) == set(OUTCOMES) | set(COLLECTION_OUTCOMES)
 SHOW = ("all", *OUTPUT_PORTS, "filtered")
+COLLECTION_TOTALS = ("added", "removed", "queued", "missing", "failed")
 UNSET = object()  # update(): leave the schedule as it is
 
 
@@ -42,12 +47,15 @@ def create(name: str, graph: dict | None = None, schedule_text: str | None = Non
     """New flows always start as a dry run."""
     now = db.now()
     value = schedule.normalise(schedule_text)
-    return db.get().execute(
+    clean = graphs.normalise(graph)
+    flow_id = db.get().execute(
         "INSERT INTO flows (name, graph, version, schedule, enabled, dry_run, next_run_at, created_at, updated_at) "
         "VALUES (?,?,1,?,?,1,?,?,?)",
-        (_name(name), db.dumps(graphs.normalise(graph)), value, int(enabled),
+        (_name(name), db.dumps(clean), value, int(enabled),
          schedule.next_run(value, now) if enabled else None, now, now),
     ).lastrowid
+    collection_store.sync_definitions(flow_id, clean)
+    return flow_id
 
 
 def update(flow_id: int, *, name: str | None = None, graph: dict | None = None, schedule_text=UNSET,
@@ -76,6 +84,8 @@ def update(flow_id: int, *, name: str | None = None, graph: dict | None = None, 
     if values:
         values["updated_at"] = db.now()
         db.get().update("flows", "id", flow_id, values)
+    if "graph" in values:
+        collection_store.sync_definitions(flow_id, graphs.normalise(graph))
     return get(flow_id)
 
 
@@ -85,7 +95,9 @@ GONE = 0
 
 
 def delete(flow_id: int) -> bool:
+    """The flow's collections stay in Plex, listed as no longer in a flow."""
     database = db.get()
+    collection_store.flow_deleted(flow_id)
     with database.transaction() as conn:
         conn.execute("UPDATE parser_runs SET flow_run_id=? WHERE flow_run_id IN "
                      "(SELECT id FROM flow_runs WHERE flow_id=?)", (GONE, flow_id))
@@ -130,9 +142,18 @@ def flows() -> list[dict]:
 
 
 def _totals(stats: dict) -> dict:
-    totals = {port: 0 for port in OUTPUT_PORTS}
+    totals = {port: 0 for port in ARR_PORTS}
     totals.update({key: int(value) for key, value in (stats.get("totals") or {}).items() if key in totals})
     return totals
+
+
+def _collection_totals(stats: dict) -> dict | None:
+    """What the run's collection outputs changed, None without any."""
+    if not stats.get("collections") and not stats.get("collection_totals"):
+        return None
+    found = stats.get("collection_totals") or {}
+    return {"outputs": len(stats.get("collections") or []),
+            **{port: int(found.get(port) or 0) for port in COLLECTION_TOTALS}}
 
 
 def run_brief(row: dict, flow_name: str | None = None) -> dict:
@@ -150,6 +171,7 @@ def run_brief(row: dict, flow_name: str | None = None) -> dict:
         "error": row["error"],
         "titles": int(stats.get("titles") or 0),
         **_totals(stats),
+        "collections": _collection_totals(stats),
     }
 
 
@@ -183,7 +205,8 @@ def _port_label(node: dict, port: str | None) -> str:
         return ", ".join(_port_label(node, part) for part in port.split(","))
     node_type = TYPES.get(node.get("type", ""))
     if node_type is not None and node_type.category == "output":
-        return OUTCOMES.get(port, port)
+        labels = COLLECTION_OUTCOMES if node_type.key == collection_store.NODE_TYPE else OUTCOMES
+        return labels.get(port, port)
     labels = node.get("ports") or {}
     if port in labels:
         return labels[port]
@@ -230,6 +253,7 @@ def run_detail(run_id: int) -> dict | None:
             "run": info.get("run"),
             "error": info.get("error"),
             "compare": compare,
+            "collection_id": (info.get("collection") or {}).get("id"),
         })
     sources = database.query("SELECT * FROM parser_runs WHERE flow_run_id=? ORDER BY id", (run_id,))
     previous = database.scalar("SELECT id FROM flow_runs WHERE flow_id=? AND id<? ORDER BY id DESC LIMIT 1",
@@ -299,7 +323,8 @@ def run_titles(run_id: int, show: str = "all", q: str = "", page: int = 1) -> di
 
     def step_view(step: dict) -> dict:
         info = infos.get(step["node_id"]) or {}
-        return {"node": step["node_id"], "label": info.get("name") or info.get("label", step["node_id"]),
+        return {"node": step["node_id"], "type": info.get("type", ""),
+                "label": info.get("name") or info.get("label", step["node_id"]),
                 "category": info.get("category", ""), "port": step["port"],
                 "port_label": _port_label(info, step["port"]), "detail": step["detail"] or ""}
 
@@ -349,7 +374,9 @@ def recent_adds(limit: int = 16) -> list[dict]:
         "SELECT t.media_id, r.id AS run_id, r.flow_id, f.name AS flow_name, "
         "COALESCE(r.finished_at, r.started_at) AS at FROM flow_trace t "
         "JOIN flow_runs r ON r.id=t.run_id JOIN flows f ON f.id=r.flow_id "
-        "WHERE t.port='added' AND r.dry_run=0 ORDER BY r.id DESC, t.rowid DESC LIMIT ?", (limit * 3,))
+        "WHERE t.port='added' AND r.dry_run=0 "
+        "AND COALESCE(json_extract(r.stats, '$.nodes.\"' || t.node_id || '\".type'), '') != ? "
+        "ORDER BY r.id DESC, t.rowid DESC LIMIT ?", (collection_store.NODE_TYPE, limit * 3))
     seen: set[int] = set()
     picked = []
     for row in rows:

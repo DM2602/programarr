@@ -7,6 +7,9 @@ import { Button } from "./components/Button";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/ui";
 import { Login } from "./features/auth/Login";
+import { CollectionPage } from "./features/collections/CollectionPage";
+import { Collections } from "./features/collections/Collections";
+import { Queue } from "./features/collections/Queue";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { FlowHistory } from "./features/flows/FlowHistory";
 import { FlowRun } from "./features/flows/FlowRun";
@@ -93,6 +96,9 @@ export function App() {
             </Suspense>
           }
         />
+        <Route path="collections" element={<Collections />} />
+        <Route path="collections/queue" element={<Queue />} />
+        <Route path="collections/:id" element={<CollectionPage />} />
         <Route path="logs" element={<Logs />} />
         <Route path="settings" element={<Navigate to="/settings/plex" replace />} />
         <Route path="settings/:section" element={<Settings />} />

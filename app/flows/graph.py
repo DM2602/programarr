@@ -160,7 +160,7 @@ def check(graph: dict | None) -> Checked:
     if "source" not in categories:
         problems.append(Problem(None, "Add a source"))
     if "output" not in categories:
-        problems.append(Problem(None, "Add Radarr or Sonarr"))
+        problems.append(Problem(None, "Add an output"))
     return result
 
 

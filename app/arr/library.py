@@ -1,5 +1,5 @@
 """What flows need from Radarr and Sonarr: profiles, root folders, tags and exclusions, adding titles,
-and TVDB IDs that TMDB does not know.
+and TVDB IDs that TMDB does not have.
 
 Titles that already exist stay as they are: profile, folder, monitoring and tags. Tags only go on
 with a new title.
@@ -13,13 +13,38 @@ from .. import cache
 from .client import ArrError, get, label, request
 
 OPTIONS_SECONDS = 60
+INDEX_SECONDS = 120
 PROFILE_NAMES_SECONDS = 365 * 86400  # names for summaries, renewed whenever the options are read
 TAG = re.compile(r"^[a-z0-9-]+$")
 _options: dict[str, tuple[float, dict]] = {}
+_index: dict[str, tuple[float, dict[int, dict]]] = {}
 
 
 def reset() -> None:
     _options.clear()
+    _index.clear()
+
+
+async def index(service: str, fresh: bool = False) -> dict[int, dict]:
+    """Every movie (by TMDB ID) or series (by TVDB ID) Radarr or Sonarr has, read in one request."""
+    cached = _index.get(service)
+    if cached and not fresh and time.monotonic() - cached[0] < INDEX_SECONDS:
+        return cached[1]
+    radarr = service == "radarr"
+    rows = await request(service, "GET", "/movie" if radarr else "/series", timeout=120.0)
+    field = "tmdbId" if radarr else "tvdbId"
+    result: dict[int, dict] = {}
+    for row in rows or []:
+        if not isinstance(row, dict) or not row.get(field):
+            continue
+        try:
+            external = int(row[field])
+        except (TypeError, ValueError):
+            continue
+        files = row.get("hasFile") if radarr else ((row.get("statistics") or {}).get("episodeFileCount") or 0) > 0
+        result[external] = {"id": row.get("id"), "title": row.get("title") or "", "has_file": bool(files)}
+    _index[service] = (time.monotonic(), result)
+    return result
 
 
 def clean_tag(value: str) -> str:
@@ -171,7 +196,7 @@ async def add_series(media: dict, config: dict, tag_ids: list[int]) -> dict:
     found = next((row for row in rows or [] if isinstance(row, dict)
                   and str(row.get("tvdbId")) == str(media["tvdb_id"])), None)
     if found is None:
-        raise ArrError(f"{label('sonarr')} does not find TVDB {media['tvdb_id']}")
+        raise ArrError(f"{label('sonarr')} cannot find TVDB {media['tvdb_id']}")
     body = dict(found)
     body.pop("id", None)
     monitor = config["monitor"]

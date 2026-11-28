@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
 from typing import Literal
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, Response
 
 from .. import cache, config, db, http, imaging, settings
+from ..collections import posters as collection_posters
 from ..media import tmdb as tmdb_media
 from ..plex import Plex, PlexError
 from ..posters import refsign, sources
@@ -24,6 +27,15 @@ PLACEHOLDER = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" w
 </svg>"""
 
 HEADERS = {"Cache-Control": "private, max-age=86400"}
+# Plex images the pages may ask for: posters and composites of titles and collections, nothing else.
+_PLEX_IMAGE = re.compile(r"^/library/(?:metadata|collections)/\d+/(?:thumb|composite)(?:/\d+)?$")
+
+
+def plex_image_url(path: str | None) -> str:
+    """Our route for a Plex poster path (a collection's composite, say); the placeholder for anything else."""
+    if path and _PLEX_IMAGE.match(path):
+        return f"/img/plex?path={quote(path, safe='')}"
+    return "/img/plex"
 
 
 def _kind(data: bytes) -> str:
@@ -135,6 +147,63 @@ async def archive_image(history_id: int):
     if not thumb:
         return placeholder()
     return FileResponse(thumb, media_type="image/jpeg", headers=HEADERS)
+
+
+async def _plex_thumb(path: str) -> Response:
+    """A Plex poster or composite through Plex' photo transcoder, else read whole and made small here."""
+    key = f"plexthumb:{path}"
+    data = cache.image_get(key)
+    if data is None:
+        plex = Plex.from_settings()
+        try:
+            data, _ = await plex.thumb(path)
+        except PlexError:
+            data = None
+        if not data or _kind(data) == "application/octet-stream":
+            try:
+                whole, _ = await plex.image(path)
+                data = await asyncio.to_thread(imaging.thumbnail, whole, 420)
+            except (PlexError, imaging.ImageError):
+                return placeholder()
+        cache.image_put(key, data)
+    return Response(data, media_type=_kind(data), headers=HEADERS)
+
+
+@router.get("/img/plex")
+async def plex_image(path: str = ""):
+    if not _PLEX_IMAGE.match(path):
+        return placeholder()
+    return await _plex_thumb(path)
+
+
+@router.get("/img/collection/{collection_id}")
+async def collection_image(collection_id: int):
+    """The collection's own poster, else what Plex shows (its composite of the first titles)."""
+    row = db.get().one("SELECT * FROM collections WHERE id=?", (collection_id,))
+    if not row:
+        return placeholder()
+    data = collection_posters.read(row)
+    if data:
+        sha = f"collection-{collection_id}-{row['poster']}-{len(data)}"
+        key = f"thumb:{sha}"
+        thumb = cache.image_get(key)
+        if thumb is None:
+            try:
+                thumb = await asyncio.to_thread(imaging.thumbnail, data, 420)
+            except imaging.ImageError:
+                return placeholder()
+            cache.image_put(key, thumb)
+        return Response(thumb, media_type="image/jpeg", headers=HEADERS)
+    if not row["plex_key"]:
+        return placeholder()
+    try:
+        meta = await Plex.from_settings().collection(row["plex_key"])
+    except PlexError:
+        return placeholder()
+    path = (meta or {}).get("thumb") or (meta or {}).get("composite")
+    if not path or not _PLEX_IMAGE.match(path):
+        return placeholder()
+    return await _plex_thumb(path)
 
 
 @router.get("/img/tmdb/{name}")

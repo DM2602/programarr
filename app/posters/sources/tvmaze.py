@@ -23,7 +23,7 @@ async def _get(path: str, params: dict | None = None):
     if response.status_code == 429:
         raise SourceError("TVmaze is rate limiting (429), try again later")
     if response.status_code >= 400:
-        raise SourceError(f"TVmaze answered {response.status_code}")
+        raise SourceError(f"TVmaze returned {response.status_code}")
     return response.json()
 
 

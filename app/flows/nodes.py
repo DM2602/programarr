@@ -1,4 +1,5 @@
-"""Node types: sources (the list adapters), filters with their ports, and the Radarr and Sonarr outputs.
+"""Node types: sources (the list adapters and a Plex library), filters with their ports, and the outputs
+Radarr, Sonarr and Plex collection.
 
 Each type has a form (fields), checks its settings (clean) and describes them in one line (summary).
 Filters send every title to exactly one port.
@@ -10,8 +11,9 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, ClassVar
 
-from .. import arr, db
+from .. import arr, db, settings
 from ..arr.library import TAG, clean_tag, profile_name
+from ..collections import store as collection_store
 from ..lists import runs
 from ..lists.base import Adapter, Field, SourceError, clean_values
 from ..lists.mdblist import list_ref
@@ -109,6 +111,39 @@ class SourceNode(NodeType):
 
     def summary(self, config: dict) -> str:
         return self.adapter.describe(config)
+
+
+def _library(key: str) -> dict | None:
+    return db.get().one("SELECT key, title, type, enabled FROM libraries WHERE key=?", (str(key or ""),))
+
+
+class PlexSource(NodeType):
+    """Every title in one Plex library, for collections by genre, decade or rating."""
+    key = "plex_library"
+    label = "Plex library"
+    category: ClassVar[str] = "source"
+    inputs: ClassVar[bool] = False
+    ports: ClassVar[list[Port]] = [Port("out", "Titles")]
+    fields: ClassVar[list[Field]] = [Field("library", "Library", "select", default="", dynamic="plex.libraries")]
+
+    def missing(self) -> str | None:
+        if not (settings.get("plex_url") and settings.get("plex_token")):
+            return "Set up Plex under Settings › Plex"
+        if not settings.get("tmdb_key"):
+            return "Set up TMDB under Settings › Sources"
+        return None
+
+    def clean(self, config: dict) -> dict:
+        clean = super().clean(config)
+        lib = _library(clean["library"])
+        if lib is None or not lib["enabled"]:
+            raise ConfigError("Library: select one of the libraries under Settings › Plex")
+        clean["library"] = lib["key"]
+        return clean
+
+    def summary(self, config: dict) -> str:
+        lib = _library(config.get("library"))
+        return lib["title"] if lib else "Plex library"
 
 
 # -- filters ----------------------------------------------------------------------------------------
@@ -644,6 +679,66 @@ class SonarrOutput(ArrOutput):
     ]
 
 
+COLLECTION_OUTCOMES = {
+    "added": "Added",
+    "present": "In the collection",
+    "queued": "Queued",
+    "missing": "Not in Plex",
+    "removed": "Removed",
+    "skipped": "Skipped",
+    "failed": "Failed",
+}
+
+
+class CollectionOutput(NodeType):
+    """A Plex collection with the titles that reach it; titles Radarr or Sonarr has wait in the queue."""
+    key = "collection"
+    label = "Plex collection"
+    category: ClassVar[str] = "output"
+    ports: ClassVar[list[Port]] = []
+    fields: ClassVar[list[Field]] = [
+        Field("library", "Library", "select", default="", dynamic="plex.libraries"),
+        Field("name", "Name", "text", default="", placeholder="Top 10 {list}",
+              hint="Placeholders: {list}, {month}, {year}"),
+        Field("sync", "Sync", "select", options=[("mirror", "Mirror"), ("append", "Append")], default="mirror"),
+        Field("order", "Order", "select", options=[("list", "List order"), ("release", "Release date"),
+                                                   ("alpha", "Title")], default="list"),
+        Field("limit", "Max titles", "number", default=None, required=False, min=1, max=1000, placeholder="No limit"),
+    ]
+
+    def missing(self) -> str | None:
+        if not (settings.get("plex_url") and settings.get("plex_token")):
+            return "Set up Plex under Settings › Plex"
+        return None
+
+    def clean(self, config: dict) -> dict:
+        clean = super().clean(config)
+        lib = _library(clean["library"])
+        if lib is None or not lib["enabled"]:
+            raise ConfigError("Library: select one of the libraries under Settings › Plex")
+        clean["library"] = lib["key"]
+        try:
+            clean["name"] = collection_store.check_template(clean["name"])
+        except collection_store.TemplateError as exc:
+            raise ConfigError(f"Name: {exc}") from exc
+        return clean
+
+    def facts(self, config: dict) -> list[dict]:
+        lib = _library(config.get("library"))
+        sync = dict(self.fields[2].options).get(config.get("sync"), "Mirror")
+        order = dict(self.fields[3].options).get(config.get("order"), "List order")
+        facts = [{"label": "Name", "value": config.get("name") or ""},
+                 {"label": "Library", "value": lib["title"] if lib else "None"},
+                 {"label": "Sync", "value": sync}, {"label": "Order", "value": order}]
+        if config.get("limit"):
+            facts.append({"label": "Max", "value": str(config["limit"])})
+        return facts
+
+    def summary(self, config: dict) -> str:
+        facts = {fact["label"]: fact["value"] for fact in self.facts(config)}
+        return f"{config.get('name') or 'Collection'}, {facts['Library']}, {facts['Sync']}"
+
+
 @dataclass
 class Registry:
     types: dict[str, NodeType] = field(default_factory=dict)
@@ -659,8 +754,10 @@ def _build() -> Registry:
     registry = Registry()
     for adapter in runs.ADAPTERS.values():
         registry.types[adapter.key] = SourceNode(adapter)
-    for node in (TypeSwitch(), RatingFilter(), YearFilter(), GenreFilter(), CountryFilter(), LanguageFilter(),
-                 RankFilter(), SeasonsFilter(), PlexFilter(), RadarrOutput(), SonarrOutput()):
+    for node in (PlexSource(), TypeSwitch(), RatingFilter(), YearFilter(), GenreFilter(), CountryFilter(),
+                 LanguageFilter(), RankFilter(), SeasonsFilter(), PlexFilter(), RadarrOutput(), SonarrOutput(),
+                 CollectionOutput()):
+        assert node.key not in registry.types, node.key
         registry.types[node.key] = node
     return registry
 

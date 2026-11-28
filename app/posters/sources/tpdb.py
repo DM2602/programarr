@@ -146,7 +146,7 @@ async def get_page(url: str) -> tuple[str, str]:
             if response.status_code == 404:
                 raise SourceError("Page not found on ThePosterDB (404)")
             if response.status_code >= 400:
-                raise SourceError(f"ThePosterDB answered {response.status_code}")
+                raise SourceError(f"ThePosterDB returned {response.status_code}")
             _save_cookies(client.cookies)
             return text, str(response.url)
 
@@ -309,16 +309,25 @@ def cards_to_images(cards: list[Card], item_type: str, titles: list[str] | str, 
 
 
 # -- public API -------------------------------------------------------------
-async def search(title: str, year: int | None, item_type: str) -> list[dict]:
-    section = "movies" if item_type == "movie" else "shows"
-    key = f"tpdb:search:{section}:{norm_title(title)}"
+async def search_section(term: str, section: str) -> list[dict]:
+    """Search results in one section of the site: movies, shows or collections."""
+    key = f"tpdb:search:{section}:{norm_title(term)}"
     cached = cache.get(key)
     if cached is None:
-        url = f"{_base()}/search?term={quote_plus(title)}&section={section}"
+        url = f"{_base()}/search?term={quote_plus(term)}&section={section}"
         html, _ = await get_page(url)
         cached = parse_search(html)
         cache.put(key, cached, 24 * 3600)
     return cached
+
+
+async def search(title: str, year: int | None, item_type: str) -> list[dict]:
+    return await search_section(title, "movies" if item_type == "movie" else "shows")
+
+
+def collection_ref(card: Card) -> ImageRef:
+    """A poster on a collection page, as a reference the picker can show and apply."""
+    return _ref_from_card(card, "collection", None, f"tpdb:{card.set_id}" if card.set_id else None, None)
 
 
 async def find_item_page(title: str, year: int | None, item_type: str) -> tuple[str | None, bool]:

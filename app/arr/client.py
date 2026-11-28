@@ -44,7 +44,7 @@ def _problem(name: str, response: httpx.Response) -> str:
     try:
         data = response.json()
     except ValueError:
-        return f"{name} answered {response.status_code}"
+        return f"{name} returned {response.status_code}"
     rows = data if isinstance(data, list) else [data] if isinstance(data, dict) else []
     messages = []
     for row in rows:
@@ -52,7 +52,7 @@ def _problem(name: str, response: httpx.Response) -> str:
             text = row.get("errorMessage") or row.get("message") or row.get("error")
             if text and text not in messages:
                 messages.append(str(text))
-    return f"{name}: {'; '.join(messages)}" if messages else f"{name} answered {response.status_code}"
+    return f"{name}: {'; '.join(messages)}" if messages else f"{name} returned {response.status_code}"
 
 
 async def request(service: str, method: str, path: str, params: dict | None = None, body: Any = None,
@@ -61,7 +61,7 @@ async def request(service: str, method: str, path: str, params: dict | None = No
     base = (url or settings.get(f"{service}_url") or "").rstrip("/")
     key = key or settings.get(f"{service}_key")
     if not base or not key:
-        raise ArrError(f"{name}: address and API key are needed")
+        raise ArrError(f"{name}: address and API key are required")
     async with http.client(timeout=timeout, headers={"X-Api-Key": key, "Accept": "application/json"}) as client:
         try:
             response = await client.request(method, f"{base}/api/v3{path}", params=params or {},
@@ -71,7 +71,7 @@ async def request(service: str, method: str, path: str, params: dict | None = No
     if response.status_code == 401:
         raise ArrError(f"{name} rejects the API key", 401)
     if response.status_code == 404:
-        raise ArrError(f"{name} does not know {path.split('?')[0]}", 404)
+        raise ArrError(f"{name} cannot find {path.split('?')[0]}", 404)
     if response.status_code >= 400:
         raise ArrError(_problem(name, response), response.status_code)
     if not response.content:

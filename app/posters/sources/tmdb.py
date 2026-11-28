@@ -33,14 +33,14 @@ async def _get(path: str, params: dict | None = None, key: str | None = None) ->
     if response.status_code == 401:
         raise SourceError("TMDB rejects the key")
     if response.status_code >= 400:
-        raise SourceError(f"TMDB answered {response.status_code}")
+        raise SourceError(f"TMDB returned {response.status_code}")
     return response.json()
 
 
 async def test(key: str | None = None) -> str:
     data = await _get("/configuration", key=key)
     if data is None:
-        raise SourceError("Unexpected answer from TMDB")
+        raise SourceError("Unexpected response from TMDB")
     return "Key is valid"
 
 
